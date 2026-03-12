@@ -1,0 +1,10 @@
+export const MAP_WIDTH = 3200
+export const MAP_HEIGHT = 1200
+export const SCENE_KEY = 'world-map'
+export const CAMERA_LERP = 0.1
+export const ROAD_WIDTH = 63
+export const PLAYER_RADIUS = 12
+export const INSPECT_DISTANCE = 70
+export const VERTICAL_ROAD_CENTERS = [800, 1600, 2400]
+export const PLOT_WIDTH = 50
+export const PLOT_HEIGHT = 60
