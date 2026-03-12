@@ -10,6 +10,7 @@ function toDomainUser(record: typeof users.$inferSelect) {
     id: record.id,
     username: Username.create(record.username),
     passwordHash: record.passwordHash,
+    money: Number(record.money),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
@@ -48,6 +49,7 @@ export class DrizzleUserRepository implements UserRepository {
         id: user.id,
         username: user.username.getValue(),
         passwordHash: user.passwordHash,
+        money: user.money.toString(),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -56,6 +58,7 @@ export class DrizzleUserRepository implements UserRepository {
         set: {
           username: user.username.getValue(),
           passwordHash: user.passwordHash,
+          money: user.money.toString(),
           updatedAt: new Date(),
         },
       });

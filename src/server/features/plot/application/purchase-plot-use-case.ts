@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { plotRepository } from "@/server/features/plot/infrastructure";
+import { userRepository } from "@/server/features/person/infrastructure";
 
 const purchasePlotSchema = z.object({
   plotId: z.number().int().positive(),
@@ -50,7 +51,17 @@ export async function executePurchasePlotUseCase(
     };
   }
 
+  const buyer = await userRepository.findById(parsed.data.buyerUserId);
+  if (!buyer) {
+    return {
+      ok: false,
+      error: "用户不存在",
+      status: 404,
+    };
+  }
+
   try {
+    buyer.spendMoney(plot.price);
     plot.purchaseBy(parsed.data.buyerUserId);
   } catch (error) {
     if (error instanceof DomainError) {
@@ -63,6 +74,7 @@ export async function executePurchasePlotUseCase(
     throw error;
   }
 
+  await userRepository.save(buyer);
   await plotRepository.save(plot);
 
   return {

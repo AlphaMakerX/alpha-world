@@ -18,11 +18,13 @@ export const users = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     username: varchar("username", { length: 32 }).notNull().unique(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+    money: numeric("money", { precision: 12, scale: 2 }).notNull().default("10000"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check("users_username_length_chk", sql`char_length(${table.username}) between 3 and 32`),
+    check("users_money_chk", sql`${table.money} >= 0`),
   ],
 );
 
