@@ -2,7 +2,7 @@
 
 import { Modal, message } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createWorldMapScene } from "./world-map-scene";
+import { createWorldMapScene, WORLD_MAP_SYNC_EVENT } from "./world-map-scene";
 import { WorldMapHeader } from "./world-map-header";
 import { trpc } from "@/client/lib/trpc";
 import { signOut, useSession } from "next-auth/react";
@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { AuthPanel } from "@/client/features/auth/components/auth-panel";
 import { PlotDetailModal } from "./plot-detail-modal";
 
+type BuildingType = "residential" | "factory" | "shop";
 
 export function WorldMap() {
   const router = useRouter();
@@ -18,20 +19,67 @@ export function WorldMap() {
   const trpcUtils = trpc.useUtils();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<import("phaser").Game | null>(null);
+  const [isGameReady, setIsGameReady] = useState(false);
   const { data } = trpc.plot.list.useQuery();
   const { data: meData } = trpc.person.me.useQuery(undefined, {
     enabled: authStatus === "authenticated",
   });
   const purchaseMutation = trpc.plot.purchase.useMutation();
+  const buildMutation = trpc.building.build.useMutation();
+  const startProductionMutation = trpc.building.startProduction.useMutation();
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   type PlotItem = NonNullable<typeof data>["plots"][number];
 
-  const existingPlotIds = new Set(
-    (data?.plots ?? []).map((plot) => `P${plot.x}-${String(plot.y).padStart(2, "0")}`),
+  const existingPlotIds = useMemo(
+    () =>
+      new Set((data?.plots ?? []).map((plot) => `P${plot.x}-${String(plot.y).padStart(2, "0")}`)),
+    [data?.plots],
   );
-  const existingPlotIdsKey = Array.from(existingPlotIds).sort().join("|");
+  const existingPlotIdsKey = useMemo(() => Array.from(existingPlotIds).sort().join("|"), [existingPlotIds]);
+  const plotWorldIdByDbId = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const plot of data?.plots ?? []) {
+      map.set(plot.id, `P${plot.x}-${String(plot.y).padStart(2, "0")}`);
+    }
+    return map;
+  }, [data?.plots]);
+  const myPlotIds = useMemo(() => {
+    const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
+    if (!currentUserId) {
+      return new Set<string>();
+    }
+
+    return new Set(
+      (data?.plots ?? [])
+        .filter((plot) => plot.ownerUserId === currentUserId)
+        .map((plot) => `P${plot.x}-${String(plot.y).padStart(2, "0")}`),
+    );
+  }, [authStatus, data?.plots, meData?.user.id]);
+  const myPlotIdsKey = useMemo(() => Array.from(myPlotIds).sort().join("|"), [myPlotIds]);
+  const buildingTypeByPlotId = useMemo(() => {
+    const map = new Map<string, BuildingType>();
+    for (const plot of data?.plots ?? []) {
+      const worldPlotId = plotWorldIdByDbId.get(plot.id);
+      if (worldPlotId) {
+        const buildingType = plot.building?.type;
+        if (buildingType) {
+          map.set(worldPlotId, buildingType);
+        }
+      }
+    }
+    return map;
+  }, [data?.plots, plotWorldIdByDbId]);
+  const buildingTypeByPlotIdKey = useMemo(
+    () =>
+      Array.from(buildingTypeByPlotId.entries())
+        .sort(([plotA], [plotB]) => plotA.localeCompare(plotB))
+        .map(([plotId, type]) => `${plotId}:${type}`)
+        .join("|"),
+    [buildingTypeByPlotId],
+  );
   const plotById = useMemo(() => {
     const map = new Map<string, PlotItem>();
     for (const plot of data?.plots ?? []) {
@@ -40,7 +88,31 @@ export function WorldMap() {
     return map;
   }, [data?.plots]);
   const selectedPlot = selectedPlotId ? plotById.get(selectedPlotId) : undefined;
-  const canPurchaseSelectedPlot = Boolean(selectedPlot?.ownerUserId == null);
+  const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
+  const hasBuildingOnSelectedPlot = Boolean(selectedPlot?.building);
+  const canManageSelectedPlot = Boolean(selectedPlot && currentUserId && selectedPlot.ownerUserId === currentUserId);
+  const shouldFetchFactoryRecipes = Boolean(
+    selectedPlot?.building?.type === "factory" && canManageSelectedPlot,
+  );
+  const selectedFactoryBuildingId =
+    selectedPlot?.building?.type === "factory" ? selectedPlot.building.id : undefined;
+  const { data: factoryRecipesData } = trpc.building.factoryRecipes.useQuery(undefined, {
+    enabled: shouldFetchFactoryRecipes,
+  });
+  const { data: factoryOrdersData } = trpc.building.factoryOrders.useQuery(
+    { buildingId: selectedFactoryBuildingId ?? 0 },
+    {
+      enabled: Boolean(selectedFactoryBuildingId && canManageSelectedPlot),
+      refetchInterval: 3000,
+    },
+  );
+  const {
+    data: inventoryData,
+    isFetching: inventoryLoading,
+    refetch: refetchInventory,
+  } = trpc.building.myInventory.useQuery(undefined, {
+    enabled: authStatus === "authenticated",
+  });
   const headerUsername =
     authStatus === "authenticated" ? (meData?.user.username ?? session?.user?.name ?? undefined) : undefined;
   const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
@@ -76,6 +148,60 @@ export function WorldMap() {
     }
   };
 
+  const handleBuild = async (buildingType: "residential" | "factory" | "shop") => {
+    if (!selectedPlot) {
+      return;
+    }
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await buildMutation.mutateAsync({
+        plotId: selectedPlot.id,
+        buildingType,
+      });
+      await trpcUtils.plot.list.invalidate();
+      messageApi.success("建造成功");
+      setSelectedPlotId(null);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "建造失败，请稍后重试");
+    }
+  };
+
+  const handleStartProduction = async (recipeId: string) => {
+    if (!selectedPlot?.building) {
+      return;
+    }
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+    if (selectedPlot.ownerUserId !== currentUserId) {
+      messageApi.error("只能操作自己地块上的工厂");
+      return;
+    }
+    if (selectedPlot.building.type !== "factory") {
+      messageApi.error("当前建筑不是工厂");
+      return;
+    }
+
+    try {
+      await startProductionMutation.mutateAsync({
+        buildingId: selectedPlot.building.id,
+        recipeId,
+      });
+      await Promise.all([
+        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.building.factoryOrders.invalidate(),
+      ]);
+      messageApi.success("已开始制造");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "开始制造失败，请稍后重试");
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -91,8 +217,15 @@ export function WorldMap() {
 
       const WorldMapScene = createWorldMapScene(Phaser, {
         existingPlotIds,
+        highlightedPlotIds: myPlotIds,
+        buildingTypeByPlotId,
         onOpenExistingPlot: (plotId) => {
           setSelectedPlotId((prev) => (prev === plotId ? null : plotId));
+        },
+        onSceneReady: () => {
+          if (!cancelled) {
+            setIsGameReady(true);
+          }
         },
       });
 
@@ -130,8 +263,29 @@ export function WorldMap() {
       cancelled = true;
       gameRef.current?.destroy(true);
       gameRef.current = null;
+      setIsGameReady(false);
     };
-  }, [existingPlotIdsKey]);
+  }, []);
+
+  useEffect(() => {
+    if (!isGameReady || !gameRef.current) {
+      return;
+    }
+
+    gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
+      existingPlotIds,
+      highlightedPlotIds: myPlotIds,
+      buildingTypeByPlotId,
+    });
+  }, [
+    isGameReady,
+    existingPlotIds,
+    existingPlotIdsKey,
+    myPlotIds,
+    myPlotIdsKey,
+    buildingTypeByPlotId,
+    buildingTypeByPlotIdKey,
+  ]);
 
   return (
     <section className="flex h-dvh w-screen flex-col">
@@ -140,6 +294,10 @@ export function WorldMap() {
         authStatus={authStatus}
         username={headerUsername}
         money={headerMoney}
+        onOpenInventoryClick={() => {
+          setInventoryModalOpen(true);
+          void refetchInventory();
+        }}
         onLoginClick={() => setLoginModalOpen(true)}
         onLogoutClick={() => void handleLogout()}
         logoutLoading={logoutLoading}
@@ -150,6 +308,7 @@ export function WorldMap() {
       />
       <PlotDetailModal
         selectedPlotId={selectedPlotId}
+        currentUserId={currentUserId}
         selectedPlot={
           selectedPlot
             ? {
@@ -157,14 +316,61 @@ export function WorldMap() {
                 status: String(selectedPlot.status),
                 price: selectedPlot.price,
                 ownerUserId: selectedPlot.ownerUserId,
+                hasBuilding: hasBuildingOnSelectedPlot,
+                building: selectedPlot.building
+                  ? {
+                      id: String(selectedPlot.building.id),
+                      type: selectedPlot.building.type,
+                      status: selectedPlot.building.status,
+                    }
+                  : null,
               }
             : undefined
         }
-        canPurchaseSelectedPlot={canPurchaseSelectedPlot}
         purchaseLoading={purchaseMutation.isPending}
+        buildLoading={buildMutation.isPending}
+        factoryRecipes={factoryRecipesData?.recipes ?? []}
+        factoryOrders={
+          factoryOrdersData
+            ? {
+                focusOrder: factoryOrdersData.focusOrder,
+                historyOrders: factoryOrdersData.historyOrders,
+              }
+            : undefined
+        }
+        productionLoading={startProductionMutation.isPending}
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
+        onBuild={(buildingType) => void handleBuild(buildingType)}
+        onStartProduction={(recipeId) => void handleStartProduction(recipeId)}
       />
+      <Modal
+        title="背包"
+        open={inventoryModalOpen}
+        onCancel={() => setInventoryModalOpen(false)}
+        footer={null}
+        destroyOnHidden
+      >
+        {authStatus !== "authenticated" ? (
+          <p className="text-sm text-slate-500">请先登录后查看背包</p>
+        ) : inventoryLoading ? (
+          <p className="text-sm text-slate-500">加载中...</p>
+        ) : inventoryData?.items.length ? (
+          <div className="space-y-2 text-sm text-slate-700">
+            {inventoryData.items.map((item) => (
+              <div
+                key={item.itemKey}
+                className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2"
+              >
+                <span className="font-medium text-slate-800">{item.itemKey}</span>
+                <span>x{item.quantity}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">背包里暂时没有物品</p>
+        )}
+      </Modal>
       <Modal
         title="登录后可购买地块"
         open={loginModalOpen}

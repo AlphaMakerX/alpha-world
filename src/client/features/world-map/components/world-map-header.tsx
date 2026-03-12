@@ -6,6 +6,7 @@ type WorldMapHeaderProps = {
   authStatus: "authenticated" | "loading" | "unauthenticated";
   username?: string;
   money?: number;
+  onOpenInventoryClick: () => void;
   onLoginClick: () => void;
   onLogoutClick: () => void;
   logoutLoading?: boolean;
@@ -15,6 +16,7 @@ export function WorldMapHeader({
   authStatus,
   username,
   money,
+  onOpenInventoryClick,
   onLoginClick,
   onLogoutClick,
   logoutLoading = false,
@@ -36,7 +38,12 @@ export function WorldMapHeader({
         }`}
       >
         {isAuthenticated ? (
-          <span className="text-sm font-medium text-slate-900">余额：{displayMoney}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-900">余额：{displayMoney}</span>
+            <Button size="small" onClick={() => void onOpenInventoryClick()}>
+              背包
+            </Button>
+          </div>
         ) : null}
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-700">{displayStatus}</span>

@@ -51,23 +51,5 @@ src/
 
 
 ## todo
-1. [x] 初始化 Next.js + TypeScript 项目结构（App Router）
-2. [x] 集成并配置 tRPC、Ant Design、Tailwind CSS
-3. [x] 接入 NextAuth.js，完成注册/登录基础流程
-4. [x] 设计并创建数据库基础表（用户、地块、建筑）
-5. [x] 使用 drizzle-orm 完成数据库连接与迁移
-6. 完成用户注册接口与页面交互
-7. 完成用户登录接口与页面交互
-8. 实现地图首页展示（未登录可浏览）
-9. 实现购买操作触发登录/注册弹窗
-10. 使用 Phaser 绘制道路与地块基础地图
-11. 加载数据库中的地块与建筑数据到 Phaser 场景
-
-## 数据库基础表
-
-- Drizzle Schema：`src/server/lib/db/schema.ts`
-- Drizzle 配置：`drizzle.config.ts`
-- Drizzle 迁移目录：`drizzle/`
-- 包含表：`users`、`plots`、`buildings`
-- 生成迁移：`npm run db:generate`
-- 执行迁移：`npm run db:migrate`
+1. 用户在自己的地块，建造建筑
+2. 建筑有 住宅，工厂，商店 3种

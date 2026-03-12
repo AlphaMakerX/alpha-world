@@ -17,13 +17,24 @@ import {
   type PlayerSprite,
   updatePlayerAnimation,
 } from './world-map-player'
-import type { WorldMapPlot } from './world-map-plot'
+import type { PlotBuildingType, PlotRenderResult, WorldMapPlot } from './world-map-plot'
 
 type PhaserModule = typeof import('phaser')
 
 type WorldMapSceneOptions = {
   existingPlotIds?: ReadonlySet<string>
+  highlightedPlotIds?: ReadonlySet<string>
+  buildingTypeByPlotId?: ReadonlyMap<string, PlotBuildingType>
   onOpenExistingPlot?: (plotId: string) => void
+  onSceneReady?: () => void
+}
+
+export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
+
+type SyncMapDataPayload = {
+  existingPlotIds: ReadonlySet<string>
+  highlightedPlotIds: ReadonlySet<string>
+  buildingTypeByPlotId: ReadonlyMap<string, PlotBuildingType>
 }
 
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
@@ -35,10 +46,15 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
   class WorldMapScene extends Scene {
     private roads: Phaser.Geom.Rectangle[] = []
     private plots: WorldMapPlot[] = []
+    private plotRenderObjects: Phaser.GameObjects.GameObject[] = []
     private nearbyPlot: WorldMapPlot | null = null
     private nearbyPlotText!: Phaser.GameObjects.Text
     private interactHintText!: Phaser.GameObjects.Text
     private interactKey!: Phaser.Input.Keyboard.Key
+    private existingPlotIds: ReadonlySet<string> = options.existingPlotIds ?? new Set<string>()
+    private highlightedPlotIds: ReadonlySet<string> = options.highlightedPlotIds ?? new Set<string>()
+    private buildingTypeByPlotId: ReadonlyMap<string, PlotBuildingType> =
+      options.buildingTypeByPlotId ?? new Map<string, PlotBuildingType>()
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -85,6 +101,24 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         })
         .setDepth(10)
         .setScrollFactor(0)
+
+      this.game.events.on(
+        WORLD_MAP_SYNC_EVENT,
+        this.syncMapData,
+        this
+      )
+      options.onSceneReady?.()
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.game.events.off(
+          WORLD_MAP_SYNC_EVENT,
+          this.syncMapData,
+          this
+        )
+        this.plotRenderObjects.forEach((object) => {
+          object.destroy()
+        })
+        this.plotRenderObjects = []
+      })
     }
 
 
@@ -132,13 +166,36 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         graphics.lineBetween(xCenter, 0, xCenter, MAP_HEIGHT)
       })
 
-      this.plots = createPlotsAndRender(
+      this.renderPlots(horizontalRoads, verticalRoads)
+    }
+
+    private renderPlots(horizontalRoads: number[], verticalRoads: number[]): void {
+      this.plotRenderObjects.forEach((object) => {
+        object.destroy()
+      })
+      this.plotRenderObjects = []
+
+      const renderResult: PlotRenderResult = createPlotsAndRender(
         this,
         this.roads,
         horizontalRoads,
         verticalRoads,
-        options.existingPlotIds ?? new Set<string>()
+        this.existingPlotIds,
+        this.highlightedPlotIds,
+        this.buildingTypeByPlotId
       )
+      this.plots = renderResult.plots
+      this.plotRenderObjects = renderResult.renderObjects
+    }
+
+    private syncMapData(payload: SyncMapDataPayload): void {
+      this.existingPlotIds = payload.existingPlotIds
+      this.highlightedPlotIds = payload.highlightedPlotIds
+      this.buildingTypeByPlotId = payload.buildingTypeByPlotId
+
+      const horizontalRoads = [MAP_HEIGHT / 2, MAP_HEIGHT / 4]
+      const verticalRoads = VERTICAL_ROAD_CENTERS
+      this.renderPlots(horizontalRoads, verticalRoads)
     }
 
     private updateNearbyPlotUI(): void {
@@ -164,7 +221,15 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       }
 
       this.nearbyPlot = nearestPlot
-      this.nearbyPlotText.setText(`地块: ${nearestPlot.id}`)
+      const buildingLabelByType: Record<PlotBuildingType, string> = {
+        residential: '住宅',
+        factory: '工厂',
+        shop: '商店',
+      }
+      const buildingLabel = nearestPlot.buildingType
+        ? `，建筑: ${buildingLabelByType[nearestPlot.buildingType]}`
+        : ''
+      this.nearbyPlotText.setText(`地块: ${nearestPlot.id}${buildingLabel}`)
       this.interactHintText.setText(
         nearestPlot.isExistingPlot ? '按空格查看详情' : '该地块暂无详情'
       )
