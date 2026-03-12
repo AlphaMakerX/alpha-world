@@ -93,6 +93,46 @@ async function runAction(action, payload = {}) {
   return data.state;
 }
 
+function extractRollValue(logs, playerId) {
+  const latestRoll = logs.find(
+    (entry) => entry.type === "roll" && (!playerId || entry.playerId === playerId),
+  );
+
+  if (!latestRoll) {
+    return null;
+  }
+
+  const matched = latestRoll.message.match(/掷出\s*(\d+)\s*点/);
+  const rolled = Number(matched?.[1]);
+
+  return Number.isInteger(rolled) ? rolled : null;
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+function getDicePips(value) {
+  switch (value) {
+    case 1:
+      return [4];
+    case 2:
+      return [0, 8];
+    case 3:
+      return [0, 4, 8];
+    case 4:
+      return [0, 2, 6, 8];
+    case 5:
+      return [0, 2, 4, 6, 8];
+    case 6:
+      return [0, 2, 3, 5, 6, 8];
+    default:
+      return [];
+  }
+}
+
 export default function GameShell() {
   const [game, setGame] = useState(null);
   const [selectedTileId, setSelectedTileId] = useState(null);
@@ -102,12 +142,20 @@ export default function GameShell() {
   const [sellQuantity, setSellQuantity] = useState("1");
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const [diceValue, setDiceValue] = useState(null);
+  const [isDiceRolling, setIsDiceRolling] = useState(false);
+  const [isPieceMoving, setIsPieceMoving] = useState(false);
+  const [displayPosition, setDisplayPosition] = useState(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     let active = true;
 
     async function refresh() {
+      if (isDiceRolling || isPieceMoving) {
+        return;
+      }
+
       try {
         const state = await loadGameState();
 
@@ -117,6 +165,10 @@ export default function GameShell() {
 
         setGame(state);
         setSelectedTileId((current) => current ?? state.currentTile?.id ?? null);
+        setDiceValue((current) =>
+          current ?? extractRollValue(state.logs, state.currentPlayer?.id),
+        );
+        setDisplayPosition(state.currentPlayer?.position ?? null);
       } catch (loadError) {
         if (active) {
           setError(loadError.message);
@@ -131,7 +183,7 @@ export default function GameShell() {
       active = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [isDiceRolling, isPieceMoving]);
 
   const selectedTile = useMemo(() => {
     if (!game || !selectedTileId) {
@@ -154,6 +206,55 @@ export default function GameShell() {
         await mutate(action, payload, successText);
       } catch (actionError) {
         setError(actionError.message);
+      }
+    });
+  }
+
+  function handleRoll() {
+    if (isPending || isDiceRolling || isPieceMoving || !game?.currentPlayer) {
+      return;
+    }
+
+    const startPosition = game.currentPlayer.position;
+    const mapSize = game.tiles.length;
+
+    setError("");
+    setFeedback("");
+    setIsDiceRolling(true);
+    setDiceValue(Math.floor(Math.random() * 6) + 1);
+    setDisplayPosition(startPosition);
+
+    const rollingTimer = setInterval(() => {
+      setDiceValue(Math.floor(Math.random() * 6) + 1);
+    }, 95);
+
+    startTransition(async () => {
+      try {
+        await sleep(900);
+        const nextState = await runAction("roll", {});
+        const rolled = extractRollValue(nextState.logs, nextState.currentPlayer?.id);
+        setDiceValue(rolled ?? null);
+        setIsDiceRolling(false);
+        clearInterval(rollingTimer);
+
+        if (rolled && mapSize > 0) {
+          setIsPieceMoving(true);
+
+          for (let step = 1; step <= rolled; step += 1) {
+            await sleep(260);
+            setDisplayPosition((startPosition + step) % mapSize);
+          }
+        }
+
+        setGame(nextState);
+        setDisplayPosition(nextState.currentPlayer?.position ?? null);
+        setFeedback("已完成掷骰");
+      } catch (actionError) {
+        setError(actionError.message);
+      } finally {
+        clearInterval(rollingTimer);
+        setIsDiceRolling(false);
+        setIsPieceMoving(false);
       }
     });
   }
@@ -198,6 +299,10 @@ export default function GameShell() {
   const canSellHere =
     selectedTile?.ownerId === currentPlayer.id &&
     selectedTile?.building?.type === "shop";
+  const activePips = new Set(getDicePips(diceValue));
+  const markerPosition = displayPosition ?? currentPlayer.position;
+  const markerTile = game.tiles[markerPosition] ?? currentTile;
+  const isActionLocked = isPending || isDiceRolling || isPieceMoving;
 
   return (
     <main className="game-shell">
@@ -231,7 +336,7 @@ export default function GameShell() {
         <div className="hero-card">
           <span>当前位置</span>
           <strong>
-            第 {currentPlayer.position + 1} 格 · {currentTile.name}
+            第 {markerPosition + 1} 格 · {markerTile.name}
           </strong>
         </div>
         <div className="hero-card">
@@ -246,20 +351,45 @@ export default function GameShell() {
             <h2>路径地图</h2>
             <p>20 格单环路径。点击格子查看详情；掷骰后自动结算住宅租金。</p>
           </div>
-          <button
-            type="button"
-            className="button button-primary"
-            disabled={isPending}
-            onClick={() => run("roll", {}, "已完成掷骰")}
-          >
-            {isPending ? "处理中..." : "掷骰移动"}
-          </button>
+          <div className="board-actions">
+            <div
+              className={`dice-display${isDiceRolling ? " rolling" : ""}`}
+              role="status"
+              aria-live="polite"
+              aria-label="当前掷骰结果"
+            >
+              <span>骰子点数</span>
+              <div className="dice-face" aria-hidden="true">
+                {Array.from({ length: 9 }).map((_, pipIndex) => (
+                  <i
+                    key={pipIndex}
+                    className={`dice-pip${activePips.has(pipIndex) ? " active" : ""}`}
+                  />
+                ))}
+              </div>
+              <strong className="dice-point-label">{diceValue ?? "-"}</strong>
+            </div>
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={isActionLocked}
+              onClick={handleRoll}
+            >
+              {isDiceRolling
+                ? "骰子滚动中..."
+                : isPieceMoving
+                  ? "角色移动中..."
+                  : isPending
+                    ? "处理中..."
+                    : "掷骰移动"}
+            </button>
+          </div>
         </div>
 
         <div className="loop-board-wrap">
           <div className="loop-board">
             {game.tiles.map((tile) => {
-              const isCurrent = tile.index === currentPlayer.position;
+              const isCurrent = tile.index === markerPosition;
               const isSelected = tile.id === selectedTileId;
               const position = getTilePosition(tile.index, game.tiles.length);
 
@@ -269,6 +399,7 @@ export default function GameShell() {
                   type="button"
                   className={`tile-card${isCurrent ? " current" : ""}${isSelected ? " selected" : ""}`}
                   style={position}
+                  disabled={isActionLocked}
                   onClick={() => setSelectedTileId(tile.id)}
                 >
                   <span className="tile-index">{tile.index + 1}</span>
@@ -319,6 +450,7 @@ export default function GameShell() {
                 key={asset.tileId}
                 type="button"
                 className="owned-asset"
+                disabled={isActionLocked}
                 onClick={() => setSelectedTileId(asset.tileId)}
               >
                 <strong>{asset.tileName}</strong>
@@ -358,6 +490,7 @@ export default function GameShell() {
                   <button
                     type="button"
                     className="button button-primary"
+                    disabled={isActionLocked}
                     onClick={() =>
                       run("buyTile", { tileId: selectedTile.id }, "已购买地块")
                     }
@@ -370,6 +503,7 @@ export default function GameShell() {
                   <div className="inline-form">
                     <select
                       value={selectedBuildType}
+                      disabled={isActionLocked}
                       onChange={(event) => setSelectedBuildType(event.target.value)}
                     >
                       {BUILDING_OPTIONS.map((option) => (
@@ -381,6 +515,7 @@ export default function GameShell() {
                     <button
                       type="button"
                       className="button button-secondary"
+                      disabled={isActionLocked}
                       onClick={() =>
                         run(
                           "build",
@@ -398,6 +533,7 @@ export default function GameShell() {
                   <button
                     type="button"
                     className="button button-secondary"
+                    disabled={isActionLocked}
                     onClick={() =>
                       run("upgrade", { tileId: selectedTile.id }, "已升级建筑")
                     }
@@ -410,6 +546,7 @@ export default function GameShell() {
                   <div className="inline-form">
                     <select
                       value={selectedProductionItem}
+                      disabled={isActionLocked}
                       onChange={(event) =>
                         setSelectedProductionItem(event.target.value)
                       }
@@ -423,6 +560,7 @@ export default function GameShell() {
                     <button
                       type="button"
                       className="button button-secondary"
+                      disabled={isActionLocked}
                       onClick={() =>
                         run(
                           "startProduction",
@@ -443,6 +581,7 @@ export default function GameShell() {
                   <div className="inline-form">
                     <select
                       value={sellItem}
+                      disabled={isActionLocked}
                       onChange={(event) => setSellItem(event.target.value)}
                     >
                       {ITEM_OPTIONS.map((option) => (
@@ -455,11 +594,13 @@ export default function GameShell() {
                       type="number"
                       min="1"
                       value={sellQuantity}
+                      disabled={isActionLocked}
                       onChange={(event) => setSellQuantity(event.target.value)}
                     />
                     <button
                       type="button"
                       className="button button-secondary"
+                      disabled={isActionLocked}
                       onClick={() =>
                         run(
                           "sellItem",

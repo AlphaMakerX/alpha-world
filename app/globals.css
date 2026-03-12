@@ -320,6 +320,74 @@ label span,
   align-items: center;
 }
 
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dice-display {
+  min-width: 132px;
+  padding: 0.58rem 0.9rem 0.48rem;
+  border-radius: 16px;
+  border: 1px solid rgba(91, 67, 39, 0.2);
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.9), rgba(245, 231, 207, 0.86));
+  box-shadow: 0 10px 22px rgba(84, 51, 20, 0.1);
+  text-align: center;
+}
+
+.dice-display span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.dice-face {
+  width: 58px;
+  height: 58px;
+  margin: 0.34rem auto 0.22rem;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 5px;
+  border-radius: 14px;
+  border: 1px solid rgba(91, 67, 39, 0.18);
+  background: linear-gradient(160deg, #fffdf8, #f3e3cb);
+  box-shadow: inset 0 -5px 10px rgba(91, 67, 39, 0.12);
+}
+
+.dice-pip {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: transparent;
+  transform: scale(0.65);
+  opacity: 0.2;
+  transition: transform 0.14s ease, opacity 0.14s ease, background-color 0.14s ease;
+}
+
+.dice-pip.active {
+  background: radial-gradient(circle at 35% 35%, #fff6ec 0%, #e2b37c 22%, #7c3d26 100%);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.dice-point-label {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--accent-deep);
+}
+
+.dice-display.rolling {
+  animation: dice-pulse 0.18s ease-in-out infinite alternate;
+  border-color: rgba(159, 59, 32, 0.55);
+  box-shadow: 0 0 0 2px rgba(159, 59, 32, 0.16), 0 12px 26px rgba(84, 51, 20, 0.2);
+}
+
 .loop-board {
   width: 1180px;
   height: 720px;
@@ -550,6 +618,16 @@ label span,
   }
 }
 
+@keyframes dice-pulse {
+  from {
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    transform: translateY(-1px) scale(1.04);
+  }
+}
+
 @media (max-width: 1080px) {
   .auth-columns,
   .dashboard-grid,
@@ -566,6 +644,10 @@ label span,
   .game-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .board-actions {
+    justify-content: space-between;
   }
 }
 
@@ -598,5 +680,14 @@ label span,
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .board-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dice-display {
+    width: 100%;
   }
 }
