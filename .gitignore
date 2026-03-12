@@ -27,3 +27,5 @@ pnpm-debug.log*
 next-env.d.ts
 
 .cursor
+.idea
+
