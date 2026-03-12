@@ -1,5 +1,6 @@
 import {
   CAMERA_LERP,
+  INSPECT_DISTANCE,
   MAP_HEIGHT,
   MAP_WIDTH,
   PLAYER_RADIUS,
@@ -16,10 +17,16 @@ import {
   type PlayerSprite,
   updatePlayerAnimation,
 } from './world-map-player'
+import type { WorldMapPlot } from './world-map-plot'
 
 type PhaserModule = typeof import('phaser')
 
-export function createWorldMapScene(Phaser: PhaserModule) {
+type WorldMapSceneOptions = {
+  existingPlotIds?: ReadonlySet<string>
+  onOpenExistingPlot?: (plotId: string) => void
+}
+
+export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
   const { Scene, Geom } = Phaser
   const BACKGROUND_COLOR = '#71b35f'
   const ROAD_COLOR = 0x5f5f5f
@@ -27,6 +34,11 @@ export function createWorldMapScene(Phaser: PhaserModule) {
 
   class WorldMapScene extends Scene {
     private roads: Phaser.Geom.Rectangle[] = []
+    private plots: WorldMapPlot[] = []
+    private nearbyPlot: WorldMapPlot | null = null
+    private nearbyPlotText!: Phaser.GameObjects.Text
+    private interactHintText!: Phaser.GameObjects.Text
+    private interactKey!: Phaser.Input.Keyboard.Key
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -52,6 +64,27 @@ export function createWorldMapScene(Phaser: PhaserModule) {
         throw new Error('Keyboard input is not available')
       }
       this.cursors = keyboard.createCursorKeys()
+      this.interactKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+
+      this.nearbyPlotText = this.add
+        .text(16, 16, '', {
+          fontSize: '16px',
+          color: '#ffffff',
+          stroke: '#111827',
+          strokeThickness: 4,
+        })
+        .setDepth(10)
+        .setScrollFactor(0)
+
+      this.interactHintText = this.add
+        .text(16, 40, '', {
+          fontSize: '14px',
+          color: '#fde68a',
+          stroke: '#111827',
+          strokeThickness: 4,
+        })
+        .setDepth(10)
+        .setScrollFactor(0)
     }
 
 
@@ -66,6 +99,7 @@ export function createWorldMapScene(Phaser: PhaserModule) {
       })
 
       updatePlayerAnimation(this.player, this.cursors)
+      this.updateNearbyPlotUI()
     }
 
     private createRoadNetwork(): void {
@@ -98,10 +132,59 @@ export function createWorldMapScene(Phaser: PhaserModule) {
         graphics.lineBetween(xCenter, 0, xCenter, MAP_HEIGHT)
       })
 
-      createPlotsAndRender(this, this.roads, horizontalRoads, verticalRoads)
+      this.plots = createPlotsAndRender(
+        this,
+        this.roads,
+        horizontalRoads,
+        verticalRoads,
+        options.existingPlotIds ?? new Set<string>()
+      )
+    }
+
+    private updateNearbyPlotUI(): void {
+      const playerX = this.player.x
+      const playerY = this.player.y
+
+      let nearestPlot: WorldMapPlot | null = null
+      let minDistance = Number.POSITIVE_INFINITY
+
+      for (const plot of this.plots) {
+        const distance = distancePointToRect(playerX, playerY, plot.rect)
+        if (distance < minDistance) {
+          minDistance = distance
+          nearestPlot = plot
+        }
+      }
+
+      if (!nearestPlot || minDistance > INSPECT_DISTANCE) {
+        this.nearbyPlot = null
+        this.nearbyPlotText.setText('')
+        this.interactHintText.setText('')
+        return
+      }
+
+      this.nearbyPlot = nearestPlot
+      this.nearbyPlotText.setText(`地块: ${nearestPlot.id}`)
+      this.interactHintText.setText(
+        nearestPlot.isExistingPlot ? '按空格查看详情' : '该地块暂无详情'
+      )
+
+      if (nearestPlot.isExistingPlot && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        options.onOpenExistingPlot?.(nearestPlot.id)
+      }
     }
 
   }
 
   return WorldMapScene
+}
+
+function distancePointToRect(px: number, py: number, rect: Phaser.Geom.Rectangle): number {
+  const closestX = clamp(px, rect.left, rect.right)
+  const closestY = clamp(py, rect.top, rect.bottom)
+  return Math.hypot(px - closestX, py - closestY)
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(value, max))
 }

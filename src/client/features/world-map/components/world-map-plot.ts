@@ -1,12 +1,19 @@
 import { MAP_HEIGHT, MAP_WIDTH, PLOT_HEIGHT, PLOT_WIDTH, ROAD_WIDTH } from '../constants'
 
+export type WorldMapPlot = {
+  id: string
+  rect: Phaser.Geom.Rectangle
+  isExistingPlot: boolean
+}
+
 // 在道路两侧生成地块，绘制地块与地块 id（P{row}-{col}）。
 export function createPlotsAndRender(
   scene: Phaser.Scene,
   roads: Phaser.Geom.Rectangle[],
   horizontalRoadCenters: number[],
-  verticalRoadCenters: number[]
-): void {
+  verticalRoadCenters: number[],
+  existingPlotIds: ReadonlySet<string>
+): WorldMapPlot[] {
   const plotGraphics = scene.add.graphics()
   const sideMargin = 28
   const plotGap = 12
@@ -49,6 +56,7 @@ export function createPlotsAndRender(
   const ySegments = pairToSegments(yBoundaries)
 
   const occupiedPlotRects: Phaser.Geom.Rectangle[] = []
+  const plots: WorldMapPlot[] = []
   const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: '14px',
     color: '#ffffff',
@@ -72,9 +80,15 @@ export function createPlotsAndRender(
     // 使用固定格式的地块 id，方便后续定位与交互。
     const plotId = `P${row}-${String(col).padStart(2, '0')}`
     occupiedPlotRects.push(plotRect)
-    plotGraphics.fillStyle(0x7db268, 0.95)
+    const isExistingPlot = existingPlotIds.has(plotId)
+    plots.push({
+      id: plotId,
+      rect: plotRect,
+      isExistingPlot,
+    })
+    plotGraphics.fillStyle(isExistingPlot ? 0xffffff : 0xe5e7eb, 0.95)
     plotGraphics.fillRect(plotX, plotY, PLOT_WIDTH, PLOT_HEIGHT)
-    plotGraphics.lineStyle(2, 0x2f5a2a, 0.6)
+    plotGraphics.lineStyle(2, 0xd1d5db, 0.95)
     plotGraphics.strokeRect(plotX, plotY, PLOT_WIDTH, PLOT_HEIGHT)
 
     scene.add
@@ -126,6 +140,8 @@ export function createPlotsAndRender(
       }
     }
   }
+
+  return plots
 }
 
 // 边界数组按“起点-终点”两两配对为区间。
