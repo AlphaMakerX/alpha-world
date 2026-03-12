@@ -1,23 +1,31 @@
 "use client";
 
-import { Button, Modal, message } from "antd";
+import { Modal, message } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createWorldMapScene } from "./world-map-scene";
+import { WorldMapHeader } from "./world-map-header";
 import { trpc } from "@/client/lib/trpc";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { AuthPanel } from "@/client/features/auth/components/auth-panel";
+import { PlotDetailModal } from "./plot-detail-modal";
 
 
 export function WorldMap() {
-  const { status: authStatus } = useSession();
+  const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
   const [messageApi, contextHolder] = message.useMessage();
   const trpcUtils = trpc.useUtils();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<import("phaser").Game | null>(null);
   const { data } = trpc.plot.list.useQuery();
+  const { data: meData } = trpc.person.me.useQuery(undefined, {
+    enabled: authStatus === "authenticated",
+  });
   const purchaseMutation = trpc.plot.purchase.useMutation();
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   type PlotItem = NonNullable<typeof data>["plots"][number];
 
   const existingPlotIds = new Set(
@@ -33,6 +41,9 @@ export function WorldMap() {
   }, [data?.plots]);
   const selectedPlot = selectedPlotId ? plotById.get(selectedPlotId) : undefined;
   const canPurchaseSelectedPlot = Boolean(selectedPlot?.ownerUserId == null);
+  const headerUsername =
+    authStatus === "authenticated" ? (meData?.user.username ?? session?.user?.name ?? undefined) : undefined;
+  const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
 
   const handlePurchase = async () => {
     if (!selectedPlot) {
@@ -45,11 +56,23 @@ export function WorldMap() {
 
     try {
       await purchaseMutation.mutateAsync({ plotId: selectedPlot.id });
-      await trpcUtils.plot.list.invalidate();
+      await Promise.all([trpcUtils.plot.list.invalidate(), trpcUtils.person.me.invalidate()]);
       messageApi.success("购买成功");
       setSelectedPlotId(null);
     } catch (error) {
       messageApi.error(error instanceof Error ? error.message : "购买失败，请稍后重试");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      await signOut({ redirect: false });
+      await Promise.all([trpcUtils.person.me.invalidate(), trpcUtils.plot.list.invalidate()]);
+      router.refresh();
+      messageApi.success("已登出");
+    } finally {
+      setLogoutLoading(false);
     }
   };
 
@@ -111,44 +134,37 @@ export function WorldMap() {
   }, [existingPlotIdsKey]);
 
   return (
-    <section className="h-dvh w-screen">
+    <section className="flex h-dvh w-screen flex-col">
       {contextHolder}
+      <WorldMapHeader
+        authStatus={authStatus}
+        username={headerUsername}
+        money={headerMoney}
+        onLoginClick={() => setLoginModalOpen(true)}
+        onLogoutClick={() => void handleLogout()}
+        logoutLoading={logoutLoading}
+      />
       <div
         ref={containerRef}
-        className="h-full w-full overflow-hidden bg-slate-100"
+        className="min-h-0 w-full flex-1 overflow-hidden bg-slate-100"
       />
-      <Modal
-        title={selectedPlotId ? `地块详情 - ${selectedPlotId}` : "地块详情"}
-        open={Boolean(selectedPlot)}
-        onCancel={() => setSelectedPlotId(null)}
-        footer={[
-          <Button key="close" onClick={() => setSelectedPlotId(null)}>
-            关闭
-          </Button>,
-          ...(canPurchaseSelectedPlot
-            ? [
-                <Button
-                  key="purchase"
-                  type="primary"
-                  loading={purchaseMutation.isPending}
-                  onClick={() => void handlePurchase()}
-                >
-                  购买
-                </Button>,
-              ]
-            : []),
-        ]}
-        destroyOnHidden
-      >
-        {selectedPlot ? (
-          <div className="space-y-2 text-sm text-slate-700">
-            <p>地块数据库 ID: {selectedPlot.id}</p>
-            <p>状态: {selectedPlot.status}</p>
-            <p>价格: {selectedPlot.price}</p>
-            <p>拥有者: {selectedPlot.ownerUserId ?? "无"}</p>
-          </div>
-        ) : null}
-      </Modal>
+      <PlotDetailModal
+        selectedPlotId={selectedPlotId}
+        selectedPlot={
+          selectedPlot
+            ? {
+                id: String(selectedPlot.id),
+                status: String(selectedPlot.status),
+                price: selectedPlot.price,
+                ownerUserId: selectedPlot.ownerUserId,
+              }
+            : undefined
+        }
+        canPurchaseSelectedPlot={canPurchaseSelectedPlot}
+        purchaseLoading={purchaseMutation.isPending}
+        onClose={() => setSelectedPlotId(null)}
+        onPurchase={() => void handlePurchase()}
+      />
       <Modal
         title="登录后可购买地块"
         open={loginModalOpen}

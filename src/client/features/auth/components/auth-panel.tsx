@@ -59,7 +59,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps = {}) {
     return (
       <div>
         {contextHolder}
-        <Space direction="vertical" size={12} className="w-full">
+        <Space orientation="vertical" size={12} className="w-full">
           <Typography.Title level={4} style={{ margin: 0 }}>
             已登录
           </Typography.Title>

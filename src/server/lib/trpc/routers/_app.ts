@@ -8,6 +8,7 @@ import {
   executeListPlotsUseCase,
   executePurchasePlotUseCase,
 } from "@/server/features/plot/application";
+import { executeGetCurrentUserUseCase } from "@/server/features/person/application";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -79,6 +80,19 @@ export const appRouter = createTRPCRouter({
 
         return result;
       }),
+  }),
+  person: createTRPCRouter({
+    me: protectedProcedure.query(async ({ ctx }) => {
+      const result = await executeGetCurrentUserUseCase({ userId: ctx.userId });
+      if (!result.ok) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: result.error,
+        });
+      }
+
+      return result;
+    }),
   }),
 });
 
