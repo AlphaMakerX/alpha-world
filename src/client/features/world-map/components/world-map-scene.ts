@@ -43,6 +43,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
   const BACKGROUND_COLOR = '#71b35f'
   const ROAD_COLOR = 0x5f5f5f
   const LANE_MARK_COLOR = 0xeedc82
+  const HORIZONTAL_ROAD_CENTERS = [MAP_HEIGHT / 2, MAP_HEIGHT / 4]
+  const VERTICAL_ROAD_CENTERS_IN_MAP = VERTICAL_ROAD_CENTERS
 
   class WorldMapScene extends Scene {
     private roads: Phaser.Geom.Rectangle[] = []
@@ -70,6 +72,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     create() {
       this.cameras.main.setBackgroundColor(BACKGROUND_COLOR)
       this.createRoadNetwork()
+      this.renderPlots()
       createPlayerAnimations(this)
       this.player = createPlayer(this)
 
@@ -139,17 +142,15 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
 
     private createRoadNetwork(): void {
       const graphics = this.add.graphics()
-      const horizontalRoads = [MAP_HEIGHT / 2, MAP_HEIGHT / 4]
-      const verticalRoads = VERTICAL_ROAD_CENTERS
 
       this.roads = []
 
       // 先构建道路碰撞几何，绘制与碰撞共享同一份数据。
-      horizontalRoads.forEach((yCenter) => {
+      HORIZONTAL_ROAD_CENTERS.forEach((yCenter) => {
         this.roads.push(new Geom.Rectangle(0, yCenter - ROAD_WIDTH / 2, MAP_WIDTH, ROAD_WIDTH))
       })
 
-      verticalRoads.forEach((xCenter) => {
+      VERTICAL_ROAD_CENTERS_IN_MAP.forEach((xCenter) => {
         this.roads.push(new Geom.Rectangle(xCenter - ROAD_WIDTH / 2, 0, ROAD_WIDTH, MAP_HEIGHT))
       })
 
@@ -160,17 +161,15 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
 
       // 车道线仅用于视觉引导，不参与碰撞判定。
       graphics.lineStyle(3, LANE_MARK_COLOR, 0.75)
-      horizontalRoads.forEach((yCenter) => {
+      HORIZONTAL_ROAD_CENTERS.forEach((yCenter) => {
         graphics.lineBetween(0, yCenter, MAP_WIDTH, yCenter)
       })
-      verticalRoads.forEach((xCenter) => {
+      VERTICAL_ROAD_CENTERS_IN_MAP.forEach((xCenter) => {
         graphics.lineBetween(xCenter, 0, xCenter, MAP_HEIGHT)
       })
-
-      this.renderPlots(horizontalRoads, verticalRoads)
     }
 
-    private renderPlots(horizontalRoads: number[], verticalRoads: number[]): void {
+    private renderPlots(): void {
       this.plotRenderObjects.forEach((object) => {
         object.destroy()
       })
@@ -179,8 +178,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       const renderResult: PlotRenderResult = createPlotsAndRender(
         this,
         this.roads,
-        horizontalRoads,
-        verticalRoads,
+        HORIZONTAL_ROAD_CENTERS,
+        VERTICAL_ROAD_CENTERS_IN_MAP,
         this.existingPlotIds,
         this.highlightedPlotIds,
         this.buildingTypeByPlotId
@@ -193,10 +192,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.existingPlotIds = payload.existingPlotIds
       this.highlightedPlotIds = payload.highlightedPlotIds
       this.buildingTypeByPlotId = payload.buildingTypeByPlotId
-
-      const horizontalRoads = [MAP_HEIGHT / 2, MAP_HEIGHT / 4]
-      const verticalRoads = VERTICAL_ROAD_CENTERS
-      this.renderPlots(horizontalRoads, verticalRoads)
+      this.renderPlots()
     }
 
     private updateNearbyPlotUI(): void {

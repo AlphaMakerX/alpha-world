@@ -1,5 +1,7 @@
-import { Button } from "antd";
-import type { FactoryOrders, FactoryOrderStatus, FactoryRecipe } from "@/client/features/building/types/building-ui";
+import { Button, Popconfirm } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import type { FactoryOrders, FactoryRecipe } from "@/client/features/building/types/building-ui";
+import { FactoryOrdersSection } from "@/client/features/factory-orders/components/factory-orders-section";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
 type BuildingActionSectionProps = {
@@ -11,26 +13,6 @@ type BuildingActionSectionProps = {
   onStartProduction: (recipeId: string) => void;
 };
 
-const factoryOrderStatusLabelByValue: Record<FactoryOrderStatus, string> = {
-  in_progress: "进行中",
-  collected: "已收取",
-  cancelled: "已取消",
-};
-
-const formatDateTime = (value: Date | string | null) => {
-  if (!value) {
-    return "无";
-  }
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "无";
-  }
-  return date.toLocaleString("zh-CN");
-};
-
-const formatItemStacks = (items: Array<{ itemKey: string; quantity: number }>) =>
-  items.length ? items.map((item) => `${item.itemKey} x${item.quantity}`).join("，") : "无";
-
 export function BuildingActionSection({
   building,
   shouldShowFactoryRecipeList,
@@ -39,6 +21,27 @@ export function BuildingActionSection({
   productionLoading,
   onStartProduction,
 }: BuildingActionSectionProps) {
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const selectedRecipe = useMemo(
+    () => factoryRecipes.find((recipe) => recipe.id === selectedRecipeId) ?? null,
+    [factoryRecipes, selectedRecipeId],
+  );
+
+  useEffect(() => {
+    if (!factoryRecipes.length) {
+      setSelectedRecipeId(null);
+      return;
+    }
+    if (!selectedRecipeId) {
+      setSelectedRecipeId(factoryRecipes[0]?.id ?? null);
+      return;
+    }
+    const exists = factoryRecipes.some((recipe) => recipe.id === selectedRecipeId);
+    if (!exists) {
+      setSelectedRecipeId(factoryRecipes[0]?.id ?? null);
+    }
+  }, [factoryRecipes, selectedRecipeId]);
+
   return (
     <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
       <p className="font-medium text-slate-800">建筑操作</p>
@@ -46,59 +49,95 @@ export function BuildingActionSection({
         <div className="space-y-2">
           <p className="font-medium text-slate-800">工厂制造清单</p>
           {factoryRecipes.length ? (
-            <div className="space-y-2">
-              {factoryRecipes.map((recipe) => (
-                <Button
-                  key={recipe.id}
-                  block
-                  onClick={() => onStartProduction(recipe.id)}
-                  loading={productionLoading}
-                  disabled={productionLoading}
-                >
-                  {recipe.name}（{recipe.durationSeconds} 秒）
-                </Button>
-              ))}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-2">
+                <p className="px-1 text-xs font-medium tracking-wide text-slate-500">选择配方</p>
+                {factoryRecipes.map((recipe) => {
+                  const isSelected = selectedRecipeId === recipe.id;
+                  return (
+                    <button
+                      key={recipe.id}
+                      type="button"
+                      onClick={() => setSelectedRecipeId(recipe.id)}
+                      className={[
+                        "w-full rounded-md border px-3 py-2 text-left transition",
+                        "hover:-translate-y-0.5 hover:border-slate-400",
+                        isSelected
+                          ? "border-blue-400 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-sm"
+                          : "border-slate-200 bg-slate-50 hover:bg-white",
+                      ].join(" ")}
+                      disabled={productionLoading}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium text-slate-800">{recipe.name}</p>
+                        <span
+                          className={[
+                            "rounded-full px-2 py-0.5 text-[11px]",
+                            isSelected ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600",
+                          ].join(" ")}
+                        >
+                          {recipe.durationSeconds}s
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="space-y-3 rounded-lg border border-blue-100 bg-gradient-to-b from-white to-blue-50/40 p-3">
+                {selectedRecipe ? (
+                  <>
+                    <div className="rounded-md border border-blue-200 bg-white/80 p-2">
+                      <p className="font-medium text-slate-800">{selectedRecipe.name}</p>
+                      <p className="text-xs text-slate-500">制造耗时 {selectedRecipe.durationSeconds} 秒</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="space-y-1 rounded-md border border-amber-100 bg-amber-50/70 p-2 text-xs text-slate-700">
+                        <p className="font-medium text-amber-700">所需材料</p>
+                        {selectedRecipe.inputs.length ? (
+                          selectedRecipe.inputs.map((input) => (
+                            <p key={`${selectedRecipe.id}-${input.itemKey}`}>
+                              {input.itemKey} x{input.quantity}
+                            </p>
+                          ))
+                        ) : (
+                          <p>无</p>
+                        )}
+                      </div>
+                      <div className="space-y-1 rounded-md border border-emerald-100 bg-emerald-50/70 p-2 text-xs text-slate-700">
+                        <p className="font-medium text-emerald-700">产出预览</p>
+                        {selectedRecipe.outputs.length ? (
+                          selectedRecipe.outputs.map((output) => (
+                            <p key={`${selectedRecipe.id}-${output.itemKey}`}>
+                              {output.itemKey} x{output.quantity}
+                            </p>
+                          ))
+                        ) : (
+                          <p>无</p>
+                        )}
+                      </div>
+                    </div>
+                    <Popconfirm
+                      title={`确认制造「${selectedRecipe.name}」吗？`}
+                      description="确认后会立即生成制造订单并扣除对应材料。"
+                      okText="确认制造"
+                      cancelText="取消"
+                      onConfirm={() => onStartProduction(selectedRecipe.id)}
+                      disabled={productionLoading}
+                    >
+                      <Button type="primary" block loading={productionLoading} disabled={productionLoading}>
+                        制造
+                      </Button>
+                    </Popconfirm>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500">请选择一个配方以查看材料并制造</p>
+                )}
+              </div>
             </div>
           ) : (
             <p className="text-slate-500">暂无可用配方</p>
           )}
-          <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-            <p className="font-medium text-slate-800">重点订单</p>
-            {factoryOrders?.focusOrder ? (
-              <div className="space-y-1 text-xs text-slate-700">
-                <p>订单 ID: {factoryOrders.focusOrder.id}</p>
-                <p>配方: {factoryOrders.focusOrder.recipeId}</p>
-                <p>状态: {factoryOrderStatusLabelByValue[factoryOrders.focusOrder.status]}</p>
-                <p>开始时间: {formatDateTime(factoryOrders.focusOrder.startedAt)}</p>
-                <p>完成时间: {formatDateTime(factoryOrders.focusOrder.finishAt)}</p>
-                <p>投入: {formatItemStacks(factoryOrders.focusOrder.inputs)}</p>
-                <p>产出: {formatItemStacks(factoryOrders.focusOrder.outputs)}</p>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">当前没有进行中的重点订单</p>
-            )}
-          </div>
-          <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-            <p className="font-medium text-slate-800">历史订单</p>
-            {factoryOrders?.historyOrders.length ? (
-              <div className="max-h-48 space-y-2 overflow-y-auto pr-1 text-xs text-slate-700">
-                {factoryOrders.historyOrders.map((order) => (
-                  <div key={order.id} className="rounded border border-slate-200 p-2">
-                    <p>订单 ID: {order.id}</p>
-                    <p>配方: {order.recipeId}</p>
-                    <p>状态: {factoryOrderStatusLabelByValue[order.status]}</p>
-                    <p>开始时间: {formatDateTime(order.startedAt)}</p>
-                    <p>完成时间: {formatDateTime(order.finishAt)}</p>
-                    <p>收取时间: {formatDateTime(order.collectedAt)}</p>
-                    <p>投入: {formatItemStacks(order.inputs)}</p>
-                    <p>产出: {formatItemStacks(order.outputs)}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">暂无历史订单</p>
-            )}
-          </div>
+          <FactoryOrdersSection factoryOrders={factoryOrders} />
         </div>
       ) : building ? (
         <p className="text-slate-500">当前建筑暂无可用操作</p>

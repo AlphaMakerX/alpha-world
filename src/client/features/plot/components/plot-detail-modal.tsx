@@ -1,11 +1,11 @@
 "use client";
 
-import { Modal } from "antd";
 import { useEffect, useState } from "react";
 import { PlotDetailSection } from "./plot-detail-section";
 import { PlotActionSection } from "./plot-action-section";
 import { BuildingDetailSection } from "@/client/features/building/components/building-detail-section";
 import { BuildingActionSection } from "@/client/features/building/components/building-action-section";
+import { DraggableModal } from "@/client/components/draggable-modal";
 import type { PlotDetailModalProps } from "./plot-detail-modal.types";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
 import { getBuildingCapabilities } from "@/client/features/building/model/building-capabilities";
@@ -52,12 +52,18 @@ export function PlotDetailModal({
   }, [buildLoading]);
 
   return (
-    <Modal
+    <DraggableModal
       title={selectedPlotId ? `${selectedPlotId}` : "地块详情"}
       open={Boolean(selectedPlot)}
       onCancel={onClose}
       footer={null}
       destroyOnHidden
+      styles={{
+        body: {
+          height: 620,
+          overflowY: "auto",
+        },
+      }}
     >
       {selectedPlot ? (
         <div className="space-y-3 text-sm text-slate-700">
@@ -88,6 +94,6 @@ export function PlotDetailModal({
           />
         </div>
       ) : null}
-    </Modal>
+    </DraggableModal>
   );
 }
