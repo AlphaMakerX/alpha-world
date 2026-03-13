@@ -8,23 +8,24 @@ import {
   SCENE_KEY,
   VERTICAL_ROAD_CENTERS,
 } from '../constants'
-import { createPlotsAndRender } from './world-map-plot'
-import { movePlayerByCursorsOnRoads } from './world-map-movement'
+import { createPlotsAndRender } from '../rendering/world-map-plot'
+import { movePlayerByCursorsOnRoads } from '../gameplay/world-map-movement'
 import {
   createPlayer,
   createPlayerAnimations,
   preloadPlayerAssets,
   type PlayerSprite,
   updatePlayerAnimation,
-} from './world-map-player'
-import type { PlotBuildingType, PlotRenderResult, WorldMapPlot } from './world-map-plot'
+} from '../gameplay/world-map-player'
+import type { BuildingType } from '@/client/features/building/types/building-ui'
+import type { PlotRenderResult, WorldMapPlot } from '../rendering/world-map-plot'
 
 type PhaserModule = typeof import('phaser')
 
 type WorldMapSceneOptions = {
   existingPlotIds?: ReadonlySet<string>
   highlightedPlotIds?: ReadonlySet<string>
-  buildingTypeByPlotId?: ReadonlyMap<string, PlotBuildingType>
+  buildingTypeByPlotId?: ReadonlyMap<string, BuildingType>
   onOpenExistingPlot?: (plotId: string) => void
   onSceneReady?: () => void
 }
@@ -34,7 +35,7 @@ export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
 type SyncMapDataPayload = {
   existingPlotIds: ReadonlySet<string>
   highlightedPlotIds: ReadonlySet<string>
-  buildingTypeByPlotId: ReadonlyMap<string, PlotBuildingType>
+  buildingTypeByPlotId: ReadonlyMap<string, BuildingType>
 }
 
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
@@ -53,8 +54,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     private interactKey!: Phaser.Input.Keyboard.Key
     private existingPlotIds: ReadonlySet<string> = options.existingPlotIds ?? new Set<string>()
     private highlightedPlotIds: ReadonlySet<string> = options.highlightedPlotIds ?? new Set<string>()
-    private buildingTypeByPlotId: ReadonlyMap<string, PlotBuildingType> =
-      options.buildingTypeByPlotId ?? new Map<string, PlotBuildingType>()
+    private buildingTypeByPlotId: ReadonlyMap<string, BuildingType> =
+      options.buildingTypeByPlotId ?? new Map<string, BuildingType>()
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -221,7 +222,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       }
 
       this.nearbyPlot = nearestPlot
-      const buildingLabelByType: Record<PlotBuildingType, string> = {
+      const buildingLabelByType: Record<BuildingType, string> = {
         residential: '住宅',
         factory: '工厂',
         shop: '商店',

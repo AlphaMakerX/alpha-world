@@ -1,13 +1,13 @@
 import { MAP_HEIGHT, MAP_WIDTH, PLOT_HEIGHT, PLOT_WIDTH, ROAD_WIDTH } from '../constants'
-
-export type PlotBuildingType = 'residential' | 'factory' | 'shop'
+import type { BuildingType } from '@/client/features/building/types/building-ui'
+import { drawBuildingByType, getBuildingVisualConfig } from './world-map-building'
 
 export type WorldMapPlot = {
   id: string
   rect: Phaser.Geom.Rectangle
   isExistingPlot: boolean
   isHighlighted: boolean
-  buildingType?: PlotBuildingType
+  buildingType?: BuildingType
 }
 
 export type PlotRenderResult = {
@@ -23,7 +23,7 @@ export function createPlotsAndRender(
   verticalRoadCenters: number[],
   existingPlotIds: ReadonlySet<string>,
   highlightedPlotIds: ReadonlySet<string>,
-  buildingTypeByPlotId: ReadonlyMap<string, PlotBuildingType>
+  buildingTypeByPlotId: ReadonlyMap<string, BuildingType>
 ): PlotRenderResult {
   const plotGraphics = scene.add.graphics()
   const renderObjects: Phaser.GameObjects.GameObject[] = [plotGraphics]
@@ -70,10 +70,11 @@ export function createPlotsAndRender(
   const occupiedPlotRects: Phaser.Geom.Rectangle[] = []
   const plots: WorldMapPlot[] = []
   const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: '14px',
+    fontSize: '11px',
     color: '#ffffff',
     stroke: '#222222',
     strokeThickness: 3,
+    fontStyle: 'bold',
   }
 
   const placePlot = (plotX: number, plotY: number, row: number, col: number): void => {
@@ -102,25 +103,44 @@ export function createPlotsAndRender(
       isHighlighted,
       buildingType,
     })
+    const buildingVisual = buildingType ? getBuildingVisualConfig(buildingType) : null
     const fillColor = isHighlighted
       ? 0xfde047
-      : buildingType
-        ? 0xfef3c7
+      : buildingVisual
+        ? buildingVisual.plotFillColor
         : isExistingPlot
           ? 0xffffff
           : 0xe5e7eb
-    plotGraphics.fillStyle(fillColor, 0.95)
+    const borderColor = isHighlighted
+      ? 0xf59e0b
+      : buildingVisual
+        ? buildingVisual.plotBorderColor
+        : 0xd1d5db
+    plotGraphics.fillStyle(fillColor, 0.96)
     plotGraphics.fillRect(plotX, plotY, PLOT_WIDTH, PLOT_HEIGHT)
-    plotGraphics.lineStyle(2, 0xd1d5db, 0.95)
+    plotGraphics.lineStyle(2, borderColor, 0.98)
     plotGraphics.strokeRect(plotX, plotY, PLOT_WIDTH, PLOT_HEIGHT)
-    if (buildingType) {
+    if (buildingType && buildingVisual) {
       drawBuildingByType(plotGraphics, plotX, plotY, buildingType)
+      const badgeText = scene.add
+        .text(plotX + PLOT_WIDTH / 2, plotY + 12, buildingVisual.label, {
+          fontSize: '10px',
+          fontStyle: 'bold',
+          color: buildingVisual.badgeTextColor,
+          backgroundColor: buildingVisual.badgeBackgroundColor,
+          stroke: buildingVisual.badgeBorderColor,
+          strokeThickness: 1,
+          padding: { x: 4, y: 1 },
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(4)
+      renderObjects.push(badgeText)
     }
 
     const plotText = scene.add
-      .text(plotX + PLOT_WIDTH / 2, plotY + PLOT_HEIGHT / 2, plotId, textStyle)
-      .setOrigin(0.5)
-      .setDepth(2)
+      .text(plotX + 6, plotY + PLOT_HEIGHT - 5, plotId, textStyle)
+      .setOrigin(0, 1)
+      .setDepth(3)
     renderObjects.push(plotText)
   }
 
@@ -169,100 +189,6 @@ export function createPlotsAndRender(
   }
 
   return { plots, renderObjects }
-}
-
-function drawBuildingByType(
-  graphics: Phaser.GameObjects.Graphics,
-  plotX: number,
-  plotY: number,
-  buildingType: PlotBuildingType
-): void {
-  if (buildingType === 'residential') {
-    drawResidentialBuilding(graphics, plotX, plotY)
-    return
-  }
-  if (buildingType === 'factory') {
-    drawFactoryBuilding(graphics, plotX, plotY)
-    return
-  }
-  drawShopBuilding(graphics, plotX, plotY)
-}
-
-function drawResidentialBuilding(
-  graphics: Phaser.GameObjects.Graphics,
-  plotX: number,
-  plotY: number
-): void {
-  const bodyWidth = PLOT_WIDTH * 0.45
-  const bodyHeight = PLOT_HEIGHT * 0.34
-  const bodyX = plotX + (PLOT_WIDTH - bodyWidth) / 2
-  const bodyY = plotY + PLOT_HEIGHT * 0.50
-  const roofTopY = plotY + PLOT_HEIGHT * 0.24
-
-  graphics.fillStyle(0x7dd3fc, 1)
-  graphics.fillRect(bodyX, bodyY, bodyWidth, bodyHeight)
-  graphics.lineStyle(2, 0x075985, 0.9)
-  graphics.strokeRect(bodyX, bodyY, bodyWidth, bodyHeight)
-
-  graphics.fillStyle(0xef4444, 1)
-  graphics.fillTriangle(
-    bodyX - 3,
-    bodyY,
-    bodyX + bodyWidth + 3,
-    bodyY,
-    bodyX + bodyWidth / 2,
-    roofTopY
-  )
-}
-
-function drawFactoryBuilding(
-  graphics: Phaser.GameObjects.Graphics,
-  plotX: number,
-  plotY: number
-): void {
-  const baseWidth = PLOT_WIDTH * 0.56
-  const baseHeight = PLOT_HEIGHT * 0.32
-  const baseX = plotX + (PLOT_WIDTH - baseWidth) / 2
-  const baseY = plotY + PLOT_HEIGHT * 0.52
-  const chimneyWidth = PLOT_WIDTH * 0.12
-  const chimneyHeight = PLOT_HEIGHT * 0.28
-  const chimneyX = baseX + baseWidth - chimneyWidth - 4
-  const chimneyY = baseY - chimneyHeight + 2
-
-  graphics.fillStyle(0x9ca3af, 1)
-  graphics.fillRect(baseX, baseY, baseWidth, baseHeight)
-  graphics.fillStyle(0x6b7280, 1)
-  graphics.fillRect(chimneyX, chimneyY, chimneyWidth, chimneyHeight)
-  graphics.lineStyle(2, 0x374151, 0.95)
-  graphics.strokeRect(baseX, baseY, baseWidth, baseHeight)
-  graphics.strokeRect(chimneyX, chimneyY, chimneyWidth, chimneyHeight)
-}
-
-function drawShopBuilding(
-  graphics: Phaser.GameObjects.Graphics,
-  plotX: number,
-  plotY: number
-): void {
-  const baseWidth = PLOT_WIDTH * 0.52
-  const baseHeight = PLOT_HEIGHT * 0.30
-  const baseX = plotX + (PLOT_WIDTH - baseWidth) / 2
-  const baseY = plotY + PLOT_HEIGHT * 0.54
-  const awningHeight = PLOT_HEIGHT * 0.10
-  const awningY = baseY - awningHeight
-  const stripeWidth = baseWidth / 4
-
-  graphics.fillStyle(0xf59e0b, 1)
-  graphics.fillRect(baseX, baseY, baseWidth, baseHeight)
-  graphics.lineStyle(2, 0x92400e, 0.95)
-  graphics.strokeRect(baseX, baseY, baseWidth, baseHeight)
-
-  for (let i = 0; i < 4; i += 1) {
-    const stripeX = baseX + stripeWidth * i
-    graphics.fillStyle(i % 2 === 0 ? 0xffffff : 0xfb923c, 1)
-    graphics.fillRect(stripeX, awningY, stripeWidth, awningHeight)
-  }
-  graphics.lineStyle(1.5, 0x9a3412, 0.9)
-  graphics.strokeRect(baseX, awningY, baseWidth, awningHeight)
 }
 
 // 边界数组按“起点-终点”两两配对为区间。

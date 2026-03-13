@@ -1,11 +1,13 @@
 "use client";
 
 import { Button } from "antd";
+import type { AuthStatus } from "@/client/types/auth-ui";
 
 type WorldMapHeaderProps = {
-  authStatus: "authenticated" | "loading" | "unauthenticated";
+  authStatus: AuthStatus;
   username?: string;
   money?: number;
+  onOpenProfileClick: () => void;
   onOpenInventoryClick: () => void;
   onLoginClick: () => void;
   onLogoutClick: () => void;
@@ -16,6 +18,7 @@ export function WorldMapHeader({
   authStatus,
   username,
   money,
+  onOpenProfileClick,
   onOpenInventoryClick,
   onLoginClick,
   onLogoutClick,
@@ -46,9 +49,13 @@ export function WorldMapHeader({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
         {isAuthenticated ? (
           <div className="relative z-[1] flex h-full items-center gap-2">
-            <span className="rounded-full border border-orange-300 bg-orange-50 px-3 py-0.5 text-sm font-semibold tracking-wide tabular-nums text-orange-800">
+            <button
+              type="button"
+              className="h-7 cursor-pointer rounded-full border border-orange-300 bg-orange-50 px-3 py-0.5 text-sm font-semibold tracking-wide tabular-nums text-orange-800 transition-colors duration-200 motion-reduce:transition-none hover:border-orange-400 hover:bg-orange-100 hover:text-orange-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70 focus-visible:ring-offset-1"
+              onClick={() => void onOpenProfileClick()}
+            >
               余额 · {displayMoney}
-            </span>
+            </button>
             <Button
               size="small"
               className="!h-7 !cursor-pointer !rounded-full !border-violet-300 !bg-violet-50 !px-3 !font-medium !text-violet-700 !transition-colors !duration-200 motion-reduce:!transition-none hover:!border-violet-400 hover:!bg-violet-100 hover:!text-violet-800 focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-violet-400/70 focus-visible:!ring-offset-1"

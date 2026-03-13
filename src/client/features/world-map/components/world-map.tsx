@@ -8,9 +8,13 @@ import { trpc } from "@/client/lib/trpc";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AuthPanel } from "@/client/features/auth/components/auth-panel";
-import { PlotDetailModal } from "./plot-detail-modal";
-
-type BuildingType = "residential" | "factory" | "shop";
+import { PlotDetailModal } from "@/client/features/plot/components/plot-detail-modal";
+import { PersonDetailModal } from "@/client/features/person/components/person-detail-modal";
+import { InventoryModal } from "@/client/features/inventory/components/inventory-modal";
+import { getBuildingCapabilities } from "@/client/features/building/model/building-capabilities";
+import type { BuildingType } from "@/client/features/building/types/building-ui";
+import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilities";
+import type { Plot } from "@/client/features/plot/types/plot-ui";
 
 export function WorldMap() {
   const router = useRouter();
@@ -30,9 +34,8 @@ export function WorldMap() {
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [personModalOpen, setPersonModalOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
-  type PlotItem = NonNullable<typeof data>["plots"][number];
-
   const existingPlotIds = useMemo(
     () =>
       new Set((data?.plots ?? []).map((plot) => `P${plot.x}-${String(plot.y).padStart(2, "0")}`)),
@@ -81,7 +84,7 @@ export function WorldMap() {
     [buildingTypeByPlotId],
   );
   const plotById = useMemo(() => {
-    const map = new Map<string, PlotItem>();
+    const map = new Map<string, Plot>();
     for (const plot of data?.plots ?? []) {
       map.set(`P${plot.x}-${String(plot.y).padStart(2, "0")}`, plot);
     }
@@ -89,11 +92,12 @@ export function WorldMap() {
   }, [data?.plots]);
   const selectedPlot = selectedPlotId ? plotById.get(selectedPlotId) : undefined;
   const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
-  const hasBuildingOnSelectedPlot = Boolean(selectedPlot?.building);
-  const canManageSelectedPlot = Boolean(selectedPlot && currentUserId && selectedPlot.ownerUserId === currentUserId);
-  const shouldFetchFactoryRecipes = Boolean(
-    selectedPlot?.building?.type === "factory" && canManageSelectedPlot,
+  const selectedPlotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
+  const selectedBuildingCapabilities = getBuildingCapabilities(
+    selectedPlot?.building,
+    selectedPlotCapabilities.isOwner,
   );
+  const shouldFetchFactoryRecipes = selectedBuildingCapabilities.canManageFactory;
   const selectedFactoryBuildingId =
     selectedPlot?.building?.type === "factory" ? selectedPlot.building.id : undefined;
   const { data: factoryRecipesData } = trpc.building.factoryRecipes.useQuery(undefined, {
@@ -102,7 +106,7 @@ export function WorldMap() {
   const { data: factoryOrdersData } = trpc.building.factoryOrders.useQuery(
     { buildingId: selectedFactoryBuildingId ?? 0 },
     {
-      enabled: Boolean(selectedFactoryBuildingId && canManageSelectedPlot),
+      enabled: Boolean(selectedFactoryBuildingId && selectedBuildingCapabilities.canManageFactory),
       refetchInterval: 3000,
     },
   );
@@ -116,6 +120,18 @@ export function WorldMap() {
   const headerUsername =
     authStatus === "authenticated" ? (meData?.user.username ?? session?.user?.name ?? undefined) : undefined;
   const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
+  const myPlotCount = useMemo(() => {
+    if (!currentUserId) {
+      return 0;
+    }
+    return (data?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId).length;
+  }, [currentUserId, data?.plots]);
+  const myBuildingCount = useMemo(() => {
+    if (!currentUserId) {
+      return 0;
+    }
+    return (data?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId && Boolean(plot.building)).length;
+  }, [currentUserId, data?.plots]);
 
   const handlePurchase = async () => {
     if (!selectedPlot) {
@@ -148,7 +164,7 @@ export function WorldMap() {
     }
   };
 
-  const handleBuild = async (buildingType: "residential" | "factory" | "shop") => {
+  const handleBuild = async (buildingType: BuildingType) => {
     if (!selectedPlot) {
       return;
     }
@@ -178,11 +194,11 @@ export function WorldMap() {
       setLoginModalOpen(true);
       return;
     }
-    if (selectedPlot.ownerUserId !== currentUserId) {
+    if (!selectedPlotCapabilities.isOwner) {
       messageApi.error("只能操作自己地块上的工厂");
       return;
     }
-    if (selectedPlot.building.type !== "factory") {
+    if (!selectedBuildingCapabilities.isFactory) {
       messageApi.error("当前建筑不是工厂");
       return;
     }
@@ -294,6 +310,13 @@ export function WorldMap() {
         authStatus={authStatus}
         username={headerUsername}
         money={headerMoney}
+        onOpenProfileClick={() => {
+          if (authStatus !== "authenticated") {
+            setLoginModalOpen(true);
+            return;
+          }
+          setPersonModalOpen(true);
+        }}
         onOpenInventoryClick={() => {
           setInventoryModalOpen(true);
           void refetchInventory();
@@ -309,68 +332,33 @@ export function WorldMap() {
       <PlotDetailModal
         selectedPlotId={selectedPlotId}
         currentUserId={currentUserId}
-        selectedPlot={
-          selectedPlot
-            ? {
-                id: String(selectedPlot.id),
-                status: String(selectedPlot.status),
-                price: selectedPlot.price,
-                ownerUserId: selectedPlot.ownerUserId,
-                hasBuilding: hasBuildingOnSelectedPlot,
-                building: selectedPlot.building
-                  ? {
-                      id: String(selectedPlot.building.id),
-                      type: selectedPlot.building.type,
-                      status: selectedPlot.building.status,
-                    }
-                  : null,
-              }
-            : undefined
-        }
+        selectedPlot={selectedPlot}
         purchaseLoading={purchaseMutation.isPending}
         buildLoading={buildMutation.isPending}
         factoryRecipes={factoryRecipesData?.recipes ?? []}
-        factoryOrders={
-          factoryOrdersData
-            ? {
-                focusOrder: factoryOrdersData.focusOrder,
-                historyOrders: factoryOrdersData.historyOrders,
-              }
-            : undefined
-        }
+        factoryOrders={factoryOrdersData}
         productionLoading={startProductionMutation.isPending}
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
         onBuild={(buildingType) => void handleBuild(buildingType)}
         onStartProduction={(recipeId) => void handleStartProduction(recipeId)}
       />
-      <Modal
-        title="背包"
+      <PersonDetailModal
+        open={personModalOpen}
+        authStatus={authStatus}
+        username={headerUsername}
+        money={headerMoney}
+        plotCount={myPlotCount}
+        buildingCount={myBuildingCount}
+        onClose={() => setPersonModalOpen(false)}
+      />
+      <InventoryModal
         open={inventoryModalOpen}
-        onCancel={() => setInventoryModalOpen(false)}
-        footer={null}
-        destroyOnHidden
-      >
-        {authStatus !== "authenticated" ? (
-          <p className="text-sm text-slate-500">请先登录后查看背包</p>
-        ) : inventoryLoading ? (
-          <p className="text-sm text-slate-500">加载中...</p>
-        ) : inventoryData?.items.length ? (
-          <div className="space-y-2 text-sm text-slate-700">
-            {inventoryData.items.map((item) => (
-              <div
-                key={item.itemKey}
-                className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2"
-              >
-                <span className="font-medium text-slate-800">{item.itemKey}</span>
-                <span>x{item.quantity}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">背包里暂时没有物品</p>
-        )}
-      </Modal>
+        authStatus={authStatus}
+        loading={inventoryLoading}
+        items={inventoryData?.items ?? []}
+        onClose={() => setInventoryModalOpen(false)}
+      />
       <Modal
         title="登录后可购买地块"
         open={loginModalOpen}
