@@ -10,7 +10,7 @@ export function FactoryOrderList({ historyOrders }: FactoryOrderListProps) {
     <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
       <p className="font-medium text-slate-800">历史订单</p>
       {historyOrders?.length ? (
-        <div className="max-h-48 space-y-2 overflow-y-auto pr-1 text-xs text-slate-700">
+        <div className="min-h-64 max-h-64 space-y-2 overflow-y-auto pr-1 text-xs text-slate-700">
           {historyOrders.map((order) => (
             <div key={order.id} className="rounded border border-slate-200 p-2">
               <FactoryOrderCard order={order} showCollectedAt />

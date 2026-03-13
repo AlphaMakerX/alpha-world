@@ -24,6 +24,7 @@ export function DraggableModal({
 }: DraggableModalProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const modalWidth = restProps.width ?? 800;
 
   useEffect(() => {
     if (!dragState) {
@@ -80,6 +81,7 @@ export function DraggableModal({
   return (
     <Modal
       {...restProps}
+      width={modalWidth}
       open={open}
       title={draggableTitle}
       modalRender={(node) => {
