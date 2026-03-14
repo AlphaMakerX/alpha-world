@@ -83,6 +83,9 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         })
         .where(eq(buildings.id, building.id))
         .returning();
+      console.log("building", building);
+      console.log("updated", updated);
+
       return toDomainBuilding(updated[0]);
     }
 

@@ -122,6 +122,7 @@ export async function executeBuildBuildingUseCase(
       },
     };
   } catch (error) {
+    console.error("error", error);
     if (error instanceof DomainError) {
       return {
         ok: false,
