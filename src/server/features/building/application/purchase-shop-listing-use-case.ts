@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { shopListingRepository, inventoryRepository } from "@/server/features/building/infrastructure";
-import { userRepository } from "@/server/features/person/infrastructure";
+import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
 
 const purchaseShopListingSchema = z.object({
   buyerUserId: z.string().uuid("用户 ID 不合法"),
@@ -84,6 +84,15 @@ export async function executePurchaseShopListingUseCase(
     listing.itemKey,
     listing.quantity,
   );
+
+  await transactionLedgerRepository.record({
+    fromUserId: parsed.data.buyerUserId,
+    toUserId: listing.sellerUserId,
+    amount: totalCost,
+    type: "shop_purchase",
+    referenceId: String(listing.id),
+    description: `购买商品: ${listing.itemKey} x${listing.quantity}`,
+  });
 
   return {
     ok: true,

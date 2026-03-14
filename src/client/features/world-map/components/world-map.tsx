@@ -11,6 +11,7 @@ import { AuthPanel } from "@/client/features/auth/components/auth-panel";
 import { PlotDetailModal } from "@/client/features/plot/components/plot-detail-modal";
 import { PersonDetailModal } from "@/client/features/person/components/person-detail-modal";
 import { InventoryModal } from "@/client/features/inventory/components/inventory-modal";
+import { GameInfoModal } from "@/client/features/game-info/components/game-info-modal";
 import { getBuildingCapabilities } from "@/client/features/building/model/building-capabilities";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
 import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilities";
@@ -38,6 +39,7 @@ export function WorldMap() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
   const [personModalOpen, setPersonModalOpen] = useState(false);
+  const [gameInfoModalOpen, setGameInfoModalOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const existingPlotIds = useMemo(
     () =>
@@ -393,6 +395,7 @@ export function WorldMap() {
           setInventoryModalOpen(true);
           void refetchInventory();
         }}
+        onOpenGameInfoClick={() => setGameInfoModalOpen(true)}
         onLoginClick={() => setLoginModalOpen(true)}
         onLogoutClick={() => void handleLogout()}
         logoutLoading={logoutLoading}
@@ -438,6 +441,10 @@ export function WorldMap() {
         loading={inventoryLoading}
         items={inventoryData?.items ?? []}
         onClose={() => setInventoryModalOpen(false)}
+      />
+      <GameInfoModal
+        open={gameInfoModalOpen}
+        onClose={() => setGameInfoModalOpen(false)}
       />
       <Modal
         title="登录后可购买地块"

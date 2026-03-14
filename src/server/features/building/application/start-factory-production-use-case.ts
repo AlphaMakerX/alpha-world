@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
+import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 import { FactoryProductionJob } from "@/server/features/building/domain";
 import {
   buildingRepository,
@@ -8,7 +9,7 @@ import {
 } from "@/server/features/building/infrastructure";
 import { getFactoryRecipeById } from "@/server/features/building/application/factory-recipe-catalog";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { userRepository } from "@/server/features/person/infrastructure";
+import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
 
 const startFactoryProductionSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
@@ -108,6 +109,11 @@ export async function executeStartFactoryProductionUseCase(
       };
     }
 
+    const adam = moneyCost > 0 ? await userRepository.findById(ADAM_USER_ID) : null;
+    if (moneyCost > 0 && !adam) {
+      return { ok: false, error: "系统尚未初始化", status: 400 };
+    }
+
     for (const inputItem of recipe.inputs) {
       if (inputItem.itemKey === "money") {
         if ((ownerUser?.money ?? 0) < inputItem.quantity) {
@@ -142,9 +148,11 @@ export async function executeStartFactoryProductionUseCase(
         inputItem.quantity,
       );
     }
-    if (ownerUser && moneyCost > 0) {
+    if (ownerUser && adam && moneyCost > 0) {
       ownerUser.spendMoney(moneyCost);
+      adam.receiveMoney(moneyCost);
       await userRepository.save(ownerUser);
+      await userRepository.save(adam);
     }
 
     const job = FactoryProductionJob.start({
@@ -157,6 +165,17 @@ export async function executeStartFactoryProductionUseCase(
       durationSeconds: recipe.durationSeconds,
     });
     const savedJob = await factoryProductionJobRepository.save(job);
+
+    if (moneyCost > 0) {
+      await transactionLedgerRepository.record({
+        fromUserId: parsed.data.ownerUserId,
+        toUserId: ADAM_USER_ID,
+        amount: moneyCost,
+        type: "factory_production",
+        referenceId: String(savedJob.id),
+        description: `工厂生产: ${recipe.name}`,
+      });
+    }
 
     return {
       ok: true,

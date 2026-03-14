@@ -9,6 +9,7 @@ type WorldMapHeaderProps = {
   money?: number;
   onOpenProfileClick: () => void;
   onOpenInventoryClick: () => void;
+  onOpenGameInfoClick: () => void;
   onLoginClick: () => void;
   onLogoutClick: () => void;
   logoutLoading?: boolean;
@@ -20,6 +21,7 @@ export function WorldMapHeader({
   money,
   onOpenProfileClick,
   onOpenInventoryClick,
+  onOpenGameInfoClick,
   onLoginClick,
   onLogoutClick,
   logoutLoading = false,
@@ -66,6 +68,13 @@ export function WorldMapHeader({
           </div>
         ) : null}
         <div className="relative z-[1] flex h-full items-center gap-2">
+          <Button
+            size="small"
+            className="!h-7 !cursor-pointer !rounded-full !border-sky-300 !bg-sky-50 !px-3 !font-medium !text-sky-700 !transition-colors !duration-200 motion-reduce:!transition-none hover:!border-sky-400 hover:!bg-sky-100 hover:!text-sky-800 focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-sky-400/70 focus-visible:!ring-offset-1"
+            onClick={() => void onOpenGameInfoClick()}
+          >
+            游戏信息
+          </Button>
           <span
             className={`inline-flex h-7 items-center rounded-full border px-3 text-xs font-semibold tracking-[0.06em] ${statusToneClass}`}
           >

@@ -21,7 +21,11 @@ import {
   executePurchaseShopListingUseCase,
   executeCancelShopListingUseCase,
 } from "@/server/features/building/application";
-import { executeGetCurrentUserUseCase } from "@/server/features/person/application";
+import {
+  executeGetCurrentUserUseCase,
+  executeGetWealthLeaderboardUseCase,
+  executeGetAdamProfileUseCase,
+} from "@/server/features/person/application";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -105,6 +109,12 @@ export const appRouter = createTRPCRouter({
       }
 
       return result;
+    }),
+    wealthLeaderboard: publicProcedure.query(async () => {
+      return executeGetWealthLeaderboardUseCase();
+    }),
+    adamProfile: publicProcedure.query(async () => {
+      return executeGetAdamProfileUseCase();
     }),
   }),
   building: createTRPCRouter({

@@ -31,6 +31,30 @@ export const users = pgTable(
 export type UserRecord = typeof users.$inferSelect;
 export type NewUserRecord = typeof users.$inferInsert;
 
+export const moneyTransactions = pgTable(
+  "money_transactions",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    fromUserId: uuid("from_user_id")
+      .notNull()
+      .references(() => users.id),
+    toUserId: uuid("to_user_id")
+      .notNull()
+      .references(() => users.id),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    type: varchar("type", { length: 30 }).notNull(),
+    referenceId: varchar("reference_id", { length: 100 }),
+    description: varchar("description", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("money_transactions_amount_chk", sql`${table.amount} > 0`),
+    index("idx_money_transactions_from_user_id").on(table.fromUserId),
+    index("idx_money_transactions_to_user_id").on(table.toUserId),
+    index("idx_money_transactions_type").on(table.type),
+  ],
+);
+
 export const plots = pgTable(
   "plots",
   {

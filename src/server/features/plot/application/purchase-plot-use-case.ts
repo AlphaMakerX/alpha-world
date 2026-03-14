@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
+import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { userRepository } from "@/server/features/person/infrastructure";
+import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
 
 const purchasePlotSchema = z.object({
   plotId: z.number().int().positive(),
@@ -60,8 +61,14 @@ export async function executePurchasePlotUseCase(
     };
   }
 
+  const adam = await userRepository.findById(ADAM_USER_ID);
+  if (!adam) {
+    return { ok: false, error: "系统尚未初始化", status: 400 };
+  }
+
   try {
     buyer.spendMoney(plot.price);
+    adam.receiveMoney(plot.price);
     plot.purchaseBy(parsed.data.buyerUserId);
   } catch (error) {
     if (error instanceof DomainError) {
@@ -75,7 +82,16 @@ export async function executePurchasePlotUseCase(
   }
 
   await userRepository.save(buyer);
+  await userRepository.save(adam);
   await plotRepository.save(plot);
+  await transactionLedgerRepository.record({
+    fromUserId: parsed.data.buyerUserId,
+    toUserId: ADAM_USER_ID,
+    amount: plot.price,
+    type: "plot_purchase",
+    referenceId: String(plot.id),
+    description: `购买地块 (${plot.coordinate.getX()}, ${plot.coordinate.getY()})`,
+  });
 
   return {
     ok: true,
