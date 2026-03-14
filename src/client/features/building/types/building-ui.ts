@@ -11,3 +11,4 @@ export type FactoryOrder = FactoryOrdersResponse["historyOrders"][number];
 export type FactoryOrderStatus = FactoryOrder["status"];
 export type FactoryOrders = Pick<FactoryOrdersResponse, "focusOrder" | "historyOrders">;
 export type InventoryItem = RouterOutputs["building"]["myInventory"]["items"][number];
+export type ShopListing = RouterOutputs["building"]["shopListings"]["listings"][number];

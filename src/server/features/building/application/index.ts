@@ -6,3 +6,6 @@ export { executeListFactoryOrdersUseCase } from "./list-factory-orders-use-case"
 export { executeStartFactoryProductionUseCase } from "./start-factory-production-use-case";
 export { executeCollectFactoryProductionUseCase } from "./collect-factory-production-use-case";
 export { executeCreateShopListingUseCase } from "./create-shop-listing-use-case";
+export { executeListShopListingsUseCase } from "./list-shop-listings-use-case";
+export { executePurchaseShopListingUseCase } from "./purchase-shop-listing-use-case";
+export { executeCancelShopListingUseCase } from "./cancel-shop-listing-use-case";

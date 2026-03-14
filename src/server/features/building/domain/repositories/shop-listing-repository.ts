@@ -1,3 +1,5 @@
+export type ShopListingStatus = "active" | "sold" | "cancelled";
+
 export type ShopListing = {
   id: number;
   buildingId: number;
@@ -5,11 +7,14 @@ export type ShopListing = {
   itemKey: string;
   quantity: number;
   unitPrice: number;
-  status: "active" | "sold" | "cancelled";
+  status: ShopListingStatus;
   createdAt: Date;
   updatedAt: Date;
 };
 
 export interface ShopListingRepository {
   create(input: Omit<ShopListing, "id" | "createdAt" | "updatedAt">): Promise<ShopListing>;
+  findById(id: number): Promise<ShopListing | null>;
+  findActiveByBuildingId(buildingId: number): Promise<ShopListing[]>;
+  updateStatus(id: number, status: ShopListingStatus): Promise<void>;
 }

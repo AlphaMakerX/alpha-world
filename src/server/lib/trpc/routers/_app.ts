@@ -17,6 +17,9 @@ import {
   executeListMyBuildingsUseCase,
   executeListMyInventoryUseCase,
   executeStartFactoryProductionUseCase,
+  executeListShopListingsUseCase,
+  executePurchaseShopListingUseCase,
+  executeCancelShopListingUseCase,
 } from "@/server/features/building/application";
 import { executeGetCurrentUserUseCase } from "@/server/features/person/application";
 import { TRPCError } from "@trpc/server";
@@ -257,6 +260,80 @@ export const appRouter = createTRPCRouter({
           itemKey: input.itemKey,
           quantity: input.quantity,
           unitPrice: input.unitPrice,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    shopListings: publicProcedure
+      .input(
+        z.object({
+          buildingId: z.number().int().positive(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const result = await executeListShopListingsUseCase({
+          buildingId: input.buildingId,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    purchaseShopListing: protectedProcedure
+      .input(
+        z.object({
+          listingId: z.number().int().positive(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        const result = await executePurchaseShopListingUseCase({
+          buyerUserId: ctx.userId,
+          listingId: input.listingId,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    cancelShopListing: protectedProcedure
+      .input(
+        z.object({
+          listingId: z.number().int().positive(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        const result = await executeCancelShopListingUseCase({
+          sellerUserId: ctx.userId,
+          listingId: input.listingId,
         });
         if (!result.ok) {
           if (result.status === 404) {

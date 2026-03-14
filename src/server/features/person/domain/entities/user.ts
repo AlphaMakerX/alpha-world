@@ -59,6 +59,14 @@ export class User {
     this.props.updatedAt = new Date();
   }
 
+  receiveMoney(amount: number): void {
+    if (amount < 0) {
+      throw new DomainError("收款金额不能小于 0");
+    }
+    this.props.money += amount;
+    this.props.updatedAt = new Date();
+  }
+
   get id() {
     return this.props.id;
   }

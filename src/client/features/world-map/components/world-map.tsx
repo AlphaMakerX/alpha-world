@@ -31,6 +31,9 @@ export function WorldMap() {
   const purchaseMutation = trpc.plot.purchase.useMutation();
   const buildMutation = trpc.building.build.useMutation();
   const startProductionMutation = trpc.building.startProduction.useMutation();
+  const createShopListingMutation = trpc.building.createShopListing.useMutation();
+  const purchaseShopListingMutation = trpc.building.purchaseShopListing.useMutation();
+  const cancelShopListingMutation = trpc.building.cancelShopListing.useMutation();
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -108,6 +111,14 @@ export function WorldMap() {
     {
       enabled: Boolean(selectedFactoryBuildingId && selectedBuildingCapabilities.canManageFactory),
       refetchInterval: 3000,
+    },
+  );
+  const selectedShopBuildingId =
+    selectedPlot?.building?.type === "shop" ? selectedPlot.building.id : undefined;
+  const { data: shopListingsData } = trpc.building.shopListings.useQuery(
+    { buildingId: selectedShopBuildingId ?? 0 },
+    {
+      enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
     },
   );
   const {
@@ -215,6 +226,67 @@ export function WorldMap() {
       messageApi.success("已开始制造");
     } catch (error) {
       messageApi.error(error instanceof Error ? error.message : "开始制造失败，请稍后重试");
+    }
+  };
+
+  const handleCreateListing = async (itemKey: string, quantity: number, unitPrice: number) => {
+    if (!selectedPlot?.building) return;
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await createShopListingMutation.mutateAsync({
+        buildingId: selectedPlot.building.id,
+        itemKey,
+        quantity,
+        unitPrice,
+      });
+      await Promise.all([
+        trpcUtils.building.shopListings.invalidate(),
+        trpcUtils.building.myInventory.invalidate(),
+      ]);
+      messageApi.success("商品上架成功");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "上架失败，请稍后重试");
+    }
+  };
+
+  const handlePurchaseListing = async (listingId: number) => {
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await purchaseShopListingMutation.mutateAsync({ listingId });
+      await Promise.all([
+        trpcUtils.building.shopListings.invalidate(),
+        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.person.me.invalidate(),
+      ]);
+      messageApi.success("购买成功");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "购买失败，请稍后重试");
+    }
+  };
+
+  const handleCancelListing = async (listingId: number) => {
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await cancelShopListingMutation.mutateAsync({ listingId });
+      await Promise.all([
+        trpcUtils.building.shopListings.invalidate(),
+        trpcUtils.building.myInventory.invalidate(),
+      ]);
+      messageApi.success("商品已下架");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "下架失败，请稍后重试");
     }
   };
 
@@ -337,11 +409,19 @@ export function WorldMap() {
         buildLoading={buildMutation.isPending}
         factoryRecipes={factoryRecipesData?.recipes ?? []}
         factoryOrders={factoryOrdersData}
+        shopListings={shopListingsData?.listings ?? []}
+        inventoryItems={inventoryData?.items ?? []}
         productionLoading={startProductionMutation.isPending}
+        createListingLoading={createShopListingMutation.isPending}
+        purchaseListingLoading={purchaseShopListingMutation.isPending}
+        cancelListingLoading={cancelShopListingMutation.isPending}
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
         onBuild={(buildingType) => void handleBuild(buildingType)}
         onStartProduction={(recipeId) => void handleStartProduction(recipeId)}
+        onCreateListing={(itemKey, quantity, unitPrice) => void handleCreateListing(itemKey, quantity, unitPrice)}
+        onPurchaseListing={(listingId) => void handlePurchaseListing(listingId)}
+        onCancelListing={(listingId) => void handleCancelListing(listingId)}
       />
       <PersonDetailModal
         open={personModalOpen}

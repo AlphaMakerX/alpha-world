@@ -1,5 +1,6 @@
+import { and, eq } from "drizzle-orm";
 import { db } from "@/server/lib/db";
-import type { ShopListing, ShopListingRepository } from "@/server/features/building/domain";
+import type { ShopListing, ShopListingRepository, ShopListingStatus } from "@/server/features/building/domain";
 import { shopListings } from "@/server/features/building/infrastructure/schema";
 
 function toShopListing(record: typeof shopListings.$inferSelect): ShopListing {
@@ -10,7 +11,7 @@ function toShopListing(record: typeof shopListings.$inferSelect): ShopListing {
     itemKey: record.itemKey,
     quantity: record.quantity,
     unitPrice: Number(record.unitPrice),
-    status: record.status as "active" | "sold" | "cancelled",
+    status: record.status as ShopListingStatus,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -33,6 +34,30 @@ export class DrizzleShopListingRepository implements ShopListingRepository {
       })
       .returning();
     return toShopListing(inserted[0]);
+  }
+
+  async findById(id: number): Promise<ShopListing | null> {
+    const record = await db.query.shopListings.findFirst({
+      where: eq(shopListings.id, id),
+    });
+    return record ? toShopListing(record) : null;
+  }
+
+  async findActiveByBuildingId(buildingId: number): Promise<ShopListing[]> {
+    const records = await db.query.shopListings.findMany({
+      where: and(
+        eq(shopListings.buildingId, buildingId),
+        eq(shopListings.status, "active"),
+      ),
+    });
+    return records.map(toShopListing);
+  }
+
+  async updateStatus(id: number, status: ShopListingStatus): Promise<void> {
+    await db
+      .update(shopListings)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(shopListings.id, id));
   }
 }
 
