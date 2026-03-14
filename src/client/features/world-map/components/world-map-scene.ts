@@ -85,6 +85,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       }
       this.cursors = keyboard.createCursorKeys()
       this.interactKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+      // 禁止全局捕获键盘事件 解决与antd输入框冲突问题
+      keyboard.disableGlobalCapture()
 
       this.nearbyPlotText = this.add
         .text(16, 16, '', {
@@ -126,7 +128,14 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     }
 
 
+    private isDOMInputFocused(): boolean {
+      const tag = document.activeElement?.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
     update(): void {
+      if (this.isDOMInputFocused()) return
+
       movePlayerByCursorsOnRoads({
         player: this.player,
         cursors: this.cursors,

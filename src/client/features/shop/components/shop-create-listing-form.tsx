@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Popconfirm } from "antd";
+import { Button, InputNumber, Popconfirm } from "antd";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { getItemDisplay } from "@/client/features/inventory/utils/item-display";
 
@@ -76,26 +76,26 @@ export function ShopCreateListingForm({
                 <label className="text-xs text-slate-600">
                   上架数量 <span className="text-slate-400">(最多 {maxQuantity})</span>
                 </label>
-                <input
-                  type="number"
+                <InputNumber
                   min={1}
                   max={maxQuantity}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.min(Number(e.target.value) || 1, maxQuantity))}
+                  onChange={(v) => setQuantity(v ?? 1)}
                   disabled={loading}
-                  className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 disabled:opacity-50"
+                  className="!w-full"
+                  size="small"
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-slate-600">单价 (¥)</label>
-                <input
-                  type="number"
+                <InputNumber
                   min={0}
                   step={0.01}
                   value={unitPrice}
-                  onChange={(e) => setUnitPrice(Math.max(Number(e.target.value) || 0, 0))}
+                  onChange={(v) => setUnitPrice(v ?? 0)}
                   disabled={loading}
-                  className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 disabled:opacity-50"
+                  className="!w-full"
+                  size="small"
                 />
               </div>
             </div>
