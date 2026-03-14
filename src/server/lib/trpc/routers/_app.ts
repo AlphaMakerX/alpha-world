@@ -20,6 +20,10 @@ import {
   executeListShopListingsUseCase,
   executePurchaseShopListingUseCase,
   executeCancelShopListingUseCase,
+  executeCreateBuyOrderUseCase,
+  executeListBuyOrdersUseCase,
+  executeFulfillBuyOrderUseCase,
+  executeCancelBuyOrderUseCase,
 } from "@/server/features/building/application";
 import {
   executeGetCurrentUserUseCase,
@@ -122,7 +126,7 @@ export const appRouter = createTRPCRouter({
       .input(
         z.object({
           plotId: z.number().int().positive(),
-          buildingType: z.enum(["residential", "factory", "shop"]),
+          buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
         }),
       )
       .mutation(async ({ input, ctx }) => {
@@ -344,6 +348,111 @@ export const appRouter = createTRPCRouter({
         const result = await executeCancelShopListingUseCase({
           sellerUserId: ctx.userId,
           listingId: input.listingId,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    createBuyOrder: protectedProcedure
+      .input(
+        z.object({
+          buildingId: z.number().int().positive(),
+          itemKey: z.string().trim().min(1),
+          quantity: z.number().int().positive(),
+          unitPrice: z.number().positive(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        const result = await executeCreateBuyOrderUseCase({
+          buyerUserId: ctx.userId,
+          buildingId: input.buildingId,
+          itemKey: input.itemKey,
+          quantity: input.quantity,
+          unitPrice: input.unitPrice,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    buyOrders: publicProcedure
+      .input(
+        z.object({
+          buildingId: z.number().int().positive(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const result = await executeListBuyOrdersUseCase({
+          buildingId: input.buildingId,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    fulfillBuyOrder: protectedProcedure
+      .input(
+        z.object({
+          orderId: z.number().int().positive(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        const result = await executeFulfillBuyOrderUseCase({
+          sellerUserId: ctx.userId,
+          orderId: input.orderId,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    cancelBuyOrder: protectedProcedure
+      .input(
+        z.object({
+          orderId: z.number().int().positive(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        const result = await executeCancelBuyOrderUseCase({
+          buyerUserId: ctx.userId,
+          orderId: input.orderId,
         });
         if (!result.ok) {
           if (result.status === 404) {

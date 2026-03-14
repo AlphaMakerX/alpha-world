@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { compare } from "bcryptjs";
 import { userRepository } from "@/server/features/person/infrastructure";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 
 const loginUserSchema = z.object({
   username: z.string().trim().min(3).max(32),
@@ -37,13 +36,6 @@ export async function executeLoginUserUseCase(input: unknown): Promise<LoginUser
     return {
       ok: false,
       error: "用户名或密码错误",
-    };
-  }
-
-  if (user.id === ADAM_USER_ID) {
-    return {
-      ok: false,
-      error: "系统账户不允许登录",
     };
   }
 

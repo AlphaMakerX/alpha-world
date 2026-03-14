@@ -35,6 +35,9 @@ export function WorldMap() {
   const createShopListingMutation = trpc.building.createShopListing.useMutation();
   const purchaseShopListingMutation = trpc.building.purchaseShopListing.useMutation();
   const cancelShopListingMutation = trpc.building.cancelShopListing.useMutation();
+  const createBuyOrderMutation = trpc.building.createBuyOrder.useMutation();
+  const fulfillBuyOrderMutation = trpc.building.fulfillBuyOrder.useMutation();
+  const cancelBuyOrderMutation = trpc.building.cancelBuyOrder.useMutation();
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -121,6 +124,14 @@ export function WorldMap() {
     { buildingId: selectedShopBuildingId ?? 0 },
     {
       enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
+    },
+  );
+  const selectedPurchasingStationBuildingId =
+    selectedPlot?.building?.type === "purchasing_station" ? selectedPlot.building.id : undefined;
+  const { data: buyOrdersData } = trpc.building.buyOrders.useQuery(
+    { buildingId: selectedPurchasingStationBuildingId ?? 0 },
+    {
+      enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
     },
   );
   const {
@@ -292,6 +303,67 @@ export function WorldMap() {
     }
   };
 
+  const handleCreateBuyOrder = async (itemKey: string, quantity: number, unitPrice: number) => {
+    if (!selectedPlot?.building) return;
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await createBuyOrderMutation.mutateAsync({
+        buildingId: selectedPlot.building.id,
+        itemKey,
+        quantity,
+        unitPrice,
+      });
+      await Promise.all([
+        trpcUtils.building.buyOrders.invalidate(),
+        trpcUtils.person.me.invalidate(),
+      ]);
+      messageApi.success("收购订单已发布");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "发布失败，请稍后重试");
+    }
+  };
+
+  const handleFulfillBuyOrder = async (orderId: number) => {
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await fulfillBuyOrderMutation.mutateAsync({ orderId });
+      await Promise.all([
+        trpcUtils.building.buyOrders.invalidate(),
+        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.person.me.invalidate(),
+      ]);
+      messageApi.success("出售成功");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "出售失败，请稍后重试");
+    }
+  };
+
+  const handleCancelBuyOrder = async (orderId: number) => {
+    if (authStatus !== "authenticated") {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    try {
+      await cancelBuyOrderMutation.mutateAsync({ orderId });
+      await Promise.all([
+        trpcUtils.building.buyOrders.invalidate(),
+        trpcUtils.person.me.invalidate(),
+      ]);
+      messageApi.success("收购订单已取消");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "取消失败，请稍后重试");
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -413,11 +485,15 @@ export function WorldMap() {
         factoryRecipes={factoryRecipesData?.recipes ?? []}
         factoryOrders={factoryOrdersData}
         shopListings={shopListingsData?.listings ?? []}
+        buyOrders={buyOrdersData?.orders ?? []}
         inventoryItems={inventoryData?.items ?? []}
         productionLoading={startProductionMutation.isPending}
         createListingLoading={createShopListingMutation.isPending}
         purchaseListingLoading={purchaseShopListingMutation.isPending}
         cancelListingLoading={cancelShopListingMutation.isPending}
+        createBuyOrderLoading={createBuyOrderMutation.isPending}
+        fulfillBuyOrderLoading={fulfillBuyOrderMutation.isPending}
+        cancelBuyOrderLoading={cancelBuyOrderMutation.isPending}
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
         onBuild={(buildingType) => void handleBuild(buildingType)}
@@ -425,6 +501,9 @@ export function WorldMap() {
         onCreateListing={(itemKey, quantity, unitPrice) => void handleCreateListing(itemKey, quantity, unitPrice)}
         onPurchaseListing={(listingId) => void handlePurchaseListing(listingId)}
         onCancelListing={(listingId) => void handleCancelListing(listingId)}
+        onCreateBuyOrder={(itemKey, quantity, unitPrice) => void handleCreateBuyOrder(itemKey, quantity, unitPrice)}
+        onFulfillBuyOrder={(orderId) => void handleFulfillBuyOrder(orderId)}
+        onCancelBuyOrder={(orderId) => void handleCancelBuyOrder(orderId)}
       />
       <PersonDetailModal
         open={personModalOpen}

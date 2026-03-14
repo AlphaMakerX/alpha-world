@@ -6,6 +6,9 @@ export type BuildingCapabilities = {
   isShop: boolean;
   canManageShop: boolean;
   canBrowseShop: boolean;
+  isPurchasingStation: boolean;
+  canManagePurchasingStation: boolean;
+  canBrowsePurchasingStation: boolean;
 };
 
 export function getBuildingCapabilities(building: Plot["building"] | null | undefined, isOwner: boolean): BuildingCapabilities {
@@ -14,6 +17,9 @@ export function getBuildingCapabilities(building: Plot["building"] | null | unde
   const isShop = building?.type === "shop";
   const canManageShop = Boolean(isShop && isOwner);
   const canBrowseShop = Boolean(isShop && !isOwner);
+  const isPurchasingStation = building?.type === "purchasing_station";
+  const canManagePurchasingStation = Boolean(isPurchasingStation && isOwner);
+  const canBrowsePurchasingStation = Boolean(isPurchasingStation && !isOwner);
 
   return {
     isFactory,
@@ -21,5 +27,8 @@ export function getBuildingCapabilities(building: Plot["building"] | null | unde
     isShop,
     canManageShop,
     canBrowseShop,
+    isPurchasingStation,
+    canManagePurchasingStation,
+    canBrowsePurchasingStation,
   };
 }

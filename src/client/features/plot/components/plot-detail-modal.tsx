@@ -8,6 +8,7 @@ import { BuildingDetailSection } from "@/client/features/building/components/bui
 import { BuildingActionSection } from "@/client/features/building/components/building-action-section";
 import { FactorySection } from "@/client/features/building/components/factory-section";
 import { ShopSection } from "@/client/features/shop/components/shop-section";
+import { PurchasingStationSection } from "@/client/features/purchasing-station/components/purchasing-station-section";
 import { DraggableWindow } from "@/client/components/draggable-window";
 import type { PlotDetailModalProps } from "./plot-detail-modal.types";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
@@ -21,6 +22,7 @@ export function PlotDetailModal({
   factoryRecipes,
   factoryOrders,
   shopListings,
+  buyOrders,
   inventoryItems,
   productionLoading,
   purchaseLoading,
@@ -28,6 +30,9 @@ export function PlotDetailModal({
   createListingLoading,
   purchaseListingLoading,
   cancelListingLoading,
+  createBuyOrderLoading,
+  fulfillBuyOrderLoading,
+  cancelBuyOrderLoading,
   onClose,
   onPurchase,
   onBuild,
@@ -35,6 +40,9 @@ export function PlotDetailModal({
   onCreateListing,
   onPurchaseListing,
   onCancelListing,
+  onCreateBuyOrder,
+  onFulfillBuyOrder,
+  onCancelBuyOrder,
 }: PlotDetailModalProps) {
   const [buildOptionsOpen, setBuildOptionsOpen] = useState(false);
   const [pendingBuildType, setPendingBuildType] = useState<BuildingType | null>(null);
@@ -43,6 +51,7 @@ export function PlotDetailModal({
   const buildingCapabilities = getBuildingCapabilities(selectedPlot?.building, plotCapabilities.isOwner);
   const shouldShowFactoryRecipeList = buildingCapabilities.canManageFactory;
   const shouldShowShop = buildingCapabilities.isShop;
+  const shouldShowPurchasingStation = buildingCapabilities.isPurchasingStation;
 
   useEffect(() => {
     if (!selectedPlot) {
@@ -129,6 +138,17 @@ export function PlotDetailModal({
                           onCreateListing={onCreateListing}
                           onPurchase={onPurchaseListing}
                           onCancel={onCancelListing}
+                        />
+                      ) : shouldShowPurchasingStation ? (
+                        <PurchasingStationSection
+                          isOwner={buildingCapabilities.canManagePurchasingStation}
+                          orders={buyOrders}
+                          createOrderLoading={createBuyOrderLoading}
+                          fulfillLoading={fulfillBuyOrderLoading}
+                          cancelLoading={cancelBuyOrderLoading}
+                          onCreateOrder={onCreateBuyOrder}
+                          onFulfill={onFulfillBuyOrder}
+                          onCancel={onCancelBuyOrder}
                         />
                       ) : null}
                     </BuildingActionSection>

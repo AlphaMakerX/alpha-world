@@ -10,7 +10,7 @@ import { getBuildingCost } from "@/server/features/building/application/building
 const buildBuildingSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   plotId: z.number().int().positive(),
-  buildingType: z.enum(["residential", "factory", "shop"]),
+  buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
 });
 
 type BuildBuildingSuccessResult = {
@@ -18,7 +18,7 @@ type BuildBuildingSuccessResult = {
   building: {
     id: number;
     plotId: number;
-    type: "residential" | "factory" | "shop";
+    type: "residential" | "factory" | "shop" | "purchasing_station";
     status: "active";
     createdAt: Date;
     updatedAt: Date;

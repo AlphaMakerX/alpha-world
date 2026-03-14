@@ -63,6 +63,11 @@ function GameRulesTab() {
                 <td className="px-3 py-2 tabular-nums">600</td>
                 <td className="px-3 py-2 text-slate-500">出售商品</td>
               </tr>
+              <tr>
+                <td className="px-3 py-2">收购站</td>
+                <td className="px-3 py-2 tabular-nums">700</td>
+                <td className="px-3 py-2 text-slate-500">发布收购订单</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -79,6 +84,13 @@ function GameRulesTab() {
         <h3 className="mb-1.5 font-semibold text-slate-900">商店交易</h3>
         <p>
           商店是玩家之间进行交易的场所。你可以在自己的商店上架商品，其他玩家可以购买。交易金额直接在买卖双方之间流转。
+        </p>
+      </section>
+
+      <section>
+        <h3 className="mb-1.5 font-semibold text-slate-900">收购站</h3>
+        <p>
+          收购站是玩家发布收购需求的场所。站主发布收购订单并预付金币，指定想要收购的物品和价格。其他玩家可以查看订单并出售对应物品来赚取金币。
         </p>
       </section>
 

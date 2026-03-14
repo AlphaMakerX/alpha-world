@@ -9,6 +9,7 @@ const buildingTypeLabelByValue: Record<BuildingType, string> = {
   residential: "住宅",
   factory: "工厂",
   shop: "商店",
+  purchasing_station: "收购站",
 };
 
 export function BuildingDetailSection({ building }: BuildingDetailSectionProps) {

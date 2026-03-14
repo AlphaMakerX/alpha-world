@@ -3,7 +3,8 @@ export type MoneyTransactionType =
   | "plot_purchase"
   | "building_construction"
   | "factory_production"
-  | "shop_purchase";
+  | "shop_purchase"
+  | "buy_order_fulfilled";
 
 export interface TransactionLedgerRepository {
   record(entry: {

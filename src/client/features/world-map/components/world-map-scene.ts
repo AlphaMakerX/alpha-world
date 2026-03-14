@@ -231,6 +231,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         residential: '住宅',
         factory: '工厂',
         shop: '商店',
+        purchasing_station: '收购站',
       }
       const buildingLabel = nearestPlot.buildingType
         ? `，建筑: ${buildingLabelByType[nearestPlot.buildingType]}`

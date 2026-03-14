@@ -28,7 +28,7 @@ export const buildings = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    check("plot_buildings_type_chk", sql`${table.type} in ('residential', 'factory', 'shop')`),
+    check("plot_buildings_type_chk", sql`${table.type} in ('residential', 'factory', 'shop', 'purchasing_station')`),
     check("plot_buildings_status_chk", sql`${table.status} in ('active')`),
   ],
 );
@@ -79,6 +79,32 @@ export const factoryProductionJobs = pgTable(
     index("idx_factory_jobs_building_id").on(table.buildingId),
     index("idx_factory_jobs_owner_user_id").on(table.ownerUserId),
     index("idx_factory_jobs_status").on(table.status),
+  ],
+);
+
+export const buyOrders = pgTable(
+  "buy_orders",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    buildingId: bigint("building_id", { mode: "number" })
+      .notNull()
+      .references(() => buildings.id, { onDelete: "cascade" }),
+    buyerUserId: uuid("buyer_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    itemKey: varchar("item_key", { length: 50 }).notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("buy_orders_quantity_chk", sql`${table.quantity} > 0`),
+    check("buy_orders_unit_price_chk", sql`${table.unitPrice} >= 0`),
+    check("buy_orders_status_chk", sql`${table.status} in ('active', 'fulfilled', 'cancelled')`),
+    index("idx_buy_orders_buyer_user_id").on(table.buyerUserId),
+    index("idx_buy_orders_status").on(table.status),
   ],
 );
 

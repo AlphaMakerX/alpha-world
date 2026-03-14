@@ -2,6 +2,7 @@ const buildingCosts: Record<string, number> = {
   residential: 500,
   factory: 800,
   shop: 600,
+  purchasing_station: 700,
 };
 
 export function getBuildingCost(type: string): number {

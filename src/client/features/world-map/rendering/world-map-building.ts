@@ -35,6 +35,14 @@ const BUILDING_VISUAL_CONFIG: Record<BuildingType, BuildingVisualConfig> = {
     badgeBorderColor: '#c2410c',
     badgeTextColor: '#7c2d12',
   },
+  purchasing_station: {
+    label: '收购站',
+    plotFillColor: 0xede9fe,
+    plotBorderColor: 0x7c3aed,
+    badgeBackgroundColor: '#ede9fe',
+    badgeBorderColor: '#7c3aed',
+    badgeTextColor: '#5b21b6',
+  },
 }
 
 export function getBuildingVisualConfig(buildingType: BuildingType): BuildingVisualConfig {
@@ -53,6 +61,10 @@ export function drawBuildingByType(
   }
   if (buildingType === 'factory') {
     drawFactoryBuilding(graphics, plotX, plotY)
+    return
+  }
+  if (buildingType === 'purchasing_station') {
+    drawPurchasingStationBuilding(graphics, plotX, plotY)
     return
   }
   drawShopBuilding(graphics, plotX, plotY)
@@ -166,4 +178,37 @@ function drawShopBuilding(
   graphics.fillRect(signX, signY, signWidth, signHeight)
   graphics.lineStyle(1.2, 0x7c2d12, 1)
   graphics.strokeRect(signX, signY, signWidth, signHeight)
+}
+
+function drawPurchasingStationBuilding(
+  graphics: Phaser.GameObjects.Graphics,
+  plotX: number,
+  plotY: number
+): void {
+  const baseWidth = PLOT_WIDTH * 0.52
+  const baseHeight = PLOT_HEIGHT * 0.32
+  const baseX = plotX + (PLOT_WIDTH - baseWidth) / 2
+  const baseY = plotY + PLOT_HEIGHT * 0.50
+
+  graphics.fillStyle(0xc4b5fd, 1)
+  graphics.fillRect(baseX, baseY, baseWidth, baseHeight)
+  graphics.lineStyle(2, 0x7c3aed, 1)
+  graphics.strokeRect(baseX, baseY, baseWidth, baseHeight)
+
+  const roofHeight = PLOT_HEIGHT * 0.14
+  const roofOverhang = 4
+  graphics.fillStyle(0x8b5cf6, 1)
+  graphics.fillRect(baseX - roofOverhang, baseY - roofHeight, baseWidth + roofOverhang * 2, roofHeight)
+  graphics.lineStyle(1.5, 0x6d28d9, 1)
+  graphics.strokeRect(baseX - roofOverhang, baseY - roofHeight, baseWidth + roofOverhang * 2, roofHeight)
+
+  const arrowSize = PLOT_HEIGHT * 0.08
+  const arrowCenterX = baseX + baseWidth / 2
+  const arrowCenterY = baseY + baseHeight * 0.45
+  graphics.fillStyle(0xffffff, 0.9)
+  graphics.fillTriangle(
+    arrowCenterX - arrowSize, arrowCenterY + arrowSize * 0.5,
+    arrowCenterX + arrowSize, arrowCenterY + arrowSize * 0.5,
+    arrowCenterX, arrowCenterY - arrowSize * 0.5
+  )
 }

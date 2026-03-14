@@ -1,4 +1,4 @@
-import type { BuildingType, FactoryOrders, FactoryRecipe, InventoryItem, ShopListing } from "@/client/features/building/types/building-ui";
+import type { BuildingType, BuyOrder, FactoryOrders, FactoryRecipe, InventoryItem, ShopListing } from "@/client/features/building/types/building-ui";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
 export type PlotDetailModalProps = {
@@ -8,6 +8,7 @@ export type PlotDetailModalProps = {
   factoryRecipes: FactoryRecipe[];
   factoryOrders?: FactoryOrders;
   shopListings: ShopListing[];
+  buyOrders: BuyOrder[];
   inventoryItems: InventoryItem[];
   productionLoading: boolean;
   purchaseLoading: boolean;
@@ -15,6 +16,9 @@ export type PlotDetailModalProps = {
   createListingLoading: boolean;
   purchaseListingLoading: boolean;
   cancelListingLoading: boolean;
+  createBuyOrderLoading: boolean;
+  fulfillBuyOrderLoading: boolean;
+  cancelBuyOrderLoading: boolean;
   onClose: () => void;
   onPurchase: () => void;
   onBuild: (buildingType: BuildingType) => void;
@@ -22,4 +26,7 @@ export type PlotDetailModalProps = {
   onCreateListing: (itemKey: string, quantity: number, unitPrice: number) => void;
   onPurchaseListing: (listingId: number) => void;
   onCancelListing: (listingId: number) => void;
+  onCreateBuyOrder: (itemKey: string, quantity: number, unitPrice: number) => void;
+  onFulfillBuyOrder: (orderId: number) => void;
+  onCancelBuyOrder: (orderId: number) => void;
 };

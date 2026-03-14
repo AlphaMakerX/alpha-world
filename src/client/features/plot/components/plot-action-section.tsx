@@ -22,6 +22,7 @@ const buildingTypeOptions: Array<{
   { value: "residential", label: "住宅", description: "稳定居住型建筑" },
   { value: "factory", label: "工厂", description: "可执行生产制造" },
   { value: "shop", label: "商店", description: "商业交易型建筑" },
+  { value: "purchasing_station", label: "收购站", description: "发布收购订单" },
 ];
 
 export function PlotActionSection({

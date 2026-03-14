@@ -1,6 +1,6 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 
-export type BuildingType = "residential" | "factory" | "shop";
+export type BuildingType = "residential" | "factory" | "shop" | "purchasing_station";
 export type BuildingStatus = "active";
 
 type BuildingProps = {
@@ -44,6 +44,12 @@ export class Building {
   ensureShop(): void {
     if (this.props.type !== "shop") {
       throw new DomainError("当前建筑不是商店");
+    }
+  }
+
+  ensurePurchasingStation(): void {
+    if (this.props.type !== "purchasing_station") {
+      throw new DomainError("当前建筑不是收购站");
     }
   }
 

@@ -1,10 +1,10 @@
 import { db } from "@/server/lib/db";
 import { users } from "@/server/features/person/infrastructure/schema";
-import { ADAM_USER_ID, ADAM_USERNAME, ADAM_INITIAL_MONEY } from "@/server/features/shared-kernel/domain/adam";
+import { ADAM_USER_ID, ADAM_USERNAME, ADAM_INITIAL_MONEY, ADAM_INITIAL_PASSWORD } from "@/server/features/shared-kernel/domain/adam";
 import { hash } from "bcryptjs";
 
 async function initializeSystem() {
-  const passwordHash = await hash("@@SYSTEM_ADAM_NO_LOGIN@@", 10);
+  const passwordHash = await hash(ADAM_INITIAL_PASSWORD, 10);
 
   await db
     .insert(users)
@@ -18,6 +18,7 @@ async function initializeSystem() {
       target: users.id,
       set: {
         username: ADAM_USERNAME,
+        passwordHash,
         money: ADAM_INITIAL_MONEY.toFixed(2),
       },
     });
