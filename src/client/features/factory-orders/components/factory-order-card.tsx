@@ -1,6 +1,7 @@
 import type { FactoryOrder } from "@/client/features/building/types/building-ui";
+import { ItemTile } from "@/client/features/inventory/components/item-tile";
 import { useEffect, useState } from "react";
-import { factoryOrderStatusLabelByValue, formatDateTime, formatItemStacks } from "./factory-order-display";
+import { factoryOrderStatusLabelByValue, formatDateTime } from "./factory-order-display";
 
 type FactoryOrderCardProps = {
   order: FactoryOrder;
@@ -8,10 +9,10 @@ type FactoryOrderCardProps = {
   showCollectedAt?: boolean;
 };
 
-const statusClassNameByValue = {
-  in_progress: "bg-amber-50 text-amber-700 ring-amber-200",
-  collected: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  cancelled: "bg-rose-50 text-rose-700 ring-rose-200",
+const statusConfig = {
+  in_progress: { badge: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-400" },
+  collected: { badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-400" },
+  cancelled: { badge: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-400" },
 } as const;
 
 function useOrderProgress(order: FactoryOrder) {
@@ -48,40 +49,47 @@ function formatRemaining(finishAt: Date | string) {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  if (h > 0) return `剩余 ${h}时${m}分`;
-  if (m > 0) return `剩余 ${m}分${s}秒`;
-  return `剩余 ${s}秒`;
+  if (h > 0) return `${h}时${m}分`;
+  if (m > 0) return `${m}分${s}秒`;
+  return `${s}秒`;
 }
 
 export function FactoryOrderCard({ order, className, showCollectedAt = false }: FactoryOrderCardProps) {
   const progress = useOrderProgress(order);
+  const status = statusConfig[order.status];
 
   return (
     <div
-      className={["space-y-2 text-xs text-slate-700", className].filter(Boolean).join(" ")}
+      className={[
+        "rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm transition hover:shadow-md",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1">
-          <p className="text-xs">
-            <span className="text-slate-400">订单</span>{" "}
-            <span className="font-mono font-medium text-slate-700">{order.id}</span>
-          </p>
-          <p className="text-xs text-slate-600">配方：{order.recipeId}</p>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono text-[11px] text-slate-400">#{order.id}</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-slate-500">{order.recipeId}</span>
         </div>
         <span
           className={[
-            "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1",
-            statusClassNameByValue[order.status],
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1",
+            status.badge,
           ].join(" ")}
         >
+          <span className={["inline-block h-1.5 w-1.5 rounded-full", status.dot].join(" ")} />
           {factoryOrderStatusLabelByValue[order.status]}
         </span>
       </div>
 
+      {/* Progress (in_progress only) */}
       {order.status === "in_progress" && (
-        <div className="space-y-1">
+        <div className="mt-2.5 space-y-1">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium text-amber-700">{formatRemaining(order.finishAt)}</span>
+            <span className="font-medium text-amber-600">{formatRemaining(order.finishAt)}</span>
             <span className="tabular-nums text-slate-400">{Math.round(progress)}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -93,32 +101,51 @@ export function FactoryOrderCard({ order, className, showCollectedAt = false }: 
         </div>
       )}
 
-      <div className="space-y-1 text-slate-600">
-        <p>
-          <span className="text-slate-500">开始：</span>
-          {formatDateTime(order.startedAt)}
-        </p>
-        <p>
-          <span className="text-slate-500">完成：</span>
-          {formatDateTime(order.finishAt)}
-        </p>
-        {showCollectedAt ? (
-          <p>
-            <span className="text-slate-500">收取：</span>
-            {formatDateTime(order.collectedAt)}
-          </p>
-        ) : null}
+      {/* Recipe visualization: inputs → outputs */}
+      <div className="mt-3 rounded-lg bg-slate-50/80 p-2.5">
+        <div className="flex items-center gap-2">
+          {/* Inputs */}
+          <div className="flex min-w-0 flex-wrap gap-1.5">
+            {order.inputs.length > 0 ? (
+              order.inputs.map((item) => (
+                <ItemTile key={`in-${item.itemKey}`} itemKey={item.itemKey} quantity={item.quantity} />
+              ))
+            ) : (
+              <span className="text-[11px] text-slate-400">无</span>
+            )}
+          </div>
+
+          {/* Arrow */}
+          <div className="flex shrink-0 flex-col items-center gap-0.5 px-1">
+            <span className="text-lg leading-none text-slate-300">→</span>
+          </div>
+
+          {/* Outputs */}
+          <div className="flex min-w-0 flex-wrap gap-1.5">
+            {order.outputs.length > 0 ? (
+              order.outputs.map((item) => (
+                <ItemTile key={`out-${item.itemKey}`} itemKey={item.itemKey} quantity={item.quantity} />
+              ))
+            ) : (
+              <span className="text-[11px] text-slate-400">无</span>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-1 border-t border-dashed border-slate-200 pt-2">
-        <p className="text-sky-800">
-          <span className="font-medium">投入：</span>
-          {formatItemStacks(order.inputs)}
-        </p>
-        <p className="text-violet-800">
-          <span className="font-medium">产出：</span>
-          {formatItemStacks(order.outputs)}
-        </p>
+      {/* Timestamps */}
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-slate-400">
+        <span>
+          开始 <span className="text-slate-500">{formatDateTime(order.startedAt)}</span>
+        </span>
+        <span>
+          完成 <span className="text-slate-500">{formatDateTime(order.finishAt)}</span>
+        </span>
+        {showCollectedAt && (
+          <span>
+            收取 <span className="text-slate-500">{formatDateTime(order.collectedAt)}</span>
+          </span>
+        )}
       </div>
     </div>
   );
