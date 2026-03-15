@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "antd";
+import { Button, Popconfirm } from "antd";
 import type { AuthStatus } from "@/client/types/auth-ui";
 
 type WorldMapHeaderProps = {
@@ -81,14 +81,21 @@ export function WorldMapHeader({
             {displayStatus}
           </span>
           {isAuthenticated ? (
-            <Button
-              size="small"
-              className="!h-7 !cursor-pointer !rounded-full !border-rose-300 !bg-rose-50 !px-3 !font-medium !text-rose-700 !transition-colors !duration-200 motion-reduce:!transition-none hover:!border-rose-400 hover:!bg-rose-100 hover:!text-rose-800 focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-rose-400/70 focus-visible:!ring-offset-1"
-              onClick={() => void onLogoutClick()}
-              loading={logoutLoading}
+            <Popconfirm
+              title="确认登出吗？"
+              okText="确认"
+              cancelText="取消"
+              onConfirm={() => void onLogoutClick()}
+              disabled={logoutLoading}
             >
-              登出
-            </Button>
+              <Button
+                size="small"
+                className="!h-7 !cursor-pointer !rounded-full !border-rose-300 !bg-rose-50 !px-3 !font-medium !text-rose-700 !transition-colors !duration-200 motion-reduce:!transition-none hover:!border-rose-400 hover:!bg-rose-100 hover:!text-rose-800 focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-rose-400/70 focus-visible:!ring-offset-1"
+                loading={logoutLoading}
+              >
+                登出
+              </Button>
+            </Popconfirm>
           ) : (
             <Button
               type="primary"
