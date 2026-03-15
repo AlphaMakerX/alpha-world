@@ -15,6 +15,7 @@ const startFactoryProductionSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
   recipeId: z.string().trim().min(1, "配方 ID 不能为空"),
+  quantity: z.number().int().min(1).max(99).default(1),
 });
 
 type StartFactoryProductionSuccessResult = {
@@ -97,7 +98,18 @@ export async function executeStartFactoryProductionUseCase(
     }
     building.ensureFactory();
 
-    const moneyCost = recipe.inputs
+    const qty = parsed.data.quantity;
+    const scaledInputs = recipe.inputs.map((item) => ({
+      itemKey: item.itemKey,
+      quantity: item.quantity * qty,
+    }));
+    const scaledOutputs = recipe.outputs.map((item) => ({
+      itemKey: item.itemKey,
+      quantity: item.quantity * qty,
+    }));
+    const scaledDuration = recipe.durationSeconds * qty;
+
+    const moneyCost = scaledInputs
       .filter((inputItem) => inputItem.itemKey === "money")
       .reduce((sum, inputItem) => sum + inputItem.quantity, 0);
     const ownerUser = moneyCost > 0 ? await userRepository.findById(parsed.data.ownerUserId) : null;
@@ -114,7 +126,7 @@ export async function executeStartFactoryProductionUseCase(
       return { ok: false, error: "系统尚未初始化", status: 400 };
     }
 
-    for (const inputItem of recipe.inputs) {
+    for (const inputItem of scaledInputs) {
       if (inputItem.itemKey === "money") {
         if ((ownerUser?.money ?? 0) < inputItem.quantity) {
           return {
@@ -138,7 +150,7 @@ export async function executeStartFactoryProductionUseCase(
       }
     }
 
-    for (const inputItem of recipe.inputs) {
+    for (const inputItem of scaledInputs) {
       if (inputItem.itemKey === "money") {
         continue;
       }
@@ -160,9 +172,9 @@ export async function executeStartFactoryProductionUseCase(
       buildingId: building.id,
       ownerUserId: parsed.data.ownerUserId,
       recipeId: recipe.id,
-      inputs: recipe.inputs,
-      outputs: recipe.outputs,
-      durationSeconds: recipe.durationSeconds,
+      inputs: scaledInputs,
+      outputs: scaledOutputs,
+      durationSeconds: scaledDuration,
     });
     const savedJob = await factoryProductionJobRepository.save(job);
 
@@ -173,7 +185,7 @@ export async function executeStartFactoryProductionUseCase(
         amount: moneyCost,
         type: "factory_production",
         referenceId: String(savedJob.id),
-        description: `工厂生产: ${recipe.name}`,
+        description: `工厂生产: ${recipe.name} ×${qty}`,
       });
     }
 

@@ -210,7 +210,7 @@ export function WorldMap() {
     }
   };
 
-  const handleStartProduction = async (recipeId: string) => {
+  const handleStartProduction = async (recipeId: string, quantity: number = 1) => {
     if (!selectedPlot?.building) {
       return;
     }
@@ -231,6 +231,7 @@ export function WorldMap() {
       await startProductionMutation.mutateAsync({
         buildingId: selectedPlot.building.id,
         recipeId,
+        quantity,
       });
       await Promise.all([
         trpcUtils.building.myInventory.invalidate(),
@@ -497,7 +498,7 @@ export function WorldMap() {
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
         onBuild={(buildingType) => void handleBuild(buildingType)}
-        onStartProduction={(recipeId) => void handleStartProduction(recipeId)}
+        onStartProduction={(recipeId, quantity) => void handleStartProduction(recipeId, quantity)}
         onCreateListing={(itemKey, quantity, unitPrice) => void handleCreateListing(itemKey, quantity, unitPrice)}
         onPurchaseListing={(listingId) => void handlePurchaseListing(listingId)}
         onCancelListing={(listingId) => void handleCancelListing(listingId)}

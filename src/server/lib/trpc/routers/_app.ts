@@ -211,6 +211,7 @@ export const appRouter = createTRPCRouter({
         z.object({
           buildingId: z.number().int().positive(),
           recipeId: z.string().trim().min(1),
+          quantity: z.number().int().min(1).max(99).default(1),
         }),
       )
       .mutation(async ({ input, ctx }) => {
@@ -218,6 +219,7 @@ export const appRouter = createTRPCRouter({
           ownerUserId: ctx.userId,
           buildingId: input.buildingId,
           recipeId: input.recipeId,
+          quantity: input.quantity,
         });
         if (!result.ok) {
           if (result.status === 404) {

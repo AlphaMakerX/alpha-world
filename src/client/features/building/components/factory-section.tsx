@@ -8,7 +8,7 @@ type FactorySectionProps = {
   factoryRecipes: FactoryRecipe[];
   factoryOrders?: FactoryOrders;
   productionLoading: boolean;
-  onStartProduction: (recipeId: string) => void;
+  onStartProduction: (recipeId: string, quantity: number) => void;
 };
 
 export function FactorySection({
