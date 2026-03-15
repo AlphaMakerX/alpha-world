@@ -531,6 +531,11 @@ export function WorldMap() {
         onCancel={() => setLoginModalOpen(false)}
         footer={null}
         destroyOnHidden
+        afterClose={() => {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+        }}
       >
         <AuthPanel onAuthSuccess={() => setLoginModalOpen(false)} />
       </Modal>
