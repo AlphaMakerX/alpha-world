@@ -115,7 +115,7 @@ export function WorldMap() {
     { buildingId: selectedFactoryBuildingId ?? 0 },
     {
       enabled: Boolean(selectedFactoryBuildingId && selectedBuildingCapabilities.canManageFactory),
-      refetchInterval: 3000,
+      refetchInterval: (query) => (query.state.data?.focusOrder ? 3000 : false),
     },
   );
   const selectedShopBuildingId =
