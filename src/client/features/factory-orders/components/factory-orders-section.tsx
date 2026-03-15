@@ -11,7 +11,7 @@ export function FactoryOrdersSection({ factoryOrders }: FactoryOrdersSectionProp
   const [activeTab, setActiveTab] = useState<"focus" | "history">("focus");
 
   const tabs = [
-    { key: "focus" as const, label: "制作中订单" },
+    { key: "focus" as const, label: "制造中订单" },
     { key: "history" as const, label: "历史订单" },
   ];
 
