@@ -14,3 +14,4 @@ export type InventoryItem = RouterOutputs["building"]["myInventory"]["items"][nu
 export type ShopListing = RouterOutputs["building"]["shopListings"]["listings"][number];
 export type BuyOrder = RouterOutputs["building"]["buyOrders"]["orders"][number];
 export type ShopTransaction = RouterOutputs["building"]["shopTransactionHistory"]["transactions"][number];
+export type PurchasingStationTransaction = RouterOutputs["building"]["purchasingStationTransactionHistory"]["transactions"][number];

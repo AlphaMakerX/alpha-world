@@ -1,4 +1,4 @@
-import type { BuildingType, BuyOrder, FactoryOrders, FactoryRecipe, InventoryItem, ShopListing, ShopTransaction } from "@/client/features/building/types/building-ui";
+import type { BuildingType, BuyOrder, FactoryOrders, FactoryRecipe, InventoryItem, PurchasingStationTransaction, ShopListing, ShopTransaction } from "@/client/features/building/types/building-ui";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
 export type PlotDetailModalProps = {
@@ -9,6 +9,7 @@ export type PlotDetailModalProps = {
   factoryOrders?: FactoryOrders;
   shopListings: ShopListing[];
   shopTransactions: ShopTransaction[];
+  purchasingStationTransactions: PurchasingStationTransaction[];
   buyOrders: BuyOrder[];
   inventoryItems: InventoryItem[];
   productionLoading: boolean;

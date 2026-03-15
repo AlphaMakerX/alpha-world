@@ -10,6 +10,7 @@ import { FactorySection } from "@/client/features/building/components/factory-se
 import { ShopSection } from "@/client/features/shop/components/shop-section";
 import { ShopTransactionHistory } from "@/client/features/shop/components/shop-transaction-history";
 import { PurchasingStationSection } from "@/client/features/purchasing-station/components/purchasing-station-section";
+import { PurchasingStationTransactionHistory } from "@/client/features/purchasing-station/components/purchasing-station-transaction-history";
 import { DraggableWindow } from "@/client/components/draggable-window";
 import type { PlotDetailModalProps } from "./plot-detail-modal.types";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
@@ -24,6 +25,7 @@ export function PlotDetailModal({
   factoryOrders,
   shopListings,
   shopTransactions,
+  purchasingStationTransactions,
   buyOrders,
   inventoryItems,
   productionLoading,
@@ -156,6 +158,8 @@ export function PlotDetailModal({
                     </BuildingActionSection>
                     {shouldShowShop ? (
                       <ShopTransactionHistory transactions={shopTransactions} />
+                    ) : shouldShowPurchasingStation ? (
+                      <PurchasingStationTransactionHistory transactions={purchasingStationTransactions} />
                     ) : null}
                   </div>
                 ),

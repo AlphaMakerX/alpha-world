@@ -140,6 +140,12 @@ export function WorldMap() {
       enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
     },
   );
+  const { data: purchasingStationTransactionHistoryData } = trpc.building.purchasingStationTransactionHistory.useQuery(
+    { buildingId: selectedPurchasingStationBuildingId ?? 0 },
+    {
+      enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
+    },
+  );
   const {
     data: inventoryData,
     isFetching: inventoryLoading,
@@ -345,6 +351,7 @@ export function WorldMap() {
       await fulfillBuyOrderMutation.mutateAsync({ orderId, quantity });
       await Promise.all([
         trpcUtils.building.buyOrders.invalidate(),
+        trpcUtils.building.purchasingStationTransactionHistory.invalidate(),
         trpcUtils.building.myInventory.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
@@ -494,6 +501,7 @@ export function WorldMap() {
         factoryOrders={factoryOrdersData}
         shopListings={shopListingsData?.listings ?? []}
         shopTransactions={shopTransactionHistoryData?.transactions ?? []}
+        purchasingStationTransactions={purchasingStationTransactionHistoryData?.transactions ?? []}
         buyOrders={buyOrdersData?.orders ?? []}
         inventoryItems={inventoryData?.items ?? []}
         productionLoading={startProductionMutation.isPending}
