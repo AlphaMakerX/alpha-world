@@ -3,6 +3,7 @@ import {
   INSPECT_DISTANCE,
   MAP_HEIGHT,
   MAP_WIDTH,
+  PLAYER_FOOT_OFFSET_Y,
   PLAYER_RADIUS,
   ROAD_WIDTH,
   SCENE_KEY,
@@ -143,6 +144,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         moveSpeed: this.moveSpeed,
         deltaMs: this.game.loop.delta,
         playerRadius: PLAYER_RADIUS,
+        playerFootOffsetY: PLAYER_FOOT_OFFSET_Y,
       })
 
       updatePlayerAnimation(this.player, this.cursors)

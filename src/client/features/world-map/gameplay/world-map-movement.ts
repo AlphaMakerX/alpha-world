@@ -17,6 +17,7 @@ type MovePlayerByCursorsParams = {
   moveSpeed: number
   deltaMs: number
   playerRadius: number
+  playerFootOffsetY: number
 }
 
 function isPointInsideRectangle(rectangle: Phaser.Geom.Rectangle, x: number, y: number): boolean {
@@ -36,16 +37,13 @@ function canPlayerStandAt(
   roads: Phaser.Geom.Rectangle[],
   x: number,
   y: number,
-  playerRadius: number,
+  radius: number,
 ): boolean {
-  const r = playerRadius
-
-  // 使用上下左右四点采样近似圆形碰撞，性能稳定且便于维护。
   return (
-    isPointOnRoad(roads, x - r, y) &&
-    isPointOnRoad(roads, x + r, y) &&
-    isPointOnRoad(roads, x, y - r) &&
-    isPointOnRoad(roads, x, y + r)
+    isPointOnRoad(roads, x - radius, y) &&
+    isPointOnRoad(roads, x + radius, y) &&
+    isPointOnRoad(roads, x, y - radius) &&
+    isPointOnRoad(roads, x, y + radius)
   )
 }
 
@@ -73,7 +71,7 @@ function getMovementVectorFromCursors(
 }
 
 export function movePlayerByCursorsOnRoads(params: MovePlayerByCursorsParams): void {
-  const { player, cursors, roads, moveSpeed, deltaMs, playerRadius } = params
+  const { player, cursors, roads, moveSpeed, deltaMs, playerRadius, playerFootOffsetY } = params
   const step = moveSpeed * (deltaMs / 1000)
   const { vx, vy } = getMovementVectorFromCursors(cursors, step)
 
@@ -83,12 +81,13 @@ export function movePlayerByCursorsOnRoads(params: MovePlayerByCursorsParams): v
 
   const targetX = player.x + vx
   const targetY = player.y + vy
+  const footY = player.y + playerFootOffsetY
 
   // 分轴移动可降低贴墙转角时的阻塞感。
-  if (canPlayerStandAt(roads, targetX, player.y, playerRadius)) {
+  if (canPlayerStandAt(roads, targetX, footY, playerRadius)) {
     player.x = targetX
   }
-  if (canPlayerStandAt(roads, player.x, targetY, playerRadius)) {
+  if (canPlayerStandAt(roads, player.x, targetY + playerFootOffsetY, playerRadius)) {
     player.y = targetY
   }
 }

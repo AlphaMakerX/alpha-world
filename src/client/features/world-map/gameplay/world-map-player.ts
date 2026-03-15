@@ -12,6 +12,7 @@ export function preloadPlayerAssets(scene: Phaser.Scene): void {
 
 export function createPlayer(scene: Phaser.Scene): PlayerSprite {
   const player = scene.physics.add.sprite(140, MAP_HEIGHT / 2, DUDE_TEXTURE_KEY) as PlayerSprite
+  player.setOrigin(0.5, 1)
   player.setFrame(4)
   player.setDepth(20)
   return player
