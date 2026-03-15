@@ -153,6 +153,7 @@ export function WorldMap() {
   } = trpc.building.myInventory.useQuery(undefined, {
     enabled: authStatus === "authenticated",
   });
+
   const headerUsername =
     authStatus === "authenticated" ? (meData?.user.username ?? session?.user?.name ?? undefined) : undefined;
   const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
@@ -537,6 +538,7 @@ export function WorldMap() {
         authStatus={authStatus}
         loading={inventoryLoading}
         items={inventoryData?.items ?? []}
+        onRefresh={() => void refetchInventory()}
         onClose={() => setInventoryModalOpen(false)}
       />
       <GameInfoModal
