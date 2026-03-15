@@ -22,6 +22,7 @@ export function PlotDetailModal({
   factoryRecipes,
   factoryOrders,
   shopListings,
+  shopTransactions,
   buyOrders,
   inventoryItems,
   productionLoading,
@@ -131,6 +132,7 @@ export function PlotDetailModal({
                         <ShopSection
                           isOwner={buildingCapabilities.canManageShop}
                           listings={shopListings}
+                          transactions={shopTransactions}
                           inventoryItems={inventoryItems}
                           createListingLoading={createListingLoading}
                           purchaseLoading={purchaseListingLoading}

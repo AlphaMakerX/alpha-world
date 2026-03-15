@@ -6,6 +6,7 @@ import { userRepository, transactionLedgerRepository } from "@/server/features/p
 const purchaseShopListingSchema = z.object({
   buyerUserId: z.string().uuid("用户 ID 不合法"),
   listingId: z.number().int().positive(),
+  quantity: z.number().int().positive("购买数量必须为正整数"),
 });
 
 type PurchaseShopListingSuccessResult = {
@@ -54,6 +55,11 @@ export async function executePurchaseShopListingUseCase(
     return { ok: false, error: "不能购买自己上架的商品", status: 409 };
   }
 
+  const purchaseQuantity = parsed.data.quantity;
+  if (purchaseQuantity > listing.quantity) {
+    return { ok: false, error: `购买数量不能超过剩余库存 (${listing.quantity})`, status: 409 };
+  }
+
   const buyer = await userRepository.findById(parsed.data.buyerUserId);
   if (!buyer) {
     return { ok: false, error: "用户不存在", status: 404 };
@@ -64,7 +70,7 @@ export async function executePurchaseShopListingUseCase(
     return { ok: false, error: "卖家不存在", status: 404 };
   }
 
-  const totalCost = listing.unitPrice * listing.quantity;
+  const totalCost = listing.unitPrice * purchaseQuantity;
 
   try {
     buyer.spendMoney(totalCost);
@@ -78,11 +84,18 @@ export async function executePurchaseShopListingUseCase(
 
   await userRepository.save(buyer);
   await userRepository.save(seller);
-  await shopListingRepository.updateStatus(listing.id, "sold");
+
+  const remainingQuantity = listing.quantity - purchaseQuantity;
+  if (remainingQuantity === 0) {
+    await shopListingRepository.updateStatus(listing.id, "sold");
+  } else {
+    await shopListingRepository.updateQuantity(listing.id, remainingQuantity);
+  }
+
   await inventoryRepository.addItem(
     parsed.data.buyerUserId,
     listing.itemKey,
-    listing.quantity,
+    purchaseQuantity,
   );
 
   await transactionLedgerRepository.record({
@@ -91,7 +104,7 @@ export async function executePurchaseShopListingUseCase(
     amount: totalCost,
     type: "shop_purchase",
     referenceId: String(listing.id),
-    description: `购买商品: ${listing.itemKey} x${listing.quantity}`,
+    description: `购买商品: ${listing.itemKey} x${purchaseQuantity}`,
   });
 
   return {
@@ -99,7 +112,7 @@ export async function executePurchaseShopListingUseCase(
     listing: {
       id: listing.id,
       itemKey: listing.itemKey,
-      quantity: listing.quantity,
+      quantity: purchaseQuantity,
       unitPrice: listing.unitPrice,
       totalCost,
     },

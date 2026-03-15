@@ -126,6 +126,12 @@ export function WorldMap() {
       enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
     },
   );
+  const { data: shopTransactionHistoryData } = trpc.building.shopTransactionHistory.useQuery(
+    { buildingId: selectedShopBuildingId ?? 0 },
+    {
+      enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.canManageShop),
+    },
+  );
   const selectedPurchasingStationBuildingId =
     selectedPlot?.building?.type === "purchasing_station" ? selectedPlot.building.id : undefined;
   const { data: buyOrdersData } = trpc.building.buyOrders.useQuery(
@@ -267,16 +273,17 @@ export function WorldMap() {
     }
   };
 
-  const handlePurchaseListing = async (listingId: number) => {
+  const handlePurchaseListing = async (listingId: number, quantity: number) => {
     if (authStatus !== "authenticated") {
       setLoginModalOpen(true);
       return;
     }
 
     try {
-      await purchaseShopListingMutation.mutateAsync({ listingId });
+      await purchaseShopListingMutation.mutateAsync({ listingId, quantity });
       await Promise.all([
         trpcUtils.building.shopListings.invalidate(),
+        trpcUtils.building.shopTransactionHistory.invalidate(),
         trpcUtils.building.myInventory.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
@@ -486,6 +493,7 @@ export function WorldMap() {
         factoryRecipes={factoryRecipesData?.recipes ?? []}
         factoryOrders={factoryOrdersData}
         shopListings={shopListingsData?.listings ?? []}
+        shopTransactions={shopTransactionHistoryData?.transactions ?? []}
         buyOrders={buyOrdersData?.orders ?? []}
         inventoryItems={inventoryData?.items ?? []}
         productionLoading={startProductionMutation.isPending}
@@ -500,7 +508,7 @@ export function WorldMap() {
         onBuild={(buildingType) => void handleBuild(buildingType)}
         onStartProduction={(recipeId, quantity) => void handleStartProduction(recipeId, quantity)}
         onCreateListing={(itemKey, quantity, unitPrice) => void handleCreateListing(itemKey, quantity, unitPrice)}
-        onPurchaseListing={(listingId) => void handlePurchaseListing(listingId)}
+        onPurchaseListing={(listingId, quantity) => void handlePurchaseListing(listingId, quantity)}
         onCancelListing={(listingId) => void handleCancelListing(listingId)}
         onCreateBuyOrder={(itemKey, quantity, unitPrice) => void handleCreateBuyOrder(itemKey, quantity, unitPrice)}
         onFulfillBuyOrder={(orderId) => void handleFulfillBuyOrder(orderId)}

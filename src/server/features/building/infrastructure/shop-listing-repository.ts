@@ -59,6 +59,13 @@ export class DrizzleShopListingRepository implements ShopListingRepository {
       .set({ status, updatedAt: new Date() })
       .where(eq(shopListings.id, id));
   }
+
+  async updateQuantity(id: number, quantity: number): Promise<void> {
+    await db
+      .update(shopListings)
+      .set({ quantity, updatedAt: new Date() })
+      .where(eq(shopListings.id, id));
+  }
 }
 
 export const shopListingRepository: ShopListingRepository = new DrizzleShopListingRepository();

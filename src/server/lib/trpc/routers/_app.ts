@@ -24,6 +24,7 @@ import {
   executeListBuyOrdersUseCase,
   executeFulfillBuyOrderUseCase,
   executeCancelBuyOrderUseCase,
+  executeGetShopTransactionHistoryUseCase,
 } from "@/server/features/building/application";
 import {
   executeGetCurrentUserUseCase,
@@ -319,12 +320,14 @@ export const appRouter = createTRPCRouter({
       .input(
         z.object({
           listingId: z.number().int().positive(),
+          quantity: z.number().int().positive(),
         }),
       )
       .mutation(async ({ input, ctx }) => {
         const result = await executePurchaseShopListingUseCase({
           buyerUserId: ctx.userId,
           listingId: input.listingId,
+          quantity: input.quantity,
         });
         if (!result.ok) {
           if (result.status === 404) {
@@ -350,6 +353,30 @@ export const appRouter = createTRPCRouter({
         const result = await executeCancelShopListingUseCase({
           sellerUserId: ctx.userId,
           listingId: input.listingId,
+        });
+        if (!result.ok) {
+          if (result.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: result.error,
+            });
+          }
+          throw new TRPCError({
+            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+        return result;
+      }),
+    shopTransactionHistory: publicProcedure
+      .input(
+        z.object({
+          buildingId: z.number().int().positive(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const result = await executeGetShopTransactionHistoryUseCase({
+          buildingId: input.buildingId,
         });
         if (!result.ok) {
           if (result.status === 404) {

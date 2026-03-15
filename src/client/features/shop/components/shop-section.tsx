@@ -1,22 +1,25 @@
-import type { InventoryItem, ShopListing } from "@/client/features/building/types/building-ui";
+import type { InventoryItem, ShopListing, ShopTransaction } from "@/client/features/building/types/building-ui";
 import { ShopListingCard } from "./shop-listing-card";
 import { ShopCreateListingForm } from "./shop-create-listing-form";
+import { ShopTransactionHistory } from "./shop-transaction-history";
 
 type ShopSectionProps = {
   isOwner: boolean;
   listings: ShopListing[];
+  transactions: ShopTransaction[];
   inventoryItems: InventoryItem[];
   createListingLoading: boolean;
   purchaseLoading: boolean;
   cancelLoading: boolean;
   onCreateListing: (itemKey: string, quantity: number, unitPrice: number) => void;
-  onPurchase: (listingId: number) => void;
+  onPurchase: (listingId: number, quantity: number) => void;
   onCancel: (listingId: number) => void;
 };
 
 export function ShopSection({
   isOwner,
   listings,
+  transactions,
   inventoryItems,
   createListingLoading,
   purchaseLoading,
@@ -59,6 +62,8 @@ export function ShopSection({
           </p>
         )}
       </div>
+
+      {isOwner ? <ShopTransactionHistory transactions={transactions} /> : null}
     </div>
   );
 }

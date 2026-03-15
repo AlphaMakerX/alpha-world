@@ -17,4 +17,5 @@ export interface ShopListingRepository {
   findById(id: number): Promise<ShopListing | null>;
   findActiveByBuildingId(buildingId: number): Promise<ShopListing[]>;
   updateStatus(id: number, status: ShopListingStatus): Promise<void>;
+  updateQuantity(id: number, quantity: number): Promise<void>;
 }
