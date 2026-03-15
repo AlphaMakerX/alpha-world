@@ -6,6 +6,7 @@ import { userRepository, transactionLedgerRepository } from "@/server/features/p
 const fulfillBuyOrderSchema = z.object({
   sellerUserId: z.string().uuid("用户 ID 不合法"),
   orderId: z.number().int().positive(),
+  quantity: z.number().int().positive("出售数量必须为正整数"),
 });
 
 type FulfillBuyOrderSuccessResult = {
@@ -52,6 +53,11 @@ export async function executeFulfillBuyOrderUseCase(
     return { ok: false, error: "不能出售给自己的收购订单", status: 409 };
   }
 
+  const sellQuantity = parsed.data.quantity;
+  if (sellQuantity > order.quantity) {
+    return { ok: false, error: `出售数量不能超过订单剩余需求 (${order.quantity})`, status: 409 };
+  }
+
   const seller = await userRepository.findById(parsed.data.sellerUserId);
   if (!seller) {
     return { ok: false, error: "用户不存在", status: 404 };
@@ -61,11 +67,11 @@ export async function executeFulfillBuyOrderUseCase(
     parsed.data.sellerUserId,
     order.itemKey,
   );
-  if (sellerQuantity < order.quantity) {
+  if (sellerQuantity < sellQuantity) {
     return { ok: false, error: "库存不足，无法出售", status: 409 };
   }
 
-  const totalIncome = order.unitPrice * order.quantity;
+  const totalIncome = order.unitPrice * sellQuantity;
 
   try {
     seller.receiveMoney(totalIncome);
@@ -79,15 +85,21 @@ export async function executeFulfillBuyOrderUseCase(
   await inventoryRepository.consumeItem(
     parsed.data.sellerUserId,
     order.itemKey,
-    order.quantity,
+    sellQuantity,
   );
   await inventoryRepository.addItem(
     order.buyerUserId,
     order.itemKey,
-    order.quantity,
+    sellQuantity,
   );
   await userRepository.save(seller);
-  await buyOrderRepository.updateStatus(order.id, "fulfilled");
+
+  const remainingQuantity = order.quantity - sellQuantity;
+  if (remainingQuantity === 0) {
+    await buyOrderRepository.updateStatus(order.id, "fulfilled");
+  } else {
+    await buyOrderRepository.updateQuantity(order.id, remainingQuantity);
+  }
 
   await transactionLedgerRepository.record({
     fromUserId: order.buyerUserId,
@@ -95,7 +107,7 @@ export async function executeFulfillBuyOrderUseCase(
     amount: totalIncome,
     type: "buy_order_fulfilled",
     referenceId: String(order.id),
-    description: `收购订单成交: ${order.itemKey} x${order.quantity}`,
+    description: `收购订单成交: ${order.itemKey} x${sellQuantity}`,
   });
 
   return {
@@ -103,7 +115,7 @@ export async function executeFulfillBuyOrderUseCase(
     order: {
       id: order.id,
       itemKey: order.itemKey,
-      quantity: order.quantity,
+      quantity: sellQuantity,
       unitPrice: order.unitPrice,
       totalIncome,
     },

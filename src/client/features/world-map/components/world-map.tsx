@@ -335,14 +335,14 @@ export function WorldMap() {
     }
   };
 
-  const handleFulfillBuyOrder = async (orderId: number) => {
+  const handleFulfillBuyOrder = async (orderId: number, quantity: number) => {
     if (authStatus !== "authenticated") {
       setLoginModalOpen(true);
       return;
     }
 
     try {
-      await fulfillBuyOrderMutation.mutateAsync({ orderId });
+      await fulfillBuyOrderMutation.mutateAsync({ orderId, quantity });
       await Promise.all([
         trpcUtils.building.buyOrders.invalidate(),
         trpcUtils.building.myInventory.invalidate(),
@@ -511,7 +511,7 @@ export function WorldMap() {
         onPurchaseListing={(listingId, quantity) => void handlePurchaseListing(listingId, quantity)}
         onCancelListing={(listingId) => void handleCancelListing(listingId)}
         onCreateBuyOrder={(itemKey, quantity, unitPrice) => void handleCreateBuyOrder(itemKey, quantity, unitPrice)}
-        onFulfillBuyOrder={(orderId) => void handleFulfillBuyOrder(orderId)}
+        onFulfillBuyOrder={(orderId, quantity) => void handleFulfillBuyOrder(orderId, quantity)}
         onCancelBuyOrder={(orderId) => void handleCancelBuyOrder(orderId)}
       />
       <PersonDetailModal

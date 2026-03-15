@@ -59,6 +59,13 @@ export class DrizzleBuyOrderRepository implements BuyOrderRepository {
       .set({ status, updatedAt: new Date() })
       .where(eq(buyOrders.id, id));
   }
+
+  async updateQuantity(id: number, quantity: number): Promise<void> {
+    await db
+      .update(buyOrders)
+      .set({ quantity, updatedAt: new Date() })
+      .where(eq(buyOrders.id, id));
+  }
 }
 
 export const buyOrderRepository: BuyOrderRepository = new DrizzleBuyOrderRepository();

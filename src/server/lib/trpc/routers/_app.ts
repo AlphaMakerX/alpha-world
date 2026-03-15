@@ -451,12 +451,14 @@ export const appRouter = createTRPCRouter({
       .input(
         z.object({
           orderId: z.number().int().positive(),
+          quantity: z.number().int().positive(),
         }),
       )
       .mutation(async ({ input, ctx }) => {
         const result = await executeFulfillBuyOrderUseCase({
           sellerUserId: ctx.userId,
           orderId: input.orderId,
+          quantity: input.quantity,
         });
         if (!result.ok) {
           if (result.status === 404) {

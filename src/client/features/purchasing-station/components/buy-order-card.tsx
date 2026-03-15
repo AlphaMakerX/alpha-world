@@ -1,4 +1,5 @@
-import { Button, Popconfirm } from "antd";
+import { useState } from "react";
+import { Button, InputNumber, Popconfirm } from "antd";
 import type { BuyOrder } from "@/client/features/building/types/building-ui";
 import { getItemDisplay } from "@/client/features/inventory/utils/item-display";
 
@@ -7,7 +8,7 @@ type BuyOrderCardProps = {
   isOwner: boolean;
   fulfillLoading: boolean;
   cancelLoading: boolean;
-  onFulfill: (orderId: number) => void;
+  onFulfill: (orderId: number, quantity: number) => void;
   onCancel: (orderId: number) => void;
 };
 
@@ -21,6 +22,8 @@ export function BuyOrderCard({
 }: BuyOrderCardProps) {
   const display = getItemDisplay(order.itemKey);
   const totalPrice = order.unitPrice * order.quantity;
+  const [sellQuantity, setSellQuantity] = useState(order.quantity);
+  const sellTotal = order.unitPrice * sellQuantity;
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 transition hover:shadow-md">
@@ -59,11 +62,29 @@ export function BuyOrderCard({
             </Popconfirm>
           ) : (
             <Popconfirm
-              title={`确认出售 ${display.name} ×${order.quantity}？`}
-              description={`将从你的背包扣除物品，获得 ¥${totalPrice.toFixed(2)}。`}
+              title={`确认出售 ${display.name} ×${sellQuantity}？`}
+              description={
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">出售数量:</span>
+                    <InputNumber
+                      size="small"
+                      min={1}
+                      max={order.quantity}
+                      value={sellQuantity}
+                      onChange={(v) => setSellQuantity(v ?? 1)}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-slate-400">/ {order.quantity}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    将从你的背包扣除物品，获得 ¥{sellTotal.toFixed(2)}
+                  </p>
+                </div>
+              }
               okText="确认出售"
               cancelText="取消"
-              onConfirm={() => onFulfill(order.id)}
+              onConfirm={() => onFulfill(order.id, sellQuantity)}
               disabled={fulfillLoading}
             >
               <Button type="primary" size="small" loading={fulfillLoading}>

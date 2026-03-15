@@ -28,6 +28,6 @@ export type PlotDetailModalProps = {
   onPurchaseListing: (listingId: number, quantity: number) => void;
   onCancelListing: (listingId: number) => void;
   onCreateBuyOrder: (itemKey: string, quantity: number, unitPrice: number) => void;
-  onFulfillBuyOrder: (orderId: number) => void;
+  onFulfillBuyOrder: (orderId: number, quantity: number) => void;
   onCancelBuyOrder: (orderId: number) => void;
 };

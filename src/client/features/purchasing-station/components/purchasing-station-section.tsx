@@ -9,7 +9,7 @@ type PurchasingStationSectionProps = {
   fulfillLoading: boolean;
   cancelLoading: boolean;
   onCreateOrder: (itemKey: string, quantity: number, unitPrice: number) => void;
-  onFulfill: (orderId: number) => void;
+  onFulfill: (orderId: number, quantity: number) => void;
   onCancel: (orderId: number) => void;
 };
 

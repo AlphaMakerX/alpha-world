@@ -17,4 +17,5 @@ export interface BuyOrderRepository {
   findById(id: number): Promise<BuyOrder | null>;
   findActiveByBuildingId(buildingId: number): Promise<BuyOrder[]>;
   updateStatus(id: number, status: BuyOrderStatus): Promise<void>;
+  updateQuantity(id: number, quantity: number): Promise<void>;
 }
