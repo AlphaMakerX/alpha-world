@@ -248,6 +248,7 @@ export function WorldMap() {
       await Promise.all([
         trpcUtils.building.myInventory.invalidate(),
         trpcUtils.building.factoryOrders.invalidate(),
+        trpcUtils.person.me.invalidate(),
       ]);
       messageApi.success("已开始制造");
     } catch (error) {
