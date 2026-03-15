@@ -138,8 +138,8 @@ export function createPlotsAndRender(
     }
 
     const plotText = scene.add
-      .text(plotX + 6, plotY + PLOT_HEIGHT - 5, plotId, textStyle)
-      .setOrigin(0, 1)
+      .text(plotX + PLOT_WIDTH / 2, plotY - 2, plotId, textStyle)
+      .setOrigin(0.5, 1)
       .setDepth(3)
     renderObjects.push(plotText)
   }
