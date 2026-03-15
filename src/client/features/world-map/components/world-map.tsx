@@ -129,7 +129,7 @@ export function WorldMap() {
   const { data: shopTransactionHistoryData } = trpc.building.shopTransactionHistory.useQuery(
     { buildingId: selectedShopBuildingId ?? 0 },
     {
-      enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.canManageShop),
+      enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
     },
   );
   const selectedPurchasingStationBuildingId =
