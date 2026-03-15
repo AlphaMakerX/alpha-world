@@ -1,17 +1,22 @@
-import { desc, ne } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { db } from "@/server/lib/db";
 import { users } from "@/server/features/person/infrastructure/schema";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
+import {
+  ADAM_INITIAL_MONEY,
+  ADAM_USERNAME,
+} from "@/server/features/shared-kernel/domain/adam";
 
 export type LeaderboardEntry = {
   rank: number;
   username: string;
   money: number;
+  isAdam: boolean;
 };
 
 export type GetWealthLeaderboardResult = {
   ok: true;
   entries: LeaderboardEntry[];
+  totalMoneySupply: number;
 };
 
 export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLeaderboardResult> {
@@ -21,7 +26,6 @@ export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLea
       money: users.money,
     })
     .from(users)
-    .where(ne(users.id, ADAM_USER_ID))
     .orderBy(desc(users.money))
     .limit(50);
 
@@ -29,7 +33,8 @@ export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLea
     rank: index + 1,
     username: row.username,
     money: Number(row.money),
+    isAdam: row.username === ADAM_USERNAME,
   }));
 
-  return { ok: true, entries };
+  return { ok: true, entries, totalMoneySupply: ADAM_INITIAL_MONEY };
 }

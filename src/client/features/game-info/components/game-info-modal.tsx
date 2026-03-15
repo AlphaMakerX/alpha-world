@@ -118,6 +118,7 @@ function WealthLeaderboardTab() {
   }
 
   const entries = data?.entries ?? [];
+  const totalMoneySupply = data?.totalMoneySupply ?? 0;
 
   if (entries.length === 0) {
     return (
@@ -134,37 +135,66 @@ function WealthLeaderboardTab() {
   ];
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-slate-50">
-          <tr>
-            <th className="w-16 px-3 py-2 text-center font-medium text-slate-600">排名</th>
-            <th className="px-3 py-2 font-medium text-slate-600">玩家</th>
-            <th className="px-3 py-2 text-right font-medium text-slate-600">财富</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {entries.map((entry) => (
-            <tr key={entry.rank} className={entry.rank <= 3 ? "bg-amber-50/40" : ""}>
-              <td className="px-3 py-2 text-center">
-                {entry.rank <= 3 ? (
-                  <span
-                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${medalColors[entry.rank - 1]}`}
-                  >
-                    {entry.rank}
-                  </span>
-                ) : (
-                  <span className="text-slate-400">{entry.rank}</span>
-                )}
-              </td>
-              <td className="px-3 py-2 font-medium text-slate-800">{entry.username}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-orange-700">
-                {entry.money.toLocaleString("zh-CN")}
-              </td>
+    <div className="space-y-3">
+      <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
+        <p className="text-xs font-medium text-sky-600">货币总量（初始发行）</p>
+        <p className="mt-0.5 text-xl font-bold tabular-nums text-sky-900">
+          {totalMoneySupply.toLocaleString("zh-CN")}
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-slate-200">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="w-16 px-3 py-2 text-center font-medium text-slate-600">排名</th>
+              <th className="px-3 py-2 font-medium text-slate-600">玩家</th>
+              <th className="px-3 py-2 text-right font-medium text-slate-600">财富</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {entries.map((entry) => (
+              <tr
+                key={entry.rank}
+                className={
+                  entry.isAdam
+                    ? "bg-violet-50/60"
+                    : entry.rank <= 3
+                      ? "bg-amber-50/40"
+                      : ""
+                }
+              >
+                <td className="px-3 py-2 text-center">
+                  {entry.isAdam ? (
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-violet-300 bg-violet-100 text-xs font-bold text-violet-700">
+                      {entry.rank}
+                    </span>
+                  ) : entry.rank <= 3 ? (
+                    <span
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${medalColors[entry.rank - 1]}`}
+                    >
+                      {entry.rank}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">{entry.rank}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 font-medium text-slate-800">
+                  {entry.username}
+                  {entry.isAdam && (
+                    <span className="ml-1.5 inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
+                      央行
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-orange-700">
+                  {entry.money.toLocaleString("zh-CN")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
