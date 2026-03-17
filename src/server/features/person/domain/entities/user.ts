@@ -67,6 +67,14 @@ export class User {
     this.props.updatedAt = new Date();
   }
 
+  changePasswordHash(passwordHash: string): void {
+    if (!passwordHash) {
+      throw new DomainError("密码哈希不能为空");
+    }
+    this.props.passwordHash = passwordHash;
+    this.props.updatedAt = new Date();
+  }
+
   get id() {
     return this.props.id;
   }
