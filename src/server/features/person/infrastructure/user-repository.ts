@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import { Username } from "@/server/features/person/domain/value-objects/username";
@@ -18,7 +18,7 @@ function toDomainUser(record: typeof users.$inferSelect) {
 
 export class DrizzleUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
-    const record = await db.query.users.findFirst({
+    const record = await getDbClient().query.users.findFirst({
       where: eq(users.id, id),
     });
 
@@ -31,7 +31,7 @@ export class DrizzleUserRepository implements UserRepository {
 
   async findByUsername(username: Username): Promise<User | null> {
     const normalizedUsername = username.getValue();
-    const record = await db.query.users.findFirst({
+    const record = await getDbClient().query.users.findFirst({
       where: eq(users.username, normalizedUsername),
     });
 
@@ -43,7 +43,7 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async save(user: User): Promise<void> {
-    await db
+    await getDbClient()
       .insert(users)
       .values({
         id: user.id,
