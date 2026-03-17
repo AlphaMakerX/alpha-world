@@ -6,14 +6,14 @@ import {
 import {
   executeListPlotsUseCase,
   executePurchasePlotUseCase,
-} from "@/server/features/plot/application";
+  purchasePlotSchema,
+} from "@/server/features/plot/composition";
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
-import { z } from "zod";
 
 export const plotRouter = createTRPCRouter({
   list: publicProcedure.query(() => executeListPlotsUseCase()),
   purchase: protectedProcedure
-    .input(z.object({ plotId: z.number().int().positive() }))
+    .input(purchasePlotSchema.omit({ buyerUserId: true }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(
         await executePurchasePlotUseCase({

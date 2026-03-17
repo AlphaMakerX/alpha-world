@@ -1,173 +1,71 @@
-{
-  "useCase": "executeLoginUserUseCase",
-  "testCases": [
-    {
-      "id": "TC_LOGIN_001",
-      "name": "用户名密码正确时返回登录成功",
-      "input": {
-        "command": {
-          "username": "testuser",
-          "password": "password123"
-        },
-        "mocks": {
-          "userRepository.findByUsername": {
-            "returns": {
-              "id": "user-1",
-              "username": "testuser",
-              "passwordHash": "hashed-password"
-            }
-          },
-          "passwordHasher.verify": {
-            "returns": true
-          }
-        }
-      },
-      "action": "executeLoginUserUseCase(command, deps)",
-      "expected": {
-        "result": {
-          "ok": true,
-          "user": {
-            "id": "user-1",
-            "username": "testuser"
-          }
-        }
-      }
+[
+  {
+    "name": "用户名密码正确时返回登录成功",
+    "input": {
+      "username": "testuser",
+      "password": "password123"
     },
-    {
-      "id": "TC_LOGIN_002",
-      "name": "用户不存在时返回失败",
-      "input": {
-        "command": {
-          "username": "testuser",
-          "password": "password123"
-        },
-        "mocks": {
-          "userRepository.findByUsername": {
-            "returns": null
-          }
-        }
-      },
-      "action": "executeLoginUserUseCase(command, deps)",
-      "expected": {
-        "result": {
-          "ok": false,
-          "error": "用户名或密码错误"
-        },
-        "interaction": {
-          "passwordHasher.verify.called": false
-        }
-      }
-    },
-    {
-      "id": "TC_LOGIN_003",
-      "name": "密码错误时返回失败",
-      "input": {
-        "command": {
-          "username": "testuser",
-          "password": "password123"
-        },
-        "mocks": {
-          "userRepository.findByUsername": {
-            "returns": {
-              "id": "user-1",
-              "username": "testuser",
-              "passwordHash": "hashed-password"
-            }
-          },
-          "passwordHasher.verify": {
-            "returns": false
-          }
-        }
-      },
-      "action": "executeLoginUserUseCase(command, deps)",
-      "expected": {
-        "result": {
-          "ok": false,
-          "error": "用户名或密码错误"
-        }
-      }
-    },
-    {
-      "id": "TC_LOGIN_004",
-      "name": "用户不存在和密码错误返回同一错误信息",
-      "input": {
-        "scenarioA": {
-          "mocks": {
-            "userRepository.findByUsername": {
-              "returns": null
-            }
-          }
-        },
-        "scenarioB": {
-          "mocks": {
-            "userRepository.findByUsername": {
-              "returns": {
-                "id": "user-1",
-                "username": "testuser",
-                "passwordHash": "hashed-password"
-              }
-            },
-            "passwordHasher.verify": {
-              "returns": false
-            }
-          }
-        }
-      },
-      "action": "分别执行 executeLoginUserUseCase(command, depsScenarioA/B)",
-      "expected": {
-        "resultNoUser.equals.resultWrongPassword": true
-      }
-    },
-    {
-      "id": "TC_LOGIN_005",
-      "name": "用户名格式非法时抛出DomainError",
-      "input": {
-        "command": {
-          "username": "ab",
-          "password": "password123"
-        },
-        "mocks": {}
-      },
-      "action": "executeLoginUserUseCase(command, deps)",
-      "expected": {
-        "throws": {
-          "message": "用户名长度必须在 3 到 32 之间"
-        },
-        "interaction": {
-          "userRepository.findByUsername.called": false
-        }
-      }
-    },
-    {
-      "id": "TC_LOGIN_006",
-      "name": "验证密码时传入正确参数",
-      "input": {
-        "command": {
-          "username": "testuser",
-          "password": "password123"
-        },
-        "mocks": {
-          "userRepository.findByUsername": {
-            "returns": {
-              "id": "user-1",
-              "username": "testuser",
-              "passwordHash": "hashed-password"
-            }
-          },
-          "passwordHasher.verify": {
-            "returns": true
-          }
-        }
-      },
-      "action": "executeLoginUserUseCase(command, deps)",
-      "expected": {
-        "interaction": {
-          "passwordHasher.verify.calledWith": [
-            "password123",
-            "hashed-password"
-          ]
-        }
+    "expected": {
+      "ok": true,
+      "user": {
+        "id": "user-1",
+        "username": "testuser"
       }
     }
-  ]
-}
+  },
+  {
+    "name": "用户不存在时返回失败",
+    "input": {
+      "username": "testuser",
+      "password": "password123"
+    },
+    "expected": {
+      "ok": false,
+      "error": "用户名或密码错误"
+    }
+  },
+  {
+    "name": "密码错误时返回失败",
+    "input": {
+      "username": "testuser",
+      "password": "password123"
+    },
+    "expected": {
+      "ok": false,
+      "error": "用户名或密码错误"
+    }
+  },
+  {
+    "name": "用户不存在和密码错误返回同一错误信息",
+    "input": {
+      "场景A": "用户不存在",
+      "场景B": "密码错误"
+    },
+    "expected": {
+      "场景A与场景B返回结果相同": true
+    }
+  },
+  {
+    "name": "用户名格式非法时抛出 DomainError",
+    "input": {
+      "username": "ab",
+      "password": "password123"
+    },
+    "expected": {
+      "throws": "用户名长度必须在 3 到 32 之间"
+    }
+  },
+  {
+    "name": "验证密码时传入正确参数",
+    "input": {
+      "username": "testuser",
+      "password": "password123"
+    },
+    "expected": {
+      "passwordHasher.verify 参数": [
+        "password123",
+        "hashed-password"
+      ]
+    }
+  }
+]

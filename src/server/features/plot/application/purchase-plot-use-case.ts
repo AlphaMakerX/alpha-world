@@ -1,13 +1,13 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
-import { plotRepository } from "@/server/features/plot/infrastructure";
-import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 
-const purchasePlotSchema = z.object({
-  plotId: z.number().int().positive(),
-  buyerUserId: z.string().uuid("用户 ID 不合法"),
-});
+export type PurchasePlotCommand = {
+  plotId: number;
+  buyerUserId: string;
+};
 
 type PurchasePlotSuccessResult = {
   ok: true;
@@ -31,19 +31,17 @@ type PurchasePlotFailureResult = {
 
 export type PurchasePlotResult = PurchasePlotSuccessResult | PurchasePlotFailureResult;
 
-export async function executePurchasePlotUseCase(
-  input: unknown,
-): Promise<PurchasePlotResult> {
-  const parsed = purchasePlotSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type PurchasePlotUseCaseDeps = {
+  plotRepository: PlotRepository;
+  userRepository: UserRepository;
+  transactionLedgerRepository: TransactionLedgerRepository;
+};
 
-  const plot = await plotRepository.findById(parsed.data.plotId);
+export async function executePurchasePlotUseCase(
+  command: PurchasePlotCommand,
+  deps: PurchasePlotUseCaseDeps,
+): Promise<PurchasePlotResult> {
+  const plot = await deps.plotRepository.findById(command.plotId);
   if (!plot) {
     return {
       ok: false,
@@ -52,7 +50,7 @@ export async function executePurchasePlotUseCase(
     };
   }
 
-  const buyer = await userRepository.findById(parsed.data.buyerUserId);
+  const buyer = await deps.userRepository.findById(command.buyerUserId);
   if (!buyer) {
     return {
       ok: false,
@@ -61,7 +59,7 @@ export async function executePurchasePlotUseCase(
     };
   }
 
-  const adam = await userRepository.findById(ADAM_USER_ID);
+  const adam = await deps.userRepository.findById(ADAM_USER_ID);
   if (!adam) {
     return { ok: false, error: "系统尚未初始化", status: 400 };
   }
@@ -69,7 +67,7 @@ export async function executePurchasePlotUseCase(
   try {
     buyer.spendMoney(plot.price);
     adam.receiveMoney(plot.price);
-    plot.purchaseBy(parsed.data.buyerUserId);
+    plot.purchaseBy(command.buyerUserId);
   } catch (error) {
     if (error instanceof DomainError) {
       return {
@@ -81,11 +79,11 @@ export async function executePurchasePlotUseCase(
     throw error;
   }
 
-  await userRepository.save(buyer);
-  await userRepository.save(adam);
-  await plotRepository.save(plot);
-  await transactionLedgerRepository.record({
-    fromUserId: parsed.data.buyerUserId,
+  await deps.userRepository.save(buyer);
+  await deps.userRepository.save(adam);
+  await deps.plotRepository.save(plot);
+  await deps.transactionLedgerRepository.record({
+    fromUserId: command.buyerUserId,
     toUserId: ADAM_USER_ID,
     amount: plot.price,
     type: "plot_purchase",

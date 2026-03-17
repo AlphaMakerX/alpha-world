@@ -1,17 +1,23 @@
-import { plotRepository } from "@/server/features/plot/infrastructure";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { userRepository } from "@/server/features/person/infrastructure";
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 
-export async function executeListPlotsUseCase() {
-  const plots = await plotRepository.findAll();
-  const buildingByPlotId = await buildingRepository.findByPlotIds(plots.map((plot) => plot.id));
+export type ListPlotsUseCaseDeps = {
+  plotRepository: PlotRepository;
+  buildingRepository: BuildingRepository;
+  userRepository: UserRepository;
+};
+
+export async function executeListPlotsUseCase(deps: ListPlotsUseCaseDeps) {
+  const plots = await deps.plotRepository.findAll();
+  const buildingByPlotId = await deps.buildingRepository.findByPlotIds(plots.map((plot) => plot.id));
   const ownerUserIds = Array.from(
     new Set(plots.map((plot) => plot.ownerUserId).filter((ownerUserId): ownerUserId is string => Boolean(ownerUserId))),
   );
   const ownerUsernameByUserId = new Map<string, string>();
   await Promise.all(
     ownerUserIds.map(async (ownerUserId) => {
-      const owner = await userRepository.findById(ownerUserId);
+      const owner = await deps.userRepository.findById(ownerUserId);
       if (owner) {
         ownerUsernameByUserId.set(ownerUserId, owner.username.getValue());
       }
