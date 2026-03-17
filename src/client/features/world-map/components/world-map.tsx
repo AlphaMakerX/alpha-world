@@ -31,13 +31,13 @@ export function WorldMap() {
   });
   const purchaseMutation = trpc.plot.purchase.useMutation();
   const buildMutation = trpc.building.build.useMutation();
-  const startProductionMutation = trpc.building.startProduction.useMutation();
-  const createShopListingMutation = trpc.building.createShopListing.useMutation();
-  const purchaseShopListingMutation = trpc.building.purchaseShopListing.useMutation();
-  const cancelShopListingMutation = trpc.building.cancelShopListing.useMutation();
-  const createBuyOrderMutation = trpc.building.createBuyOrder.useMutation();
-  const fulfillBuyOrderMutation = trpc.building.fulfillBuyOrder.useMutation();
-  const cancelBuyOrderMutation = trpc.building.cancelBuyOrder.useMutation();
+  const startProductionMutation = trpc.factory.startProduction.useMutation();
+  const createShopListingMutation = trpc.shop.createListing.useMutation();
+  const purchaseShopListingMutation = trpc.shop.purchase.useMutation();
+  const cancelShopListingMutation = trpc.shop.cancelListing.useMutation();
+  const createBuyOrderMutation = trpc.purchasingStation.createBuyOrder.useMutation();
+  const fulfillBuyOrderMutation = trpc.purchasingStation.fulfillBuyOrder.useMutation();
+  const cancelBuyOrderMutation = trpc.purchasingStation.cancelBuyOrder.useMutation();
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -108,10 +108,10 @@ export function WorldMap() {
   const shouldFetchFactoryRecipes = selectedBuildingCapabilities.canManageFactory;
   const selectedFactoryBuildingId =
     selectedPlot?.building?.type === "factory" ? selectedPlot.building.id : undefined;
-  const { data: factoryRecipesData } = trpc.building.factoryRecipes.useQuery(undefined, {
+  const { data: factoryRecipesData } = trpc.factory.recipes.useQuery(undefined, {
     enabled: shouldFetchFactoryRecipes,
   });
-  const { data: factoryOrdersData } = trpc.building.factoryOrders.useQuery(
+  const { data: factoryOrdersData } = trpc.factory.orders.useQuery(
     { buildingId: selectedFactoryBuildingId ?? 0 },
     {
       enabled: Boolean(selectedFactoryBuildingId && selectedBuildingCapabilities.canManageFactory),
@@ -120,13 +120,13 @@ export function WorldMap() {
   );
   const selectedShopBuildingId =
     selectedPlot?.building?.type === "shop" ? selectedPlot.building.id : undefined;
-  const { data: shopListingsData } = trpc.building.shopListings.useQuery(
+  const { data: shopListingsData } = trpc.shop.listings.useQuery(
     { buildingId: selectedShopBuildingId ?? 0 },
     {
       enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
     },
   );
-  const { data: shopTransactionHistoryData } = trpc.building.shopTransactionHistory.useQuery(
+  const { data: shopTransactionHistoryData } = trpc.shop.transactionHistory.useQuery(
     { buildingId: selectedShopBuildingId ?? 0 },
     {
       enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
@@ -134,13 +134,13 @@ export function WorldMap() {
   );
   const selectedPurchasingStationBuildingId =
     selectedPlot?.building?.type === "purchasing_station" ? selectedPlot.building.id : undefined;
-  const { data: buyOrdersData } = trpc.building.buyOrders.useQuery(
+  const { data: buyOrdersData } = trpc.purchasingStation.buyOrders.useQuery(
     { buildingId: selectedPurchasingStationBuildingId ?? 0 },
     {
       enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
     },
   );
-  const { data: purchasingStationTransactionHistoryData } = trpc.building.purchasingStationTransactionHistory.useQuery(
+  const { data: purchasingStationTransactionHistoryData } = trpc.purchasingStation.transactionHistory.useQuery(
     { buildingId: selectedPurchasingStationBuildingId ?? 0 },
     {
       enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
@@ -150,7 +150,7 @@ export function WorldMap() {
     data: inventoryData,
     isFetching: inventoryLoading,
     refetch: refetchInventory,
-  } = trpc.building.myInventory.useQuery(undefined, {
+  } = trpc.inventory.mine.useQuery(undefined, {
     enabled: authStatus === "authenticated",
   });
 
@@ -247,8 +247,8 @@ export function WorldMap() {
         quantity,
       });
       await Promise.all([
-        trpcUtils.building.myInventory.invalidate(),
-        trpcUtils.building.factoryOrders.invalidate(),
+        trpcUtils.inventory.mine.invalidate(),
+        trpcUtils.factory.orders.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
       messageApi.success("已开始制造");
@@ -272,8 +272,8 @@ export function WorldMap() {
         unitPrice,
       });
       await Promise.all([
-        trpcUtils.building.shopListings.invalidate(),
-        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.shop.listings.invalidate(),
+        trpcUtils.inventory.mine.invalidate(),
       ]);
       messageApi.success("商品上架成功");
     } catch (error) {
@@ -290,9 +290,9 @@ export function WorldMap() {
     try {
       await purchaseShopListingMutation.mutateAsync({ listingId, quantity });
       await Promise.all([
-        trpcUtils.building.shopListings.invalidate(),
-        trpcUtils.building.shopTransactionHistory.invalidate(),
-        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.shop.listings.invalidate(),
+        trpcUtils.shop.transactionHistory.invalidate(),
+        trpcUtils.inventory.mine.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
       messageApi.success("购买成功");
@@ -310,8 +310,8 @@ export function WorldMap() {
     try {
       await cancelShopListingMutation.mutateAsync({ listingId });
       await Promise.all([
-        trpcUtils.building.shopListings.invalidate(),
-        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.shop.listings.invalidate(),
+        trpcUtils.inventory.mine.invalidate(),
       ]);
       messageApi.success("商品已下架");
     } catch (error) {
@@ -334,7 +334,7 @@ export function WorldMap() {
         unitPrice,
       });
       await Promise.all([
-        trpcUtils.building.buyOrders.invalidate(),
+        trpcUtils.purchasingStation.buyOrders.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
       messageApi.success("收购订单已发布");
@@ -352,9 +352,9 @@ export function WorldMap() {
     try {
       await fulfillBuyOrderMutation.mutateAsync({ orderId, quantity });
       await Promise.all([
-        trpcUtils.building.buyOrders.invalidate(),
-        trpcUtils.building.purchasingStationTransactionHistory.invalidate(),
-        trpcUtils.building.myInventory.invalidate(),
+        trpcUtils.purchasingStation.buyOrders.invalidate(),
+        trpcUtils.purchasingStation.transactionHistory.invalidate(),
+        trpcUtils.inventory.mine.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
       messageApi.success("出售成功");
@@ -372,7 +372,7 @@ export function WorldMap() {
     try {
       await cancelBuyOrderMutation.mutateAsync({ orderId });
       await Promise.all([
-        trpcUtils.building.buyOrders.invalidate(),
+        trpcUtils.purchasingStation.buyOrders.invalidate(),
         trpcUtils.person.me.invalidate(),
       ]);
       messageApi.success("收购订单已取消");
