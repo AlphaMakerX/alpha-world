@@ -1,6 +1,4 @@
-import { desc } from "drizzle-orm";
-import { db } from "@/server/lib/db";
-import { users } from "@/server/features/person/infrastructure/schema";
+import type { PersonQueryRepository } from "@/server/features/person/domain/repositories/person-query-repository";
 import {
   ADAM_INITIAL_MONEY,
   ADAM_USERNAME,
@@ -19,20 +17,19 @@ export type GetWealthLeaderboardResult = {
   totalMoneySupply: number;
 };
 
-export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLeaderboardResult> {
-  const rows = await db
-    .select({
-      username: users.username,
-      money: users.money,
-    })
-    .from(users)
-    .orderBy(desc(users.money))
-    .limit(50);
+export type GetWealthLeaderboardUseCaseDeps = {
+  personQueryRepository: PersonQueryRepository;
+};
+
+export async function executeGetWealthLeaderboardUseCase(
+  deps: GetWealthLeaderboardUseCaseDeps,
+): Promise<GetWealthLeaderboardResult> {
+  const rows = await deps.personQueryRepository.listWealthLeaderboard(50);
 
   const entries: LeaderboardEntry[] = rows.map((row, index) => ({
     rank: index + 1,
     username: row.username,
-    money: Number(row.money),
+    money: row.money,
     isAdam: row.username === ADAM_USERNAME,
   }));
 

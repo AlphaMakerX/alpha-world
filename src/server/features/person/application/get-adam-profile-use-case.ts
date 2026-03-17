@@ -1,7 +1,4 @@
-import { desc, eq, or } from "drizzle-orm";
-import { db } from "@/server/lib/db";
-import { users, moneyTransactions } from "@/server/features/person/infrastructure/schema";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
+import type { PersonQueryRepository } from "@/server/features/person/domain/repositories/person-query-repository";
 
 export type AdamTransaction = {
   id: number;
@@ -27,63 +24,25 @@ const TYPE_LABELS: Record<string, string> = {
   shop_purchase: "商店交易",
 };
 
-export async function executeGetAdamProfileUseCase(): Promise<GetAdamProfileResult> {
-  const adamRow = await db.query.users.findFirst({
-    where: eq(users.id, ADAM_USER_ID),
-  });
+export type GetAdamProfileUseCaseDeps = {
+  personQueryRepository: PersonQueryRepository;
+};
 
-  const money = adamRow ? Number(adamRow.money) : 0;
-
-  const rows = await db
-    .select({
-      id: moneyTransactions.id,
-      fromUserId: moneyTransactions.fromUserId,
-      toUserId: moneyTransactions.toUserId,
-      amount: moneyTransactions.amount,
-      type: moneyTransactions.type,
-      description: moneyTransactions.description,
-      createdAt: moneyTransactions.createdAt,
-    })
-    .from(moneyTransactions)
-    .where(
-      or(
-        eq(moneyTransactions.fromUserId, ADAM_USER_ID),
-        eq(moneyTransactions.toUserId, ADAM_USER_ID),
-      ),
-    )
-    .orderBy(desc(moneyTransactions.createdAt))
-    .limit(100);
-
-  const userIds = new Set<string>();
-  for (const row of rows) {
-    if (row.fromUserId !== ADAM_USER_ID) userIds.add(row.fromUserId);
-    if (row.toUserId !== ADAM_USER_ID) userIds.add(row.toUserId);
-  }
-
-  const usernameMap = new Map<string, string>();
-  if (userIds.size > 0) {
-    const userRows = await db
-      .select({ id: users.id, username: users.username })
-      .from(users)
-      .where(or(...[...userIds].map((uid) => eq(users.id, uid))));
-    for (const u of userRows) {
-      usernameMap.set(u.id, u.username);
-    }
-  }
-
-  const transactions: AdamTransaction[] = rows.map((row) => {
-    const isOutgoing = row.fromUserId === ADAM_USER_ID;
-    const counterpartyId = isOutgoing ? row.toUserId : row.fromUserId;
+export async function executeGetAdamProfileUseCase(
+  deps: GetAdamProfileUseCaseDeps,
+): Promise<GetAdamProfileResult> {
+  const profile = await deps.personQueryRepository.getAdamProfile(100);
+  const transactions: AdamTransaction[] = profile.transactions.map((transaction) => {
     return {
-      id: row.id,
-      direction: isOutgoing ? "out" : "in",
-      counterparty: usernameMap.get(counterpartyId) ?? "未知",
-      amount: Number(row.amount),
-      type: TYPE_LABELS[row.type] ?? row.type,
-      description: row.description,
-      createdAt: row.createdAt.toISOString(),
+      id: transaction.id,
+      direction: transaction.direction,
+      counterparty: transaction.counterparty,
+      amount: transaction.amount,
+      type: TYPE_LABELS[transaction.type] ?? transaction.type,
+      description: transaction.description,
+      createdAt: transaction.createdAt.toISOString(),
     };
   });
 
-  return { ok: true, money, transactions };
+  return { ok: true, money: profile.money, transactions };
 }

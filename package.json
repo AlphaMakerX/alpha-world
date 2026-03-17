@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "drizzle:push": "dotenv -e ${ENV_FILE:-.env.local} -- drizzle-kit push",
     "init:system": "dotenv -e ${ENV_FILE:-.env.local} -- tsx scripts/initialize-system.ts",
     "seed:plots:p1": "dotenv -e ${ENV_FILE:-.env.local} -- node --import tsx scripts/seed-plots-p1.ts",
@@ -47,6 +49,7 @@
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.9",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
   }
 }

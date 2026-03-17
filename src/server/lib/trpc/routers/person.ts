@@ -7,7 +7,7 @@ import {
   executeGetCurrentUserUseCase,
   executeGetWealthLeaderboardUseCase,
   executeGetAdamProfileUseCase,
-} from "@/server/features/person/application";
+} from "@/server/features/person/composition";
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
 
 export const personRouter = createTRPCRouter({
