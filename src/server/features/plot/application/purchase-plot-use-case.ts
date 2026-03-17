@@ -1,9 +1,9 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 
 export type PurchasePlotCommand = {
   plotId: number;
@@ -36,6 +36,7 @@ export type PurchasePlotUseCaseDeps = {
   plotRepository: PlotRepository;
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
+  systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
@@ -53,10 +54,7 @@ export async function executePurchasePlotUseCase(
     return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
-  const adam = await deps.userRepository.findById(ADAM_USER_ID);
-  if (!adam) {
-    return { ok: false, error: "系统尚未初始化", code: "BAD_REQUEST" };
-  }
+  const adam = await deps.systemAccountService.getSystemAccount();
 
   try {
     buyer.spendMoney(plot.price);
@@ -75,7 +73,7 @@ export async function executePurchasePlotUseCase(
     await deps.plotRepository.save(plot);
     await deps.transactionLedgerRepository.record({
       fromUserId: command.buyerUserId,
-      toUserId: ADAM_USER_ID,
+      toUserId: adam.id,
       amount: plot.price,
       type: "plot_purchase",
       referenceId: String(plot.id),

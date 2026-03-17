@@ -1,11 +1,6 @@
-import { z } from "zod";
-import { buyOrderRepository } from "@/server/features/purchasing-station/infrastructure";
-import { userRepository } from "@/server/features/person/infrastructure";
-
-const cancelBuyOrderSchema = z.object({
-  buyerUserId: z.string().uuid("用户 ID 不合法"),
-  orderId: z.number().int().positive(),
-});
+import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type CancelBuyOrderSuccessResult = {
   ok: true;
@@ -15,45 +10,50 @@ type CancelBuyOrderSuccessResult = {
 type CancelBuyOrderFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type CancelBuyOrderResult = CancelBuyOrderSuccessResult | CancelBuyOrderFailureResult;
 
-export async function executeCancelBuyOrderUseCase(
-  input: unknown,
-): Promise<CancelBuyOrderResult> {
-  const parsed = cancelBuyOrderSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type CancelBuyOrderCommand = {
+  buyerUserId: string;
+  orderId: number;
+};
 
-  const order = await buyOrderRepository.findById(parsed.data.orderId);
+export type CancelBuyOrderUseCaseDeps = {
+  buyOrderRepository: BuyOrderRepository;
+  userRepository: UserRepository;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+export async function executeCancelBuyOrderUseCase(
+  command: CancelBuyOrderCommand,
+  deps: CancelBuyOrderUseCaseDeps,
+): Promise<CancelBuyOrderResult> {
+  const order = await deps.buyOrderRepository.findById(command.orderId);
   if (!order) {
-    return { ok: false, error: "收购订单不存在", status: 404 };
+    return { ok: false, error: "收购订单不存在", code: "NOT_FOUND" };
   }
 
   if (order.status !== "active") {
-    return { ok: false, error: "该订单已完成或已取消", status: 409 };
+    return { ok: false, error: "该订单已完成或已取消", code: "CONFLICT" };
   }
 
-  if (order.buyerUserId !== parsed.data.buyerUserId) {
-    return { ok: false, error: "只有收购方本人才能取消订单", status: 409 };
+  if (order.buyerUserId !== command.buyerUserId) {
+    return { ok: false, error: "只有收购方本人才能取消订单", code: "CONFLICT" };
   }
 
-  const buyer = await userRepository.findById(order.buyerUserId);
+  const buyer = await deps.userRepository.findById(order.buyerUserId);
   if (!buyer) {
-    return { ok: false, error: "用户不存在", status: 404 };
+    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
   const refundAmount = order.unitPrice * order.quantity;
-  buyer.receiveMoney(refundAmount);
-  await userRepository.save(buyer);
-  await buyOrderRepository.updateStatus(order.id, "cancelled");
+  await deps.transact(async () => {
+    buyer.receiveMoney(refundAmount);
+    await deps.userRepository.save(buyer);
+    await deps.buyOrderRepository.updateStatus(order.id, "cancelled");
+  });
 
   return {
     ok: true,

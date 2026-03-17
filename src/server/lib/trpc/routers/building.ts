@@ -5,23 +5,13 @@ import {
 import {
   executeBuildBuildingUseCase,
   executeListMyBuildingsUseCase,
-} from "@/server/features/building/application";
+  buildBuildingSchema,
+} from "@/server/features/building/composition";
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
-import { z } from "zod";
 
 export const buildingRouter = createTRPCRouter({
   build: protectedProcedure
-    .input(
-      z.object({
-        plotId: z.number().int().positive(),
-        buildingType: z.enum([
-          "residential",
-          "factory",
-          "shop",
-          "purchasing_station",
-        ]),
-      }),
-    )
+    .input(buildBuildingSchema.omit({ ownerUserId: true }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(
         await executeBuildBuildingUseCase({

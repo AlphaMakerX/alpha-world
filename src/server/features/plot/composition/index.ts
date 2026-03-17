@@ -9,7 +9,7 @@ import {
 } from "@/server/features/plot/application/purchase-plot-use-case";
 import { transact } from "@/server/lib/db";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
+import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
 
 export const purchasePlotSchema = z.object({
   plotId: z.number().int().positive(),
@@ -38,6 +38,7 @@ export async function executePurchasePlotUseCase(input: unknown): Promise<Purcha
     plotRepository,
     userRepository,
     transactionLedgerRepository,
+    systemAccountService,
     transact,
   });
 }

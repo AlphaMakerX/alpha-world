@@ -8,6 +8,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
+import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 
 /**
@@ -27,6 +28,9 @@ function createMockDeps(
     transactionLedgerRepository: {
       record: vi.fn(),
     } satisfies TransactionLedgerRepository,
+    systemAccountService: {
+      getSystemAccount: vi.fn().mockResolvedValue(createAdamUser()),
+    },
     passwordHasher: {
       hash: vi.fn().mockResolvedValue("hashed-new-password"),
       verify: vi.fn(),
@@ -62,10 +66,8 @@ describe("executeRegisterUserUseCase", () => {
     // Arrange: 用户名不存在 + Adam 已初始化
     const adam = createAdamUser();
     const deps = createMockDeps({
-      userRepository: {
-        findById: vi.fn().mockResolvedValue(adam),
-        findByUsername: vi.fn().mockResolvedValue(null),
-        save: vi.fn(),
+      systemAccountService: {
+        getSystemAccount: vi.fn().mockResolvedValue(adam),
       },
     });
 
@@ -131,6 +133,7 @@ describe("executeRegisterUserUseCase", () => {
       },
     });
 
+
     // Act
     const result = await executeRegisterUserUseCase(validCommand, deps);
 
@@ -144,23 +147,19 @@ describe("executeRegisterUserUseCase", () => {
 
   // -------- 系统状态校验 --------
 
-  it("Adam 用户不存在（系统未初始化）时，返回 400", async () => {
+  it("Adam 用户不存在（系统未初始化）时，抛出 DomainError", async () => {
     // 注册流程依赖 Adam 作为资金来源，Adam 不存在说明系统未初始化
     const deps = createMockDeps({
-      userRepository: {
-        findById: vi.fn().mockResolvedValue(null),
-        findByUsername: vi.fn().mockResolvedValue(null),
-        save: vi.fn(),
+      systemAccountService: {
+        getSystemAccount: vi.fn().mockRejectedValue(
+          new DomainError("系统尚未初始化，请先运行 init:system"),
+        ),
       },
     });
 
-    const result = await executeRegisterUserUseCase(validCommand, deps);
-
-    expect(result).toEqual({
-      ok: false,
-      error: "系统尚未初始化，请先运行 init:system",
-      status: 400,
-    });
+    await expect(
+      executeRegisterUserUseCase(validCommand, deps),
+    ).rejects.toThrow("系统尚未初始化，请先运行 init:system");
   });
 
   // -------- 副作用验证：资金转移 --------
@@ -170,10 +169,8 @@ describe("executeRegisterUserUseCase", () => {
     const adam = createAdamUser();
     const originalMoney = adam.money;
     const deps = createMockDeps({
-      userRepository: {
-        findById: vi.fn().mockResolvedValue(adam),
-        findByUsername: vi.fn().mockResolvedValue(null),
-        save: vi.fn(),
+      systemAccountService: {
+        getSystemAccount: vi.fn().mockResolvedValue(adam),
       },
     });
 
@@ -189,10 +186,8 @@ describe("executeRegisterUserUseCase", () => {
     // 需要持久化两个实体：扣款后的 Adam 和新创建的用户
     const adam = createAdamUser();
     const deps = createMockDeps({
-      userRepository: {
-        findById: vi.fn().mockResolvedValue(adam),
-        findByUsername: vi.fn().mockResolvedValue(null),
-        save: vi.fn(),
+      systemAccountService: {
+        getSystemAccount: vi.fn().mockResolvedValue(adam),
       },
     });
 
@@ -208,10 +203,8 @@ describe("executeRegisterUserUseCase", () => {
   it("注册成功后，记录了正确的交易流水", async () => {
     const adam = createAdamUser();
     const deps = createMockDeps({
-      userRepository: {
-        findById: vi.fn().mockResolvedValue(adam),
-        findByUsername: vi.fn().mockResolvedValue(null),
-        save: vi.fn(),
+      systemAccountService: {
+        getSystemAccount: vi.fn().mockResolvedValue(adam),
       },
     });
 
@@ -240,10 +233,8 @@ describe("executeRegisterUserUseCase", () => {
     // 确保明文密码不会被直接存储，而是经过 passwordHasher.hash 处理
     const adam = createAdamUser();
     const deps = createMockDeps({
-      userRepository: {
-        findById: vi.fn().mockResolvedValue(adam),
-        findByUsername: vi.fn().mockResolvedValue(null),
-        save: vi.fn(),
+      systemAccountService: {
+        getSystemAccount: vi.fn().mockResolvedValue(adam),
       },
     });
 

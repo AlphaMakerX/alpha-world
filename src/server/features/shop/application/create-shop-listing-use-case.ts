@@ -1,18 +1,10 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { shopListingRepository } from "@/server/features/shop/infrastructure";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
-import { plotRepository } from "@/server/features/plot/infrastructure";
-
-const createShopListingSchema = z.object({
-  sellerUserId: z.string().uuid("用户 ID 不合法"),
-  buildingId: z.number().int().positive(),
-  itemKey: z.string().trim().min(1, "物品标识不能为空"),
-  quantity: z.number().int().positive("上架数量必须大于 0"),
-  unitPrice: z.number().nonnegative("单价不能小于 0"),
-});
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type CreateShopListingSuccessResult = {
   ok: true;
@@ -32,76 +24,83 @@ type CreateShopListingSuccessResult = {
 type CreateShopListingFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type CreateShopListingResult = CreateShopListingSuccessResult | CreateShopListingFailureResult;
 
-export async function executeCreateShopListingUseCase(
-  input: unknown,
-): Promise<CreateShopListingResult> {
-  const parsed = createShopListingSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type CreateShopListingCommand = {
+  sellerUserId: string;
+  buildingId: number;
+  itemKey: string;
+  quantity: number;
+  unitPrice: number;
+};
 
-  const building = await buildingRepository.findById(parsed.data.buildingId);
+export type CreateShopListingUseCaseDeps = {
+  buildingRepository: BuildingRepository;
+  shopListingRepository: ShopListingRepository;
+  inventoryRepository: InventoryRepository;
+  plotRepository: PlotRepository;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+export async function executeCreateShopListingUseCase(
+  command: CreateShopListingCommand,
+  deps: CreateShopListingUseCaseDeps,
+): Promise<CreateShopListingResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
   if (!building) {
     return {
       ok: false,
       error: "建筑不存在",
-      status: 404,
+      code: "NOT_FOUND",
     };
   }
 
   try {
-    const plot = await plotRepository.findById(building.plotId);
+    const plot = await deps.plotRepository.findById(building.plotId);
     if (!plot) {
       return {
         ok: false,
         error: "地块不存在",
-        status: 404,
+        code: "NOT_FOUND",
       };
     }
-    if (plot.ownerUserId !== parsed.data.sellerUserId) {
+    if (plot.ownerUserId !== command.sellerUserId) {
       return {
         ok: false,
         error: "只能操作自己地块上的商店",
-        status: 409,
+        code: "CONFLICT",
       };
     }
     building.ensureShop();
 
-    const normalizedItemKey = normalizeItemKey(parsed.data.itemKey);
-    const quantity = await inventoryRepository.getItemQuantity(
-      parsed.data.sellerUserId,
-      normalizedItemKey,
-    );
-    if (quantity < parsed.data.quantity) {
+    const normalizedItemKey = normalizeItemKey(command.itemKey);
+    const quantity = await deps.inventoryRepository.getItemQuantity(command.sellerUserId, normalizedItemKey);
+    if (quantity < command.quantity) {
       return {
         ok: false,
         error: "库存不足，无法上架",
-        status: 409,
+        code: "CONFLICT",
       };
     }
 
-    await inventoryRepository.consumeItem(
-      parsed.data.sellerUserId,
-      normalizedItemKey,
-      parsed.data.quantity,
-    );
+    const listing = await deps.transact(async () => {
+      await deps.inventoryRepository.consumeItem(
+        command.sellerUserId,
+        normalizedItemKey,
+        command.quantity,
+      );
 
-    const listing = await shopListingRepository.create({
-      buildingId: building.id,
-      sellerUserId: parsed.data.sellerUserId,
-      itemKey: normalizedItemKey,
-      quantity: parsed.data.quantity,
-      unitPrice: parsed.data.unitPrice,
-      status: "active",
+      return deps.shopListingRepository.create({
+        buildingId: building.id,
+        sellerUserId: command.sellerUserId,
+        itemKey: normalizedItemKey,
+        quantity: command.quantity,
+        unitPrice: command.unitPrice,
+        status: "active",
+      });
     });
 
     return {
@@ -113,7 +112,7 @@ export async function executeCreateShopListingUseCase(
       return {
         ok: false,
         error: error.message,
-        status: 409,
+        code: "CONFLICT",
       };
     }
     throw error;

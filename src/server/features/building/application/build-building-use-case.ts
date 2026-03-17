@@ -1,17 +1,12 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 import { Building } from "@/server/features/building/domain";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { plotRepository } from "@/server/features/plot/infrastructure";
-import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
 import { getBuildingCost } from "@/server/features/building/application/building-cost-catalog";
-
-const buildBuildingSchema = z.object({
-  ownerUserId: z.string().uuid("用户 ID 不合法"),
-  plotId: z.number().int().positive(),
-  buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
-});
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type BuildBuildingSuccessResult = {
   ok: true;
@@ -28,87 +23,92 @@ type BuildBuildingSuccessResult = {
 type BuildBuildingFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type BuildBuildingResult = BuildBuildingSuccessResult | BuildBuildingFailureResult;
-export type BuildBuildingInput = z.input<typeof buildBuildingSchema>;
+export type BuildBuildingCommand = {
+  ownerUserId: string;
+  plotId: number;
+  buildingType: "residential" | "factory" | "shop" | "purchasing_station";
+};
+
+export type BuildBuildingUseCaseDeps = {
+  buildingRepository: BuildingRepository;
+  plotRepository: PlotRepository;
+  userRepository: UserRepository;
+  transactionLedgerRepository: TransactionLedgerRepository;
+  systemAccountService: SystemAccountService;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
 
 export async function executeBuildBuildingUseCase(
-  input: BuildBuildingInput,
+  command: BuildBuildingCommand,
+  deps: BuildBuildingUseCaseDeps,
 ): Promise<BuildBuildingResult> {
-  const parsed = buildBuildingSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
-
-  const plot = await plotRepository.findById(parsed.data.plotId);
+  const plot = await deps.plotRepository.findById(command.plotId);
   if (!plot) {
     return {
       ok: false,
       error: "地块不存在",
-      status: 404,
+      code: "NOT_FOUND",
     };
   }
-  if (plot.ownerUserId !== parsed.data.ownerUserId) {
+  if (plot.ownerUserId !== command.ownerUserId) {
     return {
       ok: false,
       error: "只能在自己的地块建造",
-      status: 409,
+      code: "CONFLICT",
     };
   }
 
-  const existingBuilding = await buildingRepository.findByPlotId(parsed.data.plotId);
+  const existingBuilding = await deps.buildingRepository.findByPlotId(command.plotId);
   if (existingBuilding) {
     return {
       ok: false,
       error: "该地块已有建筑",
-      status: 409,
+      code: "CONFLICT",
     };
   }
 
-  const cost = getBuildingCost(parsed.data.buildingType);
+  const cost = getBuildingCost(command.buildingType);
 
-  const owner = await userRepository.findById(parsed.data.ownerUserId);
+  const owner = await deps.userRepository.findById(command.ownerUserId);
   if (!owner) {
-    return { ok: false, error: "用户不存在", status: 404 };
+    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
-  const adam = await userRepository.findById(ADAM_USER_ID);
-  if (!adam) {
-    return { ok: false, error: "系统尚未初始化", status: 400 };
-  }
+  const adam = await deps.systemAccountService.getSystemAccount();
 
   try {
-    if (cost > 0) {
-      owner.spendMoney(cost);
-      adam.receiveMoney(cost);
-    }
+    const savedBuilding = await deps.transact(async () => {
+      if (cost > 0) {
+        owner.spendMoney(cost);
+        adam.receiveMoney(cost);
+      }
 
-    const building = Building.construct({
-      id: 0,
-      plotId: parsed.data.plotId,
-      type: parsed.data.buildingType,
-    });
-
-    await userRepository.save(owner);
-    await userRepository.save(adam);
-    const savedBuilding = await buildingRepository.save(building);
-
-    if (cost > 0) {
-      await transactionLedgerRepository.record({
-        fromUserId: parsed.data.ownerUserId,
-        toUserId: ADAM_USER_ID,
-        amount: cost,
-        type: "building_construction",
-        referenceId: String(savedBuilding.id),
-        description: `建造${parsed.data.buildingType} @ 地块 ${parsed.data.plotId}`,
+      const building = Building.construct({
+        id: 0,
+        plotId: command.plotId,
+        type: command.buildingType,
       });
-    }
+
+      await deps.userRepository.save(owner);
+      await deps.userRepository.save(adam);
+      const savedBuilding = await deps.buildingRepository.save(building);
+
+      if (cost > 0) {
+        await deps.transactionLedgerRepository.record({
+          fromUserId: command.ownerUserId,
+          toUserId: adam.id,
+          amount: cost,
+          type: "building_construction",
+          referenceId: String(savedBuilding.id),
+          description: `建造${command.buildingType} @ 地块 ${command.plotId}`,
+        });
+      }
+      return savedBuilding;
+    });
 
     return {
       ok: true,
@@ -122,12 +122,11 @@ export async function executeBuildBuildingUseCase(
       },
     };
   } catch (error) {
-    console.error("error", error);
     if (error instanceof DomainError) {
       return {
         ok: false,
         error: error.message,
-        status: 409,
+        code: "CONFLICT",
       };
     }
     throw error;

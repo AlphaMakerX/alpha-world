@@ -1,10 +1,10 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { factoryProductionJobRepository } from "@/server/features/factory/infrastructure";
-import { buildingRepository } from "@/server/features/building/infrastructure";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import { receiveFactoryOutputs } from "@/server/features/inventory/domain";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
-import { plotRepository } from "@/server/features/plot/infrastructure";
+import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 
 function toOrderDto(job: {
   id: number;
@@ -32,43 +32,58 @@ function toOrderDto(job: {
   };
 }
 
-const listFactoryOrdersSchema = z.object({
-  ownerUserId: z.string().uuid("用户 ID 不合法"),
-  buildingId: z.number().int().positive(),
-});
+export type ListFactoryOrdersCommand = {
+  ownerUserId: string;
+  buildingId: number;
+};
 
-export async function executeListFactoryOrdersUseCase(input: unknown) {
-  const parsed = listFactoryOrdersSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false as const,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400 as const,
-    };
-  }
+export type ListFactoryOrdersUseCaseDeps = {
+  factoryProductionJobRepository: FactoryProductionJobRepository;
+  buildingRepository: BuildingRepository;
+  inventoryRepository: InventoryRepository;
+  plotRepository: PlotRepository;
+};
 
-  const building = await buildingRepository.findById(parsed.data.buildingId);
+type ListFactoryOrdersSuccessResult = {
+  ok: true;
+  focusOrder: ReturnType<typeof toOrderDto> | null;
+  historyOrders: Array<ReturnType<typeof toOrderDto>>;
+};
+
+type ListFactoryOrdersFailureResult = {
+  ok: false;
+  error: string;
+  code: UseCaseErrorCode;
+};
+
+export type ListFactoryOrdersResult = ListFactoryOrdersSuccessResult | ListFactoryOrdersFailureResult;
+
+export async function executeListFactoryOrdersUseCase(
+  command: ListFactoryOrdersCommand,
+  deps: ListFactoryOrdersUseCaseDeps,
+): Promise<ListFactoryOrdersResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
   if (!building) {
     return {
-      ok: false as const,
+      ok: false,
       error: "建筑不存在",
-      status: 404 as const,
+      code: "NOT_FOUND",
     };
   }
 
-  const plot = await plotRepository.findById(building.plotId);
+  const plot = await deps.plotRepository.findById(building.plotId);
   if (!plot) {
     return {
-      ok: false as const,
+      ok: false,
       error: "地块不存在",
-      status: 404 as const,
+      code: "NOT_FOUND",
     };
   }
-  if (plot.ownerUserId !== parsed.data.ownerUserId) {
+  if (plot.ownerUserId !== command.ownerUserId) {
     return {
-      ok: false as const,
+      ok: false,
       error: "只能查看自己地块上的工厂订单",
-      status: 409 as const,
+      code: "CONFLICT",
     };
   }
 
@@ -76,7 +91,7 @@ export async function executeListFactoryOrdersUseCase(input: unknown) {
     // 防御性校验：确保该建筑仍然是工厂，避免后续按工厂订单处理时出现领域错误。
     building.ensureFactory();
     const now = new Date();
-    const jobs = await factoryProductionJobRepository.findByBuildingId(parsed.data.buildingId);
+    const jobs = await deps.factoryProductionJobRepository.findByBuildingId(command.buildingId);
 
     // 查询订单时顺便做一次“到点即领取”的结算，把可领取产物入库并持久化订单状态。
     for (const job of jobs) {
@@ -86,29 +101,29 @@ export async function executeListFactoryOrdersUseCase(input: unknown) {
 
       const outputs = job.collect(now);
       await receiveFactoryOutputs({
-        inventoryRepository,
-        ownerUserId: parsed.data.ownerUserId,
+        inventoryRepository: deps.inventoryRepository,
+        ownerUserId: command.ownerUserId,
         outputs,
       });
-      await factoryProductionJobRepository.save(job);
+      await deps.factoryProductionJobRepository.save(job);
     }
 
     // 重新读取最新状态：前端只需要一个进行中订单作为焦点，其余都归类为历史订单。
-    const refreshedJobs = await factoryProductionJobRepository.findByBuildingId(parsed.data.buildingId);
+    const refreshedJobs = await deps.factoryProductionJobRepository.findByBuildingId(command.buildingId);
     const inProgressJob = refreshedJobs.find((job) => job.status === "in_progress") ?? null;
     const historyJobs = refreshedJobs.filter((job) => job.status !== "in_progress");
 
     return {
-      ok: true as const,
+      ok: true,
       focusOrder: inProgressJob ? toOrderDto(inProgressJob) : null,
       historyOrders: historyJobs.map(toOrderDto),
     };
   } catch (error) {
     if (error instanceof DomainError) {
       return {
-        ok: false as const,
+        ok: false,
         error: error.message,
-        status: 409 as const,
+        code: "CONFLICT",
       };
     }
     throw error;

@@ -1,20 +1,21 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
-import { factoryProductionJobRepository } from "@/server/features/factory/infrastructure";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
 import { getFactoryRecipeById } from "@/server/features/factory/application/factory-recipe-catalog";
-import { plotRepository } from "@/server/features/plot/infrastructure";
-import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
+import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
-const startFactoryProductionSchema = z.object({
-  ownerUserId: z.string().uuid("用户 ID 不合法"),
-  buildingId: z.number().int().positive(),
-  recipeId: z.string().trim().min(1, "配方 ID 不能为空"),
-  quantity: z.number().int().min(1).max(99).default(1),
-});
+export type StartFactoryProductionCommand = {
+  ownerUserId: string;
+  buildingId: number;
+  recipeId: string;
+  quantity: number;
+};
 
 type StartFactoryProductionSuccessResult = {
   ok: true;
@@ -32,71 +33,74 @@ type StartFactoryProductionSuccessResult = {
 type StartFactoryProductionFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type StartFactoryProductionResult =
   | StartFactoryProductionSuccessResult
   | StartFactoryProductionFailureResult;
 
-export async function executeStartFactoryProductionUseCase(
-  input: unknown,
-): Promise<StartFactoryProductionResult> {
-  const parsed = startFactoryProductionSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type StartFactoryProductionUseCaseDeps = {
+  factoryProductionJobRepository: FactoryProductionJobRepository;
+  buildingRepository: BuildingRepository;
+  inventoryRepository: InventoryRepository;
+  plotRepository: PlotRepository;
+  userRepository: UserRepository;
+  transactionLedgerRepository: TransactionLedgerRepository;
+  systemAccountService: SystemAccountService;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
 
-  const building = await buildingRepository.findById(parsed.data.buildingId);
+export async function executeStartFactoryProductionUseCase(
+  command: StartFactoryProductionCommand,
+  deps: StartFactoryProductionUseCaseDeps,
+): Promise<StartFactoryProductionResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
   if (!building) {
     return {
       ok: false,
       error: "建筑不存在",
-      status: 404,
+      code: "NOT_FOUND",
     };
   }
 
-  const recipe = getFactoryRecipeById(parsed.data.recipeId);
+  const recipe = getFactoryRecipeById(command.recipeId);
   if (!recipe) {
     return {
       ok: false,
       error: "配方不存在",
-      status: 404,
+      code: "NOT_FOUND",
     };
   }
 
-  const inProgressJob = await factoryProductionJobRepository.findInProgressByBuildingId(building.id);
+  const inProgressJob = await deps.factoryProductionJobRepository.findInProgressByBuildingId(building.id);
   if (inProgressJob) {
     return {
       ok: false,
       error: "工厂已有进行中的生产任务",
-      status: 409,
+      code: "CONFLICT",
     };
   }
 
   try {
-    const plot = await plotRepository.findById(building.plotId);
+    const plot = await deps.plotRepository.findById(building.plotId);
     if (!plot) {
       return {
         ok: false,
         error: "地块不存在",
-        status: 404,
+        code: "NOT_FOUND",
       };
     }
-    if (plot.ownerUserId !== parsed.data.ownerUserId) {
+    if (plot.ownerUserId !== command.ownerUserId) {
       return {
         ok: false,
         error: "只能操作自己地块上的工厂",
-        status: 409,
+        code: "CONFLICT",
       };
     }
     building.ensureFactory();
 
-    const qty = parsed.data.quantity;
+    const qty = command.quantity;
     const scaledInputs = recipe.inputs.map((item) => ({
       itemKey: item.itemKey,
       quantity: item.quantity * qty,
@@ -110,19 +114,16 @@ export async function executeStartFactoryProductionUseCase(
     const moneyCost = scaledInputs
       .filter((inputItem) => inputItem.itemKey === "money")
       .reduce((sum, inputItem) => sum + inputItem.quantity, 0);
-    const ownerUser = moneyCost > 0 ? await userRepository.findById(parsed.data.ownerUserId) : null;
+    const ownerUser = moneyCost > 0 ? await deps.userRepository.findById(command.ownerUserId) : null;
     if (moneyCost > 0 && !ownerUser) {
       return {
         ok: false,
         error: "用户不存在",
-        status: 404,
+        code: "NOT_FOUND",
       };
     }
 
-    const adam = moneyCost > 0 ? await userRepository.findById(ADAM_USER_ID) : null;
-    if (moneyCost > 0 && !adam) {
-      return { ok: false, error: "系统尚未初始化", status: 400 };
-    }
+    const adam = moneyCost > 0 ? await deps.systemAccountService.getSystemAccount() : null;
 
     for (const inputItem of scaledInputs) {
       if (inputItem.itemKey === "money") {
@@ -130,62 +131,59 @@ export async function executeStartFactoryProductionUseCase(
           return {
             ok: false,
             error: "余额不足，无法开始生产",
-            status: 409,
+            code: "CONFLICT",
           };
         }
         continue;
       }
-      const quantity = await inventoryRepository.getItemQuantity(
-        parsed.data.ownerUserId,
-        inputItem.itemKey,
-      );
+      const quantity = await deps.inventoryRepository.getItemQuantity(command.ownerUserId, inputItem.itemKey);
       if (quantity < inputItem.quantity) {
         return {
           ok: false,
           error: `材料不足: ${inputItem.itemKey}`,
-          status: 409,
+          code: "CONFLICT",
         };
       }
     }
 
-    for (const inputItem of scaledInputs) {
-      if (inputItem.itemKey === "money") {
-        continue;
+    const savedJob = await deps.transact(async () => {
+      for (const inputItem of scaledInputs) {
+        if (inputItem.itemKey === "money") {
+          continue;
+        }
+        await deps.inventoryRepository.consumeItem(command.ownerUserId, inputItem.itemKey, inputItem.quantity);
       }
-      await inventoryRepository.consumeItem(
-        parsed.data.ownerUserId,
-        inputItem.itemKey,
-        inputItem.quantity,
-      );
-    }
-    if (ownerUser && adam && moneyCost > 0) {
-      ownerUser.spendMoney(moneyCost);
-      adam.receiveMoney(moneyCost);
-      await userRepository.save(ownerUser);
-      await userRepository.save(adam);
-    }
 
-    const job = FactoryProductionJob.start({
-      id: 0,
-      buildingId: building.id,
-      ownerUserId: parsed.data.ownerUserId,
-      recipeId: recipe.id,
-      inputs: scaledInputs,
-      outputs: scaledOutputs,
-      durationSeconds: scaledDuration,
-    });
-    const savedJob = await factoryProductionJobRepository.save(job);
+      if (ownerUser && adam && moneyCost > 0) {
+        ownerUser.spendMoney(moneyCost);
+        adam.receiveMoney(moneyCost);
+        await deps.userRepository.save(ownerUser);
+        await deps.userRepository.save(adam);
+      }
 
-    if (moneyCost > 0) {
-      await transactionLedgerRepository.record({
-        fromUserId: parsed.data.ownerUserId,
-        toUserId: ADAM_USER_ID,
-        amount: moneyCost,
-        type: "factory_production",
-        referenceId: String(savedJob.id),
-        description: `工厂生产: ${recipe.name} ×${qty}`,
+      const job = FactoryProductionJob.start({
+        id: 0,
+        buildingId: building.id,
+        ownerUserId: command.ownerUserId,
+        recipeId: recipe.id,
+        inputs: scaledInputs,
+        outputs: scaledOutputs,
+        durationSeconds: scaledDuration,
       });
-    }
+      const savedJob = await deps.factoryProductionJobRepository.save(job);
+
+      if (moneyCost > 0) {
+        await deps.transactionLedgerRepository.record({
+          fromUserId: command.ownerUserId,
+          toUserId: adam!.id,
+          amount: moneyCost,
+          type: "factory_production",
+          referenceId: String(savedJob.id),
+          description: `工厂生产: ${recipe.name} ×${qty}`,
+        });
+      }
+      return savedJob;
+    });
 
     return {
       ok: true,
@@ -204,7 +202,7 @@ export async function executeStartFactoryProductionUseCase(
       return {
         ok: false,
         error: error.message,
-        status: 409,
+        code: "CONFLICT",
       };
     }
     throw error;

@@ -1,11 +1,6 @@
-import { z } from "zod";
-import { shopListingRepository } from "@/server/features/shop/infrastructure";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
-
-const cancelShopListingSchema = z.object({
-  sellerUserId: z.string().uuid("用户 ID 不合法"),
-  listingId: z.number().int().positive(),
-});
+import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type CancelShopListingSuccessResult = {
   ok: true;
@@ -15,44 +10,49 @@ type CancelShopListingSuccessResult = {
 type CancelShopListingFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type CancelShopListingResult =
   | CancelShopListingSuccessResult
   | CancelShopListingFailureResult;
 
-export async function executeCancelShopListingUseCase(
-  input: unknown,
-): Promise<CancelShopListingResult> {
-  const parsed = cancelShopListingSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type CancelShopListingCommand = {
+  sellerUserId: string;
+  listingId: number;
+};
 
-  const listing = await shopListingRepository.findById(parsed.data.listingId);
+export type CancelShopListingUseCaseDeps = {
+  shopListingRepository: ShopListingRepository;
+  inventoryRepository: InventoryRepository;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+export async function executeCancelShopListingUseCase(
+  command: CancelShopListingCommand,
+  deps: CancelShopListingUseCaseDeps,
+): Promise<CancelShopListingResult> {
+  const listing = await deps.shopListingRepository.findById(command.listingId);
   if (!listing) {
-    return { ok: false, error: "商品不存在", status: 404 };
+    return { ok: false, error: "商品不存在", code: "NOT_FOUND" };
   }
 
   if (listing.status !== "active") {
-    return { ok: false, error: "该商品已下架或已售出，无法取消", status: 409 };
+    return { ok: false, error: "该商品已下架或已售出，无法取消", code: "CONFLICT" };
   }
 
-  if (listing.sellerUserId !== parsed.data.sellerUserId) {
-    return { ok: false, error: "只有卖家本人才能下架商品", status: 409 };
+  if (listing.sellerUserId !== command.sellerUserId) {
+    return { ok: false, error: "只有卖家本人才能下架商品", code: "CONFLICT" };
   }
 
-  await shopListingRepository.updateStatus(listing.id, "cancelled");
-  await inventoryRepository.addItem(
-    listing.sellerUserId,
-    listing.itemKey,
-    listing.quantity,
-  );
+  await deps.transact(async () => {
+    await deps.shopListingRepository.updateStatus(listing.id, "cancelled");
+    await deps.inventoryRepository.addItem(
+      listing.sellerUserId,
+      listing.itemKey,
+      listing.quantity,
+    );
+  });
 
   return {
     ok: true,

@@ -1,11 +1,7 @@
-import { z } from "zod";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { buyOrderRepository } from "@/server/features/purchasing-station/infrastructure";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-
-const listBuyOrdersSchema = z.object({
-  buildingId: z.number().int().positive(),
-});
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type ListBuyOrdersSuccessResult = {
   ok: true;
@@ -25,38 +21,39 @@ type ListBuyOrdersSuccessResult = {
 type ListBuyOrdersFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type ListBuyOrdersResult = ListBuyOrdersSuccessResult | ListBuyOrdersFailureResult;
 
-export async function executeListBuyOrdersUseCase(
-  input: unknown,
-): Promise<ListBuyOrdersResult> {
-  const parsed = listBuyOrdersSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type ListBuyOrdersCommand = {
+  buildingId: number;
+};
 
-  const building = await buildingRepository.findById(parsed.data.buildingId);
+export type ListBuyOrdersUseCaseDeps = {
+  buildingRepository: BuildingRepository;
+  buyOrderRepository: BuyOrderRepository;
+};
+
+export async function executeListBuyOrdersUseCase(
+  command: ListBuyOrdersCommand,
+  deps: ListBuyOrdersUseCaseDeps,
+): Promise<ListBuyOrdersResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
   if (!building) {
-    return { ok: false, error: "建筑不存在", status: 404 };
+    return { ok: false, error: "建筑不存在", code: "NOT_FOUND" };
   }
 
   try {
     building.ensurePurchasingStation();
   } catch (error) {
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message, status: 409 };
+      return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
 
-  const orders = await buyOrderRepository.findActiveByBuildingId(parsed.data.buildingId);
+  const orders = await deps.buyOrderRepository.findActiveByBuildingId(command.buildingId);
 
   return { ok: true, orders };
 }

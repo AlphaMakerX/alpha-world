@@ -1,11 +1,7 @@
-import { z } from "zod";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { shopListingRepository } from "@/server/features/shop/infrastructure";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-
-const listShopListingsSchema = z.object({
-  buildingId: z.number().int().positive(),
-});
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type ListShopListingsSuccessResult = {
   ok: true;
@@ -25,29 +21,30 @@ type ListShopListingsSuccessResult = {
 type ListShopListingsFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type ListShopListingsResult = ListShopListingsSuccessResult | ListShopListingsFailureResult;
 
-export async function executeListShopListingsUseCase(
-  input: unknown,
-): Promise<ListShopListingsResult> {
-  const parsed = listShopListingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type ListShopListingsCommand = {
+  buildingId: number;
+};
 
-  const building = await buildingRepository.findById(parsed.data.buildingId);
+export type ListShopListingsUseCaseDeps = {
+  buildingRepository: BuildingRepository;
+  shopListingRepository: ShopListingRepository;
+};
+
+export async function executeListShopListingsUseCase(
+  command: ListShopListingsCommand,
+  deps: ListShopListingsUseCaseDeps,
+): Promise<ListShopListingsResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
   if (!building) {
     return {
       ok: false,
       error: "建筑不存在",
-      status: 404,
+      code: "NOT_FOUND",
     };
   }
 
@@ -55,12 +52,12 @@ export async function executeListShopListingsUseCase(
     building.ensureShop();
   } catch (error) {
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message, status: 409 };
+      return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
 
-  const listings = await shopListingRepository.findActiveByBuildingId(parsed.data.buildingId);
+  const listings = await deps.shopListingRepository.findActiveByBuildingId(command.buildingId);
 
   return {
     ok: true,

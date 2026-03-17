@@ -8,7 +8,7 @@ import {
   type RegisterUserResult,
 } from "@/server/features/auth/application/register-user-use-case";
 import { passwordHasher } from "@/server/features/auth/infrastructure";
-import { transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
+import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
 
 export const loginUserSchema = z.object({
   username: z.string().trim().min(3).max(32),
@@ -41,6 +41,7 @@ export async function executeRegisterUserUseCase(input: unknown): Promise<Regist
   return executeRegisterUserUseCaseImpl(parsed.data, {
     userRepository,
     transactionLedgerRepository,
+    systemAccountService,
     passwordHasher,
   });
 }

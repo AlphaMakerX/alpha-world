@@ -3,8 +3,9 @@ import type { PasswordHasher } from "@/server/features/auth/domain/services/pass
 import { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
-import { ADAM_USER_ID, ADAM_USERNAME } from "@/server/features/shared-kernel/domain/adam";
+import { ADAM_USERNAME } from "@/server/features/shared-kernel/domain/adam";
 
 export type RegisterUserCommand = {
   username: string;
@@ -30,6 +31,7 @@ export type RegisterUserResult = RegisterUserSuccessResult | RegisterUserFailure
 export type RegisterUserUseCaseDeps = {
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
+  systemAccountService: SystemAccountService;
   passwordHasher: PasswordHasher;
 };
 
@@ -55,14 +57,7 @@ export async function executeRegisterUserUseCase(
     };
   }
 
-  const adam = await deps.userRepository.findById(ADAM_USER_ID);
-  if (!adam) {
-    return {
-      ok: false,
-      error: "系统尚未初始化，请先运行 init:system",
-      status: 400,
-    };
-  }
+  const adam = await deps.systemAccountService.getSystemAccount();
 
   const initialMoney = 10000;
   const passwordHash = await deps.passwordHasher.hash(command.password);
@@ -77,7 +72,7 @@ export async function executeRegisterUserUseCase(
   await deps.userRepository.save(adam);
   await deps.userRepository.save(user);
   await deps.transactionLedgerRepository.record({
-    fromUserId: ADAM_USER_ID,
+    fromUserId: adam.id,
     toUserId: user.id,
     amount: initialMoney,
     type: "registration_grant",

@@ -1,14 +1,9 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { shopListingRepository } from "@/server/features/shop/infrastructure";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
-import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
-
-const purchaseShopListingSchema = z.object({
-  buyerUserId: z.string().uuid("用户 ID 不合法"),
-  listingId: z.number().int().positive(),
-  quantity: z.number().int().positive("购买数量必须为正整数"),
-});
+import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type PurchaseShopListingSuccessResult = {
   ok: true;
@@ -24,51 +19,57 @@ type PurchaseShopListingSuccessResult = {
 type PurchaseShopListingFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type PurchaseShopListingResult =
   | PurchaseShopListingSuccessResult
   | PurchaseShopListingFailureResult;
 
-export async function executePurchaseShopListingUseCase(
-  input: unknown,
-): Promise<PurchaseShopListingResult> {
-  const parsed = purchaseShopListingSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type PurchaseShopListingCommand = {
+  buyerUserId: string;
+  listingId: number;
+  quantity: number;
+};
 
-  const listing = await shopListingRepository.findById(parsed.data.listingId);
+export type PurchaseShopListingUseCaseDeps = {
+  shopListingRepository: ShopListingRepository;
+  inventoryRepository: InventoryRepository;
+  userRepository: UserRepository;
+  transactionLedgerRepository: TransactionLedgerRepository;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+export async function executePurchaseShopListingUseCase(
+  command: PurchaseShopListingCommand,
+  deps: PurchaseShopListingUseCaseDeps,
+): Promise<PurchaseShopListingResult> {
+  const listing = await deps.shopListingRepository.findById(command.listingId);
   if (!listing) {
-    return { ok: false, error: "商品不存在", status: 404 };
+    return { ok: false, error: "商品不存在", code: "NOT_FOUND" };
   }
 
   if (listing.status !== "active") {
-    return { ok: false, error: "该商品已下架或已售出", status: 409 };
+    return { ok: false, error: "该商品已下架或已售出", code: "CONFLICT" };
   }
 
-  if (listing.sellerUserId === parsed.data.buyerUserId) {
-    return { ok: false, error: "不能购买自己上架的商品", status: 409 };
+  if (listing.sellerUserId === command.buyerUserId) {
+    return { ok: false, error: "不能购买自己上架的商品", code: "CONFLICT" };
   }
 
-  const purchaseQuantity = parsed.data.quantity;
+  const purchaseQuantity = command.quantity;
   if (purchaseQuantity > listing.quantity) {
-    return { ok: false, error: `购买数量不能超过剩余库存 (${listing.quantity})`, status: 409 };
+    return { ok: false, error: `购买数量不能超过剩余库存 (${listing.quantity})`, code: "CONFLICT" };
   }
 
-  const buyer = await userRepository.findById(parsed.data.buyerUserId);
+  const buyer = await deps.userRepository.findById(command.buyerUserId);
   if (!buyer) {
-    return { ok: false, error: "用户不存在", status: 404 };
+    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
-  const seller = await userRepository.findById(listing.sellerUserId);
+  const seller = await deps.userRepository.findById(listing.sellerUserId);
   if (!seller) {
-    return { ok: false, error: "卖家不存在", status: 404 };
+    return { ok: false, error: "卖家不存在", code: "NOT_FOUND" };
   }
 
   const totalCost = listing.unitPrice * purchaseQuantity;
@@ -78,34 +79,36 @@ export async function executePurchaseShopListingUseCase(
     seller.receiveMoney(totalCost);
   } catch (error) {
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message, status: 409 };
+      return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
 
-  await userRepository.save(buyer);
-  await userRepository.save(seller);
+  await deps.transact(async () => {
+    await deps.userRepository.save(buyer);
+    await deps.userRepository.save(seller);
 
-  const remainingQuantity = listing.quantity - purchaseQuantity;
-  if (remainingQuantity === 0) {
-    await shopListingRepository.updateStatus(listing.id, "sold");
-  } else {
-    await shopListingRepository.updateQuantity(listing.id, remainingQuantity);
-  }
+    const remainingQuantity = listing.quantity - purchaseQuantity;
+    if (remainingQuantity === 0) {
+      await deps.shopListingRepository.updateStatus(listing.id, "sold");
+    } else {
+      await deps.shopListingRepository.updateQuantity(listing.id, remainingQuantity);
+    }
 
-  await inventoryRepository.addItem(
-    parsed.data.buyerUserId,
-    listing.itemKey,
-    purchaseQuantity,
-  );
+    await deps.inventoryRepository.addItem(
+      command.buyerUserId,
+      listing.itemKey,
+      purchaseQuantity,
+    );
 
-  await transactionLedgerRepository.record({
-    fromUserId: parsed.data.buyerUserId,
-    toUserId: listing.sellerUserId,
-    amount: totalCost,
-    type: "shop_purchase",
-    referenceId: String(listing.id),
-    description: `购买商品: ${listing.itemKey} x${purchaseQuantity}`,
+    await deps.transactionLedgerRepository.record({
+      fromUserId: command.buyerUserId,
+      toUserId: listing.sellerUserId,
+      amount: totalCost,
+      type: "shop_purchase",
+      referenceId: String(listing.id),
+      description: `购买商品: ${listing.itemKey} x${purchaseQuantity}`,
+    });
   });
 
   return {

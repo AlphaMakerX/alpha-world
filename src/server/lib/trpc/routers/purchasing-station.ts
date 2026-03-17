@@ -9,20 +9,17 @@ import {
   executeFulfillBuyOrderUseCase,
   executeCancelBuyOrderUseCase,
   executeGetPurchasingStationTransactionHistoryUseCase,
-} from "@/server/features/purchasing-station/application";
+  createBuyOrderSchema,
+  listBuyOrdersSchema,
+  fulfillBuyOrderSchema,
+  cancelBuyOrderSchema,
+  getPurchasingStationTransactionHistorySchema,
+} from "@/server/features/purchasing-station/composition";
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
-import { z } from "zod";
 
 export const purchasingStationRouter = createTRPCRouter({
   createBuyOrder: protectedProcedure
-    .input(
-      z.object({
-        buildingId: z.number().int().positive(),
-        itemKey: z.string().trim().min(1),
-        quantity: z.number().int().positive(),
-        unitPrice: z.number().positive(),
-      }),
-    )
+    .input(createBuyOrderSchema.omit({ buyerUserId: true }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(
         await executeCreateBuyOrderUseCase({
@@ -35,19 +32,14 @@ export const purchasingStationRouter = createTRPCRouter({
       );
     }),
   buyOrders: publicProcedure
-    .input(z.object({ buildingId: z.number().int().positive() }))
+    .input(listBuyOrdersSchema)
     .query(async ({ input }) => {
       return unwrapUseCaseResult(
         await executeListBuyOrdersUseCase({ buildingId: input.buildingId }),
       );
     }),
   fulfillBuyOrder: protectedProcedure
-    .input(
-      z.object({
-        orderId: z.number().int().positive(),
-        quantity: z.number().int().positive(),
-      }),
-    )
+    .input(fulfillBuyOrderSchema.omit({ sellerUserId: true }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(
         await executeFulfillBuyOrderUseCase({
@@ -58,7 +50,7 @@ export const purchasingStationRouter = createTRPCRouter({
       );
     }),
   cancelBuyOrder: protectedProcedure
-    .input(z.object({ orderId: z.number().int().positive() }))
+    .input(cancelBuyOrderSchema.omit({ buyerUserId: true }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(
         await executeCancelBuyOrderUseCase({
@@ -68,7 +60,7 @@ export const purchasingStationRouter = createTRPCRouter({
       );
     }),
   transactionHistory: publicProcedure
-    .input(z.object({ buildingId: z.number().int().positive() }))
+    .input(getPurchasingStationTransactionHistorySchema)
     .query(async ({ input }) => {
       return unwrapUseCaseResult(
         await executeGetPurchasingStationTransactionHistoryUseCase({

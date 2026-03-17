@@ -1,23 +1,43 @@
-import { z } from "zod";
-import { buildingRepository } from "@/server/features/building/infrastructure";
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
-const listMyBuildingsSchema = z.object({
-  ownerUserId: z.string().uuid("用户 ID 不合法"),
-});
+export type ListMyBuildingsCommand = {
+  ownerUserId: string;
+};
 
-export async function executeListMyBuildingsUseCase(input: unknown) {
-  const parsed = listMyBuildingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false as const,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400 as const,
-    };
-  }
+type ListMyBuildingsSuccessResult = {
+  ok: true;
+  buildings: Array<{
+    id: number;
+    plotId: number;
+    type: "residential" | "factory" | "shop" | "purchasing_station";
+    status: "active";
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+};
 
-  const buildings = await buildingRepository.findByOwnerUserId(parsed.data.ownerUserId);
+type ListMyBuildingsFailureResult = {
+  ok: false;
+  error: string;
+  code: UseCaseErrorCode;
+};
+
+export type ListMyBuildingsResult =
+  | ListMyBuildingsSuccessResult
+  | ListMyBuildingsFailureResult;
+
+export type ListMyBuildingsUseCaseDeps = {
+  buildingRepository: BuildingRepository;
+};
+
+export async function executeListMyBuildingsUseCase(
+  command: ListMyBuildingsCommand,
+  deps: ListMyBuildingsUseCaseDeps,
+): Promise<ListMyBuildingsResult> {
+  const buildings = await deps.buildingRepository.findByOwnerUserId(command.ownerUserId);
   return {
-    ok: true as const,
+    ok: true,
     buildings: buildings.map((building) => ({
       id: building.id,
       plotId: building.plotId,

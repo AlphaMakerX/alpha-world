@@ -1,14 +1,9 @@
-import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { buyOrderRepository } from "@/server/features/purchasing-station/infrastructure";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
-import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
-
-const fulfillBuyOrderSchema = z.object({
-  sellerUserId: z.string().uuid("用户 ID 不合法"),
-  orderId: z.number().int().positive(),
-  quantity: z.number().int().positive("出售数量必须为正整数"),
-});
+import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type FulfillBuyOrderSuccessResult = {
   ok: true;
@@ -24,52 +19,58 @@ type FulfillBuyOrderSuccessResult = {
 type FulfillBuyOrderFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type FulfillBuyOrderResult = FulfillBuyOrderSuccessResult | FulfillBuyOrderFailureResult;
 
-export async function executeFulfillBuyOrderUseCase(
-  input: unknown,
-): Promise<FulfillBuyOrderResult> {
-  const parsed = fulfillBuyOrderSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type FulfillBuyOrderCommand = {
+  sellerUserId: string;
+  orderId: number;
+  quantity: number;
+};
 
-  const order = await buyOrderRepository.findById(parsed.data.orderId);
+export type FulfillBuyOrderUseCaseDeps = {
+  buyOrderRepository: BuyOrderRepository;
+  inventoryRepository: InventoryRepository;
+  userRepository: UserRepository;
+  transactionLedgerRepository: TransactionLedgerRepository;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+export async function executeFulfillBuyOrderUseCase(
+  command: FulfillBuyOrderCommand,
+  deps: FulfillBuyOrderUseCaseDeps,
+): Promise<FulfillBuyOrderResult> {
+  const order = await deps.buyOrderRepository.findById(command.orderId);
   if (!order) {
-    return { ok: false, error: "收购订单不存在", status: 404 };
+    return { ok: false, error: "收购订单不存在", code: "NOT_FOUND" };
   }
 
   if (order.status !== "active") {
-    return { ok: false, error: "该订单已完成或已取消", status: 409 };
+    return { ok: false, error: "该订单已完成或已取消", code: "CONFLICT" };
   }
 
-  if (order.buyerUserId === parsed.data.sellerUserId) {
-    return { ok: false, error: "不能出售给自己的收购订单", status: 409 };
+  if (order.buyerUserId === command.sellerUserId) {
+    return { ok: false, error: "不能出售给自己的收购订单", code: "CONFLICT" };
   }
 
-  const sellQuantity = parsed.data.quantity;
+  const sellQuantity = command.quantity;
   if (sellQuantity > order.quantity) {
-    return { ok: false, error: `出售数量不能超过订单剩余需求 (${order.quantity})`, status: 409 };
+    return { ok: false, error: `出售数量不能超过订单剩余需求 (${order.quantity})`, code: "CONFLICT" };
   }
 
-  const seller = await userRepository.findById(parsed.data.sellerUserId);
+  const seller = await deps.userRepository.findById(command.sellerUserId);
   if (!seller) {
-    return { ok: false, error: "用户不存在", status: 404 };
+    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
-  const sellerQuantity = await inventoryRepository.getItemQuantity(
-    parsed.data.sellerUserId,
+  const sellerQuantity = await deps.inventoryRepository.getItemQuantity(
+    command.sellerUserId,
     order.itemKey,
   );
   if (sellerQuantity < sellQuantity) {
-    return { ok: false, error: "库存不足，无法出售", status: 409 };
+    return { ok: false, error: "库存不足，无法出售", code: "CONFLICT" };
   }
 
   const totalIncome = order.unitPrice * sellQuantity;
@@ -78,37 +79,39 @@ export async function executeFulfillBuyOrderUseCase(
     seller.receiveMoney(totalIncome);
   } catch (error) {
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message, status: 409 };
+      return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
 
-  await inventoryRepository.consumeItem(
-    parsed.data.sellerUserId,
-    order.itemKey,
-    sellQuantity,
-  );
-  await inventoryRepository.addItem(
-    order.buyerUserId,
-    order.itemKey,
-    sellQuantity,
-  );
-  await userRepository.save(seller);
+  await deps.transact(async () => {
+    await deps.inventoryRepository.consumeItem(
+      command.sellerUserId,
+      order.itemKey,
+      sellQuantity,
+    );
+    await deps.inventoryRepository.addItem(
+      order.buyerUserId,
+      order.itemKey,
+      sellQuantity,
+    );
+    await deps.userRepository.save(seller);
 
-  const remainingQuantity = order.quantity - sellQuantity;
-  if (remainingQuantity === 0) {
-    await buyOrderRepository.updateStatus(order.id, "fulfilled");
-  } else {
-    await buyOrderRepository.updateQuantity(order.id, remainingQuantity);
-  }
+    const remainingQuantity = order.quantity - sellQuantity;
+    if (remainingQuantity === 0) {
+      await deps.buyOrderRepository.updateStatus(order.id, "fulfilled");
+    } else {
+      await deps.buyOrderRepository.updateQuantity(order.id, remainingQuantity);
+    }
 
-  await transactionLedgerRepository.record({
-    fromUserId: order.buyerUserId,
-    toUserId: parsed.data.sellerUserId,
-    amount: totalIncome,
-    type: "buy_order_fulfilled",
-    referenceId: String(order.id),
-    description: `收购订单成交: ${order.itemKey} x${sellQuantity}`,
+    await deps.transactionLedgerRepository.record({
+      fromUserId: order.buyerUserId,
+      toUserId: command.sellerUserId,
+      amount: totalIncome,
+      type: "buy_order_fulfilled",
+      referenceId: String(order.id),
+      description: `收购订单成交: ${order.itemKey} x${sellQuantity}`,
+    });
   });
 
   return {

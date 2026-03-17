@@ -1,102 +1,63 @@
-import { z } from "zod";
-import { eq, and, inArray, desc } from "drizzle-orm";
-import { db } from "@/server/lib/db";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { buildingRepository } from "@/server/features/building/infrastructure";
-import { shopListings } from "@/server/features/shop/infrastructure/schema";
-import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
-
-const getShopTransactionHistorySchema = z.object({
-  buildingId: z.number().int().positive(),
-});
-
-type ShopTransaction = {
-  id: number;
-  buyerUsername: string;
-  amount: number;
-  description: string | null;
-  createdAt: Date;
-};
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { ShopTransactionQueryRepository } from "@/server/features/shop/domain/repositories/shop-transaction-query-repository";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type GetShopTransactionHistorySuccessResult = {
   ok: true;
-  transactions: ShopTransaction[];
+  transactions: Array<{
+    id: number;
+    buyerUsername: string;
+    amount: number;
+    description: string | null;
+    createdAt: Date;
+  }>;
 };
 
 type GetShopTransactionHistoryFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 404 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type GetShopTransactionHistoryResult =
   | GetShopTransactionHistorySuccessResult
   | GetShopTransactionHistoryFailureResult;
 
-export async function executeGetShopTransactionHistoryUseCase(
-  input: unknown,
-): Promise<GetShopTransactionHistoryResult> {
-  const parsed = getShopTransactionHistorySchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type GetShopTransactionHistoryCommand = {
+  buildingId: number;
+};
 
-  const building = await buildingRepository.findById(parsed.data.buildingId);
+export type GetShopTransactionHistoryUseCaseDeps = {
+  buildingRepository: BuildingRepository;
+  shopTransactionQueryRepository: ShopTransactionQueryRepository;
+};
+
+export async function executeGetShopTransactionHistoryUseCase(
+  command: GetShopTransactionHistoryCommand,
+  deps: GetShopTransactionHistoryUseCaseDeps,
+): Promise<GetShopTransactionHistoryResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
   if (!building) {
-    return { ok: false, error: "建筑不存在", status: 404 };
+    return { ok: false, error: "建筑不存在", code: "NOT_FOUND" };
   }
 
   try {
     building.ensureShop();
   } catch (error) {
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message, status: 409 };
+      return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
 
-  const listings = await db.query.shopListings.findMany({
-    where: eq(shopListings.buildingId, parsed.data.buildingId),
-    columns: { id: true },
-  });
-
-  if (listings.length === 0) {
-    return { ok: true, transactions: [] };
-  }
-
-  const listingIds = listings.map((l) => String(l.id));
-
-  const rows = await db
-    .select({
-      id: moneyTransactions.id,
-      buyerUsername: users.username,
-      amount: moneyTransactions.amount,
-      description: moneyTransactions.description,
-      createdAt: moneyTransactions.createdAt,
-    })
-    .from(moneyTransactions)
-    .innerJoin(users, eq(moneyTransactions.fromUserId, users.id))
-    .where(
-      and(
-        eq(moneyTransactions.type, "shop_purchase"),
-        inArray(moneyTransactions.referenceId, listingIds),
-      ),
-    )
-    .orderBy(desc(moneyTransactions.createdAt))
-    .limit(50);
+  const transactions = await deps.shopTransactionQueryRepository.listByBuildingId(
+    command.buildingId,
+    50,
+  );
 
   return {
     ok: true,
-    transactions: rows.map((row) => ({
-      id: row.id,
-      buyerUsername: row.buyerUsername,
-      amount: Number(row.amount),
-      description: row.description,
-      createdAt: row.createdAt,
-    })),
+    transactions,
   };
 }
