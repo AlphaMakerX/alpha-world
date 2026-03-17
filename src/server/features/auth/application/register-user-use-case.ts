@@ -1,14 +1,15 @@
-import { z } from "zod";
 import { randomUUID } from "crypto";
-import { hash } from "bcryptjs";
+import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
-import { userRepository, transactionLedgerRepository } from "@/server/features/person/infrastructure";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import { Username } from "@/server/features/person/domain/value-objects/username";
 import { ADAM_USER_ID, ADAM_USERNAME } from "@/server/features/shared-kernel/domain/adam";
 
-const registerUserSchema = z.object({
-  username: z.string().trim().min(3, "用户名至少 3 位").max(32, "用户名最多 32 位"),
-  password: z.string().min(6, "密码至少 6 位").max(128, "密码最多 128 位"),
-});
+export type RegisterUserCommand = {
+  username: string;
+  password: string;
+};
 
 type RegisterUserSuccessResult = {
   ok: true;
@@ -26,19 +27,17 @@ type RegisterUserFailureResult = {
 
 export type RegisterUserResult = RegisterUserSuccessResult | RegisterUserFailureResult;
 
-export async function executeRegisterUserUseCase(
-  input: unknown,
-): Promise<RegisterUserResult> {
-  const parsed = registerUserSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400,
-    };
-  }
+export type RegisterUserUseCaseDeps = {
+  userRepository: UserRepository;
+  transactionLedgerRepository: TransactionLedgerRepository;
+  passwordHasher: PasswordHasher;
+};
 
-  if (parsed.data.username.trim().toLowerCase() === ADAM_USERNAME) {
+export async function executeRegisterUserUseCase(
+  command: RegisterUserCommand,
+  deps: RegisterUserUseCaseDeps,
+): Promise<RegisterUserResult> {
+  if (command.username.trim().toLowerCase() === ADAM_USERNAME) {
     return {
       ok: false,
       error: "该用户名为系统保留名称",
@@ -46,7 +45,8 @@ export async function executeRegisterUserUseCase(
     };
   }
 
-  const existingUser = await userRepository.findByUsername(parsed.data.username);
+  const username = Username.create(command.username);
+  const existingUser = await deps.userRepository.findByUsername(username);
   if (existingUser) {
     return {
       ok: false,
@@ -55,7 +55,7 @@ export async function executeRegisterUserUseCase(
     };
   }
 
-  const adam = await userRepository.findById(ADAM_USER_ID);
+  const adam = await deps.userRepository.findById(ADAM_USER_ID);
   if (!adam) {
     return {
       ok: false,
@@ -65,18 +65,18 @@ export async function executeRegisterUserUseCase(
   }
 
   const initialMoney = 10000;
-  const passwordHash = await hash(parsed.data.password, 10);
+  const passwordHash = await deps.passwordHasher.hash(command.password);
   const user = User.register({
     id: randomUUID(),
-    username: parsed.data.username,
+    username: username.getValue(),
     passwordHash,
     initialMoney,
   });
 
   adam.spendMoney(initialMoney);
-  await userRepository.save(adam);
-  await userRepository.save(user);
-  await transactionLedgerRepository.record({
+  await deps.userRepository.save(adam);
+  await deps.userRepository.save(user);
+  await deps.transactionLedgerRepository.record({
     fromUserId: ADAM_USER_ID,
     toUserId: user.id,
     amount: initialMoney,

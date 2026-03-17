@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { factoryProductionJobRepository } from "@/server/features/factory/infrastructure";
 import { buildingRepository } from "@/server/features/building/infrastructure";
+import { receiveFactoryOutputs } from "@/server/features/inventory/domain";
 import { inventoryRepository } from "@/server/features/inventory/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
 
@@ -72,29 +73,27 @@ export async function executeListFactoryOrdersUseCase(input: unknown) {
   }
 
   try {
+    // 防御性校验：确保该建筑仍然是工厂，避免后续按工厂订单处理时出现领域错误。
     building.ensureFactory();
     const now = new Date();
     const jobs = await factoryProductionJobRepository.findByBuildingId(parsed.data.buildingId);
 
+    // 查询订单时顺便做一次“到点即领取”的结算，把可领取产物入库并持久化订单状态。
     for (const job of jobs) {
-      if (job.status !== "in_progress") {
-        continue;
-      }
-      if (job.finishAt.getTime() > now.getTime()) {
+      if (!job.canCollectAt(now)) {
         continue;
       }
 
       const outputs = job.collect(now);
-      for (const outputItem of outputs) {
-        await inventoryRepository.addItem(
-          parsed.data.ownerUserId,
-          outputItem.itemKey,
-          outputItem.quantity,
-        );
-      }
+      await receiveFactoryOutputs({
+        inventoryRepository,
+        ownerUserId: parsed.data.ownerUserId,
+        outputs,
+      });
       await factoryProductionJobRepository.save(job);
     }
 
+    // 重新读取最新状态：前端只需要一个进行中订单作为焦点，其余都归类为历史订单。
     const refreshedJobs = await factoryProductionJobRepository.findByBuildingId(parsed.data.buildingId);
     const inProgressJob = refreshedJobs.find((job) => job.status === "in_progress") ?? null;
     const historyJobs = refreshedJobs.filter((job) => job.status !== "in_progress");

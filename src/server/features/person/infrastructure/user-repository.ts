@@ -29,8 +29,8 @@ export class DrizzleUserRepository implements UserRepository {
     return toDomainUser(record);
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    const normalizedUsername = Username.create(username).getValue();
+  async findByUsername(username: Username): Promise<User | null> {
+    const normalizedUsername = username.getValue();
     const record = await db.query.users.findFirst({
       where: eq(users.username, normalizedUsername),
     });

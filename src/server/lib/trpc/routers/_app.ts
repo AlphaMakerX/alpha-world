@@ -3,7 +3,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/server/lib/trpc/core";
-import { executeRegisterUserUseCase } from "@/server/features/auth/application";
+import { executeRegisterUserUseCase, registerUserSchema } from "@/server/features/auth/composition";
 import {
   executeListPlotsUseCase,
   executePurchasePlotUseCase,
@@ -56,12 +56,7 @@ export const appRouter = createTRPCRouter({
     }),
   auth: createTRPCRouter({
     register: publicProcedure
-      .input(
-        z.object({
-          username: z.string(),
-          password: z.string(),
-        }),
-      )
+      .input(registerUserSchema)
       .mutation(async ({ input }) => {
         const result = await executeRegisterUserUseCase(input);
         if (!result.ok) {

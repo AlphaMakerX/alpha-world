@@ -65,6 +65,10 @@ export class FactoryProductionJob {
     }
   }
 
+  canCollectAt(now: Date = new Date()): boolean {
+    return this.props.status === "in_progress" && now.getTime() >= this.props.finishAt.getTime();
+  }
+
   collect(now: Date = new Date()): ItemStack[] {
     if (this.props.status !== "in_progress") {
       throw new DomainError("当前生产任务不可收取");

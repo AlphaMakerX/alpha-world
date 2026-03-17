@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { executeLoginUserUseCase } from "@/server/features/auth/application";
+import { executeLoginUserUseCase } from "@/server/features/auth/composition";
 
 export const authOptions: NextAuthOptions = {
   secret:
