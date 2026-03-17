@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
@@ -43,7 +43,7 @@ function toDomainJob(record: typeof factoryProductionJobs.$inferSelect): Factory
 
 export class DrizzleFactoryProductionJobRepository implements FactoryProductionJobRepository {
   async findById(id: number): Promise<FactoryProductionJob | null> {
-    const record = await db.query.factoryProductionJobs.findFirst({
+    const record = await getDbClient().query.factoryProductionJobs.findFirst({
       where: eq(factoryProductionJobs.id, id),
     });
     if (!record) {
@@ -54,7 +54,7 @@ export class DrizzleFactoryProductionJobRepository implements FactoryProductionJ
   }
 
   async findInProgressByBuildingId(buildingId: number): Promise<FactoryProductionJob | null> {
-    const record = await db.query.factoryProductionJobs.findFirst({
+    const record = await getDbClient().query.factoryProductionJobs.findFirst({
       where: and(
         eq(factoryProductionJobs.buildingId, buildingId),
         eq(factoryProductionJobs.status, "in_progress"),
@@ -69,7 +69,7 @@ export class DrizzleFactoryProductionJobRepository implements FactoryProductionJ
   }
 
   async findByBuildingId(buildingId: number): Promise<FactoryProductionJob[]> {
-    const records = await db.query.factoryProductionJobs.findMany({
+    const records = await getDbClient().query.factoryProductionJobs.findMany({
       where: eq(factoryProductionJobs.buildingId, buildingId),
       orderBy: desc(factoryProductionJobs.id),
     });
@@ -78,7 +78,7 @@ export class DrizzleFactoryProductionJobRepository implements FactoryProductionJ
 
   async save(job: FactoryProductionJob): Promise<FactoryProductionJob> {
     if (job.id > 0) {
-      const updated = await db
+      const updated = await getDbClient()
         .update(factoryProductionJobs)
         .set({
           status: job.status,
@@ -90,7 +90,7 @@ export class DrizzleFactoryProductionJobRepository implements FactoryProductionJ
       return toDomainJob(updated[0]);
     }
 
-    const inserted = await db
+    const inserted = await getDbClient()
       .insert(factoryProductionJobs)
       .values({
         buildingId: job.buildingId,

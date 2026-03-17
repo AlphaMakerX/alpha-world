@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import type { InventoryRepository } from "@/server/features/inventory/domain";
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
 import { createItemStack, normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
@@ -8,7 +8,7 @@ import { DomainError } from "@/server/features/shared-kernel/domain/domain-error
 
 export class DrizzleInventoryRepository implements InventoryRepository {
   async getByOwner(ownerUserId: string): Promise<ItemStack[]> {
-    const rows = await db.query.inventories.findMany({
+    const rows = await getDbClient().query.inventories.findMany({
       where: eq(inventories.ownerUserId, ownerUserId),
     });
     return rows.filter((row) => row.quantity > 0).map((row) => createItemStack(row));
@@ -16,7 +16,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
 
   async getItemQuantity(ownerUserId: string, itemKey: string): Promise<number> {
     const normalizedItemKey = normalizeItemKey(itemKey);
-    const row = await db.query.inventories.findFirst({
+    const row = await getDbClient().query.inventories.findFirst({
       where: and(
         eq(inventories.ownerUserId, ownerUserId),
         eq(inventories.itemKey, normalizedItemKey),
@@ -34,7 +34,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
     const currentQuantity = await this.getItemQuantity(ownerUserId, normalizedItemKey);
     const now = new Date();
 
-    await db
+    await getDbClient()
       .insert(inventories)
       .values({
         ownerUserId,
@@ -64,7 +64,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
     }
     const now = new Date();
 
-    await db
+    await getDbClient()
       .insert(inventories)
       .values({
         ownerUserId,
