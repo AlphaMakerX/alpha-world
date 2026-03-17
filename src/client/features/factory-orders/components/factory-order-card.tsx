@@ -1,4 +1,4 @@
-import type { FactoryOrder } from "@/client/features/building/types/building-ui";
+import type { FactoryOrder } from "@/client/features/factory/types/factory-ui";
 import { ItemTile } from "@/client/features/inventory/components/item-tile";
 import { useEffect, useState } from "react";
 import { factoryOrderStatusLabelByValue, formatDateTime } from "./factory-order-display";

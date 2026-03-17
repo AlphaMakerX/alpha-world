@@ -1,4 +1,4 @@
-import type { FactoryRecipe } from "@/client/features/building/types/building-ui";
+import type { FactoryRecipe } from "@/client/features/factory/types/factory-ui";
 
 type RecipeListProps = {
   recipes: FactoryRecipe[];

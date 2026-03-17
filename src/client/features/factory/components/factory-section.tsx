@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { FactoryOrders, FactoryRecipe } from "@/client/features/building/types/building-ui";
+import type { FactoryOrders, FactoryRecipe } from "@/client/features/factory/types/factory-ui";
 import { FactoryOrdersSection } from "@/client/features/factory-orders/components/factory-orders-section";
-import { RecipeDetail } from "@/client/features/building/components/recipe-detail";
-import { RecipeList } from "@/client/features/building/components/recipe-list";
+import { RecipeDetail } from "@/client/features/factory/components/recipe-detail";
+import { RecipeList } from "@/client/features/factory/components/recipe-list";
 
 type FactorySectionProps = {
   factoryRecipes: FactoryRecipe[];

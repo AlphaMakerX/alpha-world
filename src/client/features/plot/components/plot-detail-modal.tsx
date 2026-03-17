@@ -6,11 +6,6 @@ import { PlotDetailSection } from "./plot-detail-section";
 import { PlotActionSection } from "./plot-action-section";
 import { BuildingDetailSection } from "@/client/features/building/components/building-detail-section";
 import { BuildingActionSection } from "@/client/features/building/components/building-action-section";
-import { FactorySection } from "@/client/features/building/components/factory-section";
-import { ShopSection } from "@/client/features/shop/components/shop-section";
-import { ShopTransactionHistory } from "@/client/features/shop/components/shop-transaction-history";
-import { PurchasingStationSection } from "@/client/features/purchasing-station/components/purchasing-station-section";
-import { PurchasingStationTransactionHistory } from "@/client/features/purchasing-station/components/purchasing-station-transaction-history";
 import { DraggableWindow } from "@/client/components/draggable-window";
 import type { PlotDetailModalProps } from "./plot-detail-modal.types";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
@@ -21,41 +16,20 @@ export function PlotDetailModal({
   selectedPlotId,
   selectedPlot,
   currentUserId,
-  factoryRecipes,
-  factoryOrders,
-  shopListings,
-  shopTransactions,
-  purchasingStationTransactions,
-  buyOrders,
-  inventoryItems,
-  productionLoading,
   purchaseLoading,
   buildLoading,
-  createListingLoading,
-  purchaseListingLoading,
-  cancelListingLoading,
-  createBuyOrderLoading,
-  fulfillBuyOrderLoading,
-  cancelBuyOrderLoading,
   onClose,
   onPurchase,
   onBuild,
-  onStartProduction,
-  onCreateListing,
-  onPurchaseListing,
-  onCancelListing,
-  onCreateBuyOrder,
-  onFulfillBuyOrder,
-  onCancelBuyOrder,
+  factory,
+  shop,
+  purchasingStation,
 }: PlotDetailModalProps) {
   const [buildOptionsOpen, setBuildOptionsOpen] = useState(false);
   const [pendingBuildType, setPendingBuildType] = useState<BuildingType | null>(null);
   const [activeTabKey, setActiveTabKey] = useState("plot");
   const plotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
   const buildingCapabilities = getBuildingCapabilities(selectedPlot?.building, plotCapabilities.isOwner);
-  const shouldShowFactoryRecipeList = buildingCapabilities.canManageFactory;
-  const shouldShowShop = buildingCapabilities.isShop;
-  const shouldShowPurchasingStation = buildingCapabilities.isPurchasingStation;
 
   useEffect(() => {
     if (!selectedPlot) {
@@ -123,44 +97,13 @@ export function PlotDetailModal({
                 children: (
                   <div className="space-y-3">
                     <BuildingDetailSection building={selectedPlot.building} />
-                    <BuildingActionSection building={selectedPlot.building}>
-                      {shouldShowFactoryRecipeList ? (
-                        <FactorySection
-                          factoryRecipes={factoryRecipes}
-                          factoryOrders={factoryOrders}
-                          productionLoading={productionLoading}
-                          onStartProduction={onStartProduction}
-                        />
-                      ) : shouldShowShop ? (
-                        <ShopSection
-                          isOwner={buildingCapabilities.canManageShop}
-                          listings={shopListings}
-                          inventoryItems={inventoryItems}
-                          createListingLoading={createListingLoading}
-                          purchaseLoading={purchaseListingLoading}
-                          cancelLoading={cancelListingLoading}
-                          onCreateListing={onCreateListing}
-                          onPurchase={onPurchaseListing}
-                          onCancel={onCancelListing}
-                        />
-                      ) : shouldShowPurchasingStation ? (
-                        <PurchasingStationSection
-                          isOwner={buildingCapabilities.canManagePurchasingStation}
-                          orders={buyOrders}
-                          createOrderLoading={createBuyOrderLoading}
-                          fulfillLoading={fulfillBuyOrderLoading}
-                          cancelLoading={cancelBuyOrderLoading}
-                          onCreateOrder={onCreateBuyOrder}
-                          onFulfill={onFulfillBuyOrder}
-                          onCancel={onCancelBuyOrder}
-                        />
-                      ) : null}
-                    </BuildingActionSection>
-                    {shouldShowShop ? (
-                      <ShopTransactionHistory transactions={shopTransactions} />
-                    ) : shouldShowPurchasingStation ? (
-                      <PurchasingStationTransactionHistory transactions={purchasingStationTransactions} />
-                    ) : null}
+                    <BuildingActionSection
+                      building={selectedPlot.building}
+                      capabilities={buildingCapabilities}
+                      factory={factory}
+                      shop={shop}
+                      purchasingStation={purchasingStation}
+                    />
                   </div>
                 ),
               },

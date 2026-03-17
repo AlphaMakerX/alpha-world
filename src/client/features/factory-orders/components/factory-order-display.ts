@@ -1,4 +1,4 @@
-import type { FactoryOrderStatus } from "@/client/features/building/types/building-ui";
+import type { FactoryOrderStatus } from "@/client/features/factory/types/factory-ui";
 
 export const factoryOrderStatusLabelByValue: Record<FactoryOrderStatus, string> = {
   in_progress: "进行中",

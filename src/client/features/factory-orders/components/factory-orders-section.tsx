@@ -1,4 +1,4 @@
-import type { FactoryOrders } from "@/client/features/building/types/building-ui";
+import type { FactoryOrders } from "@/client/features/factory/types/factory-ui";
 import { useState } from "react";
 import { FactoryOrderDetail } from "./factory-order-detail";
 import { FactoryOrderList } from "./factory-order-list";

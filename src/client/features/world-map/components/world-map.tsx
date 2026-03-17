@@ -499,30 +499,36 @@ export function WorldMap() {
         selectedPlot={selectedPlot}
         purchaseLoading={purchaseMutation.isPending}
         buildLoading={buildMutation.isPending}
-        factoryRecipes={factoryRecipesData?.recipes ?? []}
-        factoryOrders={factoryOrdersData}
-        shopListings={shopListingsData?.listings ?? []}
-        shopTransactions={shopTransactionHistoryData?.transactions ?? []}
-        purchasingStationTransactions={purchasingStationTransactionHistoryData?.transactions ?? []}
-        buyOrders={buyOrdersData?.orders ?? []}
-        inventoryItems={inventoryData?.items ?? []}
-        productionLoading={startProductionMutation.isPending}
-        createListingLoading={createShopListingMutation.isPending}
-        purchaseListingLoading={purchaseShopListingMutation.isPending}
-        cancelListingLoading={cancelShopListingMutation.isPending}
-        createBuyOrderLoading={createBuyOrderMutation.isPending}
-        fulfillBuyOrderLoading={fulfillBuyOrderMutation.isPending}
-        cancelBuyOrderLoading={cancelBuyOrderMutation.isPending}
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
         onBuild={(buildingType) => void handleBuild(buildingType)}
-        onStartProduction={(recipeId, quantity) => void handleStartProduction(recipeId, quantity)}
-        onCreateListing={(itemKey, quantity, unitPrice) => void handleCreateListing(itemKey, quantity, unitPrice)}
-        onPurchaseListing={(listingId, quantity) => void handlePurchaseListing(listingId, quantity)}
-        onCancelListing={(listingId) => void handleCancelListing(listingId)}
-        onCreateBuyOrder={(itemKey, quantity, unitPrice) => void handleCreateBuyOrder(itemKey, quantity, unitPrice)}
-        onFulfillBuyOrder={(orderId, quantity) => void handleFulfillBuyOrder(orderId, quantity)}
-        onCancelBuyOrder={(orderId) => void handleCancelBuyOrder(orderId)}
+        factory={{
+          recipes: factoryRecipesData?.recipes ?? [],
+          orders: factoryOrdersData,
+          productionLoading: startProductionMutation.isPending,
+          onStartProduction: (recipeId, quantity) => void handleStartProduction(recipeId, quantity),
+        }}
+        shop={{
+          listings: shopListingsData?.listings ?? [],
+          inventoryItems: inventoryData?.items ?? [],
+          transactions: shopTransactionHistoryData?.transactions ?? [],
+          createListingLoading: createShopListingMutation.isPending,
+          purchaseLoading: purchaseShopListingMutation.isPending,
+          cancelLoading: cancelShopListingMutation.isPending,
+          onCreateListing: (itemKey, quantity, unitPrice) => void handleCreateListing(itemKey, quantity, unitPrice),
+          onPurchase: (listingId, quantity) => void handlePurchaseListing(listingId, quantity),
+          onCancel: (listingId) => void handleCancelListing(listingId),
+        }}
+        purchasingStation={{
+          orders: buyOrdersData?.orders ?? [],
+          transactions: purchasingStationTransactionHistoryData?.transactions ?? [],
+          createOrderLoading: createBuyOrderMutation.isPending,
+          fulfillLoading: fulfillBuyOrderMutation.isPending,
+          cancelLoading: cancelBuyOrderMutation.isPending,
+          onCreateOrder: (itemKey, quantity, unitPrice) => void handleCreateBuyOrder(itemKey, quantity, unitPrice),
+          onFulfill: (orderId, quantity) => void handleFulfillBuyOrder(orderId, quantity),
+          onCancel: (orderId) => void handleCancelBuyOrder(orderId),
+        }}
       />
       <PersonDetailModal
         open={personModalOpen}
