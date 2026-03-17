@@ -1,23 +1,26 @@
-import { z } from "zod";
-import { inventoryRepository } from "@/server/features/inventory/infrastructure";
+import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
+import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 
-const listMyInventorySchema = z.object({
-  ownerUserId: z.string().uuid("用户 ID 不合法"),
-});
+export type ListMyInventoryCommand = {
+  ownerUserId: string;
+};
 
-export async function executeListMyInventoryUseCase(input: unknown) {
-  const parsed = listMyInventorySchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false as const,
-      error: parsed.error.issues[0]?.message ?? "参数校验失败",
-      status: 400 as const,
-    };
-  }
+export type ListMyInventoryResult = {
+  ok: true;
+  items: ItemStack[];
+};
 
-  const items = await inventoryRepository.getByOwner(parsed.data.ownerUserId);
+export type ListMyInventoryUseCaseDeps = {
+  inventoryRepository: InventoryRepository;
+};
+
+export async function executeListMyInventoryUseCase(
+  command: ListMyInventoryCommand,
+  deps: ListMyInventoryUseCaseDeps,
+): Promise<ListMyInventoryResult> {
+  const items = await deps.inventoryRepository.getByOwner(command.ownerUserId);
   return {
-    ok: true as const,
+    ok: true,
     items,
   };
 }

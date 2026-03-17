@@ -9,6 +9,7 @@ import {
 } from "@/server/features/auth/application/register-user-use-case";
 import { passwordHasher } from "@/server/features/auth/infrastructure";
 import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { transact } from "@/server/lib/db";
 
 export const loginUserSchema = z.object({
   username: z.string().trim().min(3).max(32),
@@ -35,7 +36,7 @@ export async function executeLoginUserUseCase(input: unknown): Promise<LoginUser
 export async function executeRegisterUserUseCase(input: unknown): Promise<RegisterUserResult> {
   const parsed = registerUserSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "参数校验失败", status: 400 };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "参数校验失败", code: "BAD_REQUEST" };
   }
 
   return executeRegisterUserUseCaseImpl(parsed.data, {
@@ -43,5 +44,6 @@ export async function executeRegisterUserUseCase(input: unknown): Promise<Regist
     transactionLedgerRepository,
     systemAccountService,
     passwordHasher,
+    transact,
   });
 }

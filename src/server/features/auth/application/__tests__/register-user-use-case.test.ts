@@ -35,6 +35,7 @@ function createMockDeps(
       hash: vi.fn().mockResolvedValue("hashed-new-password"),
       verify: vi.fn(),
     } satisfies PasswordHasher,
+    transact: (async <T>(fn: () => Promise<T>) => fn()) as RegisterUserUseCaseDeps["transact"],
     ...overrides,
   };
 }
@@ -96,7 +97,7 @@ describe("executeRegisterUserUseCase", () => {
     expect(result).toEqual({
       ok: false,
       error: "该用户名为系统保留名称",
-      status: 409,
+      code: "CONFLICT",
     });
     // 保留名检查在查库之前，不应触达数据库
     expect(deps.userRepository.findByUsername).not.toHaveBeenCalled();
@@ -114,7 +115,7 @@ describe("executeRegisterUserUseCase", () => {
     expect(result).toEqual({
       ok: false,
       error: "该用户名为系统保留名称",
-      status: 409,
+      code: "CONFLICT",
     });
   });
 
@@ -141,7 +142,7 @@ describe("executeRegisterUserUseCase", () => {
     expect(result).toEqual({
       ok: false,
       error: "用户名已存在",
-      status: 409,
+      code: "CONFLICT",
     });
   });
 

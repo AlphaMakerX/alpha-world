@@ -6,6 +6,7 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { ADAM_USERNAME } from "@/server/features/shared-kernel/domain/adam";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 export type RegisterUserCommand = {
   username: string;
@@ -23,7 +24,7 @@ type RegisterUserSuccessResult = {
 type RegisterUserFailureResult = {
   ok: false;
   error: string;
-  status: 400 | 409;
+  code: UseCaseErrorCode;
 };
 
 export type RegisterUserResult = RegisterUserSuccessResult | RegisterUserFailureResult;
@@ -33,6 +34,7 @@ export type RegisterUserUseCaseDeps = {
   transactionLedgerRepository: TransactionLedgerRepository;
   systemAccountService: SystemAccountService;
   passwordHasher: PasswordHasher;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
 export async function executeRegisterUserUseCase(
@@ -43,7 +45,7 @@ export async function executeRegisterUserUseCase(
     return {
       ok: false,
       error: "该用户名为系统保留名称",
-      status: 409,
+      code: "CONFLICT",
     };
   }
 
@@ -53,7 +55,7 @@ export async function executeRegisterUserUseCase(
     return {
       ok: false,
       error: "用户名已存在",
-      status: 409,
+      code: "CONFLICT",
     };
   }
 
@@ -68,15 +70,17 @@ export async function executeRegisterUserUseCase(
     initialMoney,
   });
 
-  adam.spendMoney(initialMoney);
-  await deps.userRepository.save(adam);
-  await deps.userRepository.save(user);
-  await deps.transactionLedgerRepository.record({
-    fromUserId: adam.id,
-    toUserId: user.id,
-    amount: initialMoney,
-    type: "registration_grant",
-    description: `注册赠金 → ${user.username.getValue()}`,
+  await deps.transact(async () => {
+    adam.spendMoney(initialMoney);
+    await deps.userRepository.save(adam);
+    await deps.userRepository.save(user);
+    await deps.transactionLedgerRepository.record({
+      fromUserId: adam.id,
+      toUserId: user.id,
+      amount: initialMoney,
+      type: "registration_grant",
+      description: `注册赠金 → ${user.username.getValue()}`,
+    });
   });
 
   return {

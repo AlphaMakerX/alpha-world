@@ -5,8 +5,9 @@ type RouterInputs = inferRouterInputs<AppRouter>;
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 export type BuildingType = RouterInputs["building"]["build"]["buildingType"];
-export type InventoryItem = RouterOutputs["building"]["myInventory"]["items"][number];
-export type ShopListing = RouterOutputs["building"]["shopListings"]["listings"][number];
-export type BuyOrder = RouterOutputs["building"]["buyOrders"]["orders"][number];
-export type ShopTransaction = RouterOutputs["building"]["shopTransactionHistory"]["transactions"][number];
-export type PurchasingStationTransaction = RouterOutputs["building"]["purchasingStationTransactionHistory"]["transactions"][number];
+export type InventoryItem = RouterOutputs["inventory"]["mine"]["items"][number];
+export type ShopListing = RouterOutputs["shop"]["listings"]["listings"][number];
+export type BuyOrder = RouterOutputs["purchasingStation"]["buyOrders"]["orders"][number];
+export type ShopTransaction = RouterOutputs["shop"]["transactionHistory"]["transactions"][number];
+export type PurchasingStationTransaction =
+  RouterOutputs["purchasingStation"]["transactionHistory"]["transactions"][number];
