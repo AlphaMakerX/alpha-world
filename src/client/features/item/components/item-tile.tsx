@@ -1,4 +1,4 @@
-import { getItemDisplay } from "@/client/features/inventory/utils/item-display";
+import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
 type ItemTileProps = {
   itemKey: string;

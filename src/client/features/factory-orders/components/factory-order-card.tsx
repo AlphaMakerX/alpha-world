@@ -1,13 +1,25 @@
-import type { FactoryOrder } from "@/client/features/factory/types/factory-ui";
-import { ItemTile } from "@/client/features/inventory/components/item-tile";
+import type { FactoryOrder, FactoryOrderStatus } from "@/client/features/factory/types/factory-ui";
+import { ItemTile } from "@/client/features/item/components/item-tile";
 import { useEffect, useState } from "react";
-import { factoryOrderStatusLabelByValue, formatDateTime } from "./factory-order-display";
 
 type FactoryOrderCardProps = {
   order: FactoryOrder;
   className?: string;
   showCollectedAt?: boolean;
 };
+
+const factoryOrderStatusLabelByValue: Record<FactoryOrderStatus, string> = {
+  in_progress: "进行中",
+  collected: "已收取",
+  cancelled: "已取消",
+};
+
+function formatDateTime(value: Date | string | null) {
+  if (!value) return "无";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "无";
+  return date.toLocaleString("zh-CN");
+}
 
 const statusConfig = {
   in_progress: { badge: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-400" },

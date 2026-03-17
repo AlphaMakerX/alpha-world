@@ -3,7 +3,7 @@
 import type { AuthStatus } from "@/client/types/auth-ui";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { DraggableWindow } from "@/client/components/draggable-window";
-import { ItemTile } from "@/client/features/inventory/components/item-tile";
+import { ItemTile } from "@/client/features/item/components/item-tile";
 
 type InventoryModalProps = {
   open: boolean;

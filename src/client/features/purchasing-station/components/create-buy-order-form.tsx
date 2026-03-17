@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
-import { getItemDisplay } from "@/client/features/inventory/utils/item-display";
+import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
 const PURCHASABLE_ITEMS = [
   "iron_ore",

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { FactoryRecipe } from "@/client/features/factory/types/factory-ui";
-import { ItemTile } from "@/client/features/inventory/components/item-tile";
+import { ItemTile } from "@/client/features/item/components/item-tile";
 
 type RecipeDetailProps = {
   recipe: FactoryRecipe | null;
