@@ -10,23 +10,28 @@ import {
 } from "@/server/features/plot/application";
 import {
   executeBuildBuildingUseCase,
-  executeCollectFactoryProductionUseCase,
-  executeCreateShopListingUseCase,
-  executeListFactoryRecipesUseCase,
-  executeListFactoryOrdersUseCase,
   executeListMyBuildingsUseCase,
-  executeListMyInventoryUseCase,
-  executeStartFactoryProductionUseCase,
-  executeListShopListingsUseCase,
-  executePurchaseShopListingUseCase,
-  executeCancelShopListingUseCase,
+} from "@/server/features/building/application";
+import {
   executeCreateBuyOrderUseCase,
   executeListBuyOrdersUseCase,
   executeFulfillBuyOrderUseCase,
   executeCancelBuyOrderUseCase,
-  executeGetShopTransactionHistoryUseCase,
   executeGetPurchasingStationTransactionHistoryUseCase,
-} from "@/server/features/building/application";
+} from "@/server/features/purchasing-station/application";
+import {
+  executeCreateShopListingUseCase,
+  executeListShopListingsUseCase,
+  executePurchaseShopListingUseCase,
+  executeCancelShopListingUseCase,
+  executeGetShopTransactionHistoryUseCase,
+} from "@/server/features/shop/application";
+import { executeListMyInventoryUseCase } from "@/server/features/inventory/application";
+import {
+  executeListFactoryRecipesUseCase,
+  executeListFactoryOrdersUseCase,
+  executeStartFactoryProductionUseCase,
+} from "@/server/features/factory/application";
 import {
   executeGetCurrentUserUseCase,
   executeGetWealthLeaderboardUseCase,
@@ -222,31 +227,6 @@ export const appRouter = createTRPCRouter({
           buildingId: input.buildingId,
           recipeId: input.recipeId,
           quantity: input.quantity,
-        });
-        if (!result.ok) {
-          if (result.status === 404) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: result.error,
-            });
-          }
-          throw new TRPCError({
-            code: result.status === 409 ? "CONFLICT" : "BAD_REQUEST",
-            message: result.error,
-          });
-        }
-        return result;
-      }),
-    collectProduction: protectedProcedure
-      .input(
-        z.object({
-          jobId: z.number().int().positive(),
-        }),
-      )
-      .mutation(async ({ input, ctx }) => {
-        const result = await executeCollectFactoryProductionUseCase({
-          ownerUserId: ctx.userId,
-          jobId: input.jobId,
         });
         if (!result.ok) {
           if (result.status === 404) {

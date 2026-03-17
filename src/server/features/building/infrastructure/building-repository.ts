@@ -9,7 +9,7 @@ function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
   return Building.rehydrate({
     id: record.id,
     plotId: record.plotId,
-    type: record.type as "residential" | "factory" | "shop",
+    type: record.type as "residential" | "factory" | "shop" | "purchasing_station",
     status: record.status as "active",
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -83,8 +83,6 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         })
         .where(eq(buildings.id, building.id))
         .returning();
-      console.log("building", building);
-      console.log("updated", updated);
 
       return toDomainBuilding(updated[0]);
     }

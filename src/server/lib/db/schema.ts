@@ -1,3 +1,7 @@
 export * from "@/server/features/person/infrastructure/schema";
 export * from "@/server/features/plot/infrastructure/schema";
 export * from "@/server/features/building/infrastructure/schema";
+export * from "@/server/features/inventory/infrastructure/schema";
+export * from "@/server/features/factory/infrastructure/schema";
+export * from "@/server/features/shop/infrastructure/schema";
+export * from "@/server/features/purchasing-station/infrastructure/schema";
