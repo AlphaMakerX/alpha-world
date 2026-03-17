@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { Plot, PlotCoordinate } from "@/server/features/plot/domain";
 import type { PlotRepository } from "@/server/features/plot/domain";
 import { db } from "@/server/lib/db";
-import { plots } from "@/server/features/person/infrastructure/schema";
+import { plots } from "@/server/features/plot/infrastructure/schema";
 
 function toDomainPlot(record: typeof plots.$inferSelect): Plot {
   return Plot.rehydrate({

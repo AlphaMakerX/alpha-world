@@ -12,7 +12,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { plots, users } from "@/server/features/person/infrastructure/schema";
+import { users } from "@/server/features/person/infrastructure/schema";
+import { plots } from "@/server/features/plot/infrastructure/schema";
 
 export const buildings = pgTable(
   "plot_buildings",

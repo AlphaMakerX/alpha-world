@@ -3,7 +3,7 @@ import { db } from "@/server/lib/db";
 import { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain";
 import { buildings } from "@/server/features/building/infrastructure/schema";
-import { plots } from "@/server/features/person/infrastructure/schema";
+import { plots } from "@/server/features/plot/infrastructure/schema";
 
 function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
   return Building.rehydrate({

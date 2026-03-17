@@ -2,11 +2,9 @@ import {
   bigint,
   check,
   index,
-  integer,
   numeric,
   pgTable,
   timestamp,
-  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -52,26 +50,5 @@ export const moneyTransactions = pgTable(
     index("idx_money_transactions_from_user_id").on(table.fromUserId),
     index("idx_money_transactions_to_user_id").on(table.toUserId),
     index("idx_money_transactions_type").on(table.type),
-  ],
-);
-
-export const plots = pgTable(
-  "plots",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
-    x: integer("x").notNull(),
-    y: integer("y").notNull(),
-    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
-    status: varchar("status", { length: 20 }).notNull().default("available"),
-    price: numeric("price", { precision: 12, scale: 2 }).notNull().default("0"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    unique("plots_coordinates_unique").on(table.x, table.y),
-    check("plots_status_chk", sql`${table.status} in ('available', 'owned', 'locked')`),
-    check("plots_price_chk", sql`${table.price} >= 0`),
-    index("idx_plots_owner_user_id").on(table.ownerUserId),
-    index("idx_plots_status").on(table.status),
   ],
 );

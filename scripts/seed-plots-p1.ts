@@ -1,5 +1,5 @@
 import { db } from "@/server/lib/db";
-import { plots } from "@/server/features/person/infrastructure/schema";
+import { plots } from "@/server/features/plot/infrastructure/schema";
 import { sql } from "drizzle-orm";
 
 const TOTAL_ROWS = 6;
