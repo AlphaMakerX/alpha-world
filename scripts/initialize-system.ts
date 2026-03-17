@@ -110,10 +110,10 @@ async function transferMoneyToUserByUsername(
 
 
 async function initializeSystem() {
-  // await createAdam();
-  // await createBot();
-  // await transferMoneyToUserByUsername(BOT1_USERNAME, BOT1_TRANSFER_AMOUNT, BOT1_TRANSFER_REFERENCE_ID);
-  await transferMoneyToUserByUsername('ccc', BOT1_TRANSFER_AMOUNT, BOT1_TRANSFER_REFERENCE_ID);
+  await createAdam();
+  await createBot();
+  await transferMoneyToUserByUsername(BOT1_USERNAME, BOT1_TRANSFER_AMOUNT, BOT1_TRANSFER_REFERENCE_ID);
+  // await transferMoneyToUserByUsername('ccc', BOT1_TRANSFER_AMOUNT, BOT1_TRANSFER_REFERENCE_ID);
 
 }
 

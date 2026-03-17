@@ -2,10 +2,10 @@ import { db } from "@/server/lib/db";
 import { plots } from "@/server/features/person/infrastructure/schema";
 import { sql } from "drizzle-orm";
 
-const TOTAL_ROWS = 20;
-const COLS_PER_ROW = 10;
+const TOTAL_ROWS = 6;
+const COLS_PER_ROW = 50;
 const MIN_PRICE = 1000;
-const MAX_PRICE = 8000;
+const MAX_PRICE = 3000;
 
 function formatPlotId(row: number, col: number): string {
   return `P${row}-${String(col).padStart(2, "0")}`;

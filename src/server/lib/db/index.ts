@@ -15,7 +15,9 @@ function getDatabaseUrl() {
   return url;
 }
 
-const pool = globalThis.__alphaWorldPgPool ?? new Pool({ connectionString: getDatabaseUrl() });
+const pool = globalThis.__alphaWorldPgPool ?? new Pool({ 
+  connectionString: getDatabaseUrl(),
+});
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.__alphaWorldPgPool = pool;
@@ -23,3 +25,6 @@ if (process.env.NODE_ENV !== "production") {
 
 export const db = drizzle(pool, { schema });
 export { schema };
+
+
+
