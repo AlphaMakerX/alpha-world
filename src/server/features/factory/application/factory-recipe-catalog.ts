@@ -9,6 +9,7 @@ export type FactoryRecipe = {
 };
 
 const recipes: FactoryRecipe[] = [
+  // 基础材料：用金币采购
   {
     id: "buy_iron_ore",
     name: "采购铁矿石",
@@ -45,6 +46,14 @@ const recipes: FactoryRecipe[] = [
     outputs: [{ itemKey: "water", quantity: 6 }],
   },
   {
+    id: "buy_stone",
+    name: "采购石料",
+    durationSeconds: 10,
+    inputs: [{ itemKey: "money", quantity: 70 }],
+    outputs: [{ itemKey: "stone", quantity: 6 }],
+  },
+  // 加工品：基础材料加工
+  {
     id: "smelt_iron_ingot",
     name: "冶炼铁锭",
     durationSeconds: 60,
@@ -75,6 +84,130 @@ const recipes: FactoryRecipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "cloth", quantity: 1 }],
+  },
+  {
+    id: "forge_steel",
+    name: "锻造钢材",
+    durationSeconds: 70,
+    inputs: [
+      { itemKey: "money", quantity: 50 },
+      { itemKey: "iron_ingot", quantity: 2 },
+      { itemKey: "coal", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "steel", quantity: 1 }],
+  },
+  {
+    id: "kiln_brick",
+    name: "烧制砖块",
+    durationSeconds: 55,
+    inputs: [
+      { itemKey: "money", quantity: 25 },
+      { itemKey: "stone", quantity: 2 },
+      { itemKey: "water", quantity: 1 },
+      { itemKey: "coal", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "brick", quantity: 1 }],
+  },
+  {
+    id: "pulp_paper",
+    name: "造纸",
+    durationSeconds: 40,
+    inputs: [
+      { itemKey: "money", quantity: 20 },
+      { itemKey: "wood", quantity: 1 },
+      { itemKey: "water", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "paper", quantity: 1 }],
+  },
+  {
+    id: "twist_rope",
+    name: "搓绳",
+    durationSeconds: 35,
+    inputs: [
+      { itemKey: "money", quantity: 15 },
+      { itemKey: "cotton", quantity: 2 },
+    ],
+    outputs: [{ itemKey: "rope", quantity: 1 }],
+  },
+  // 高级品：由加工品进一步组装
+  {
+    id: "assemble_furniture",
+    name: "组装家具",
+    durationSeconds: 120,
+    inputs: [
+      { itemKey: "money", quantity: 90 },
+      { itemKey: "wood_plank", quantity: 3 },
+      { itemKey: "cloth", quantity: 1 },
+      { itemKey: "iron_ingot", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "furniture", quantity: 1 }],
+  },
+  {
+    id: "forge_tools",
+    name: "打造工具组",
+    durationSeconds: 110,
+    inputs: [
+      { itemKey: "money", quantity: 80 },
+      { itemKey: "steel", quantity: 1 },
+      { itemKey: "wood_plank", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "tools", quantity: 1 }],
+  },
+  {
+    id: "assemble_machine_parts",
+    name: "装配机器零件",
+    durationSeconds: 140,
+    inputs: [
+      { itemKey: "money", quantity: 120 },
+      { itemKey: "steel", quantity: 2 },
+      { itemKey: "iron_ingot", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "machine_parts", quantity: 1 }],
+  },
+  {
+    id: "carve_sculpture",
+    name: "雕刻雕塑",
+    durationSeconds: 130,
+    inputs: [
+      { itemKey: "money", quantity: 95 },
+      { itemKey: "stone", quantity: 3 },
+      { itemKey: "tools", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "sculpture", quantity: 1 }],
+  },
+  {
+    id: "bind_books",
+    name: "装订书籍",
+    durationSeconds: 90,
+    inputs: [
+      { itemKey: "money", quantity: 70 },
+      { itemKey: "paper", quantity: 3 },
+      { itemKey: "cloth", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "books", quantity: 1 }],
+  },
+  {
+    id: "build_reinforced_wall",
+    name: "制作加固墙材",
+    durationSeconds: 150,
+    inputs: [
+      { itemKey: "money", quantity: 130 },
+      { itemKey: "brick", quantity: 2 },
+      { itemKey: "steel", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "reinforced_wall", quantity: 1 }],
+  },
+  {
+    id: "craft_backpack",
+    name: "缝制背包",
+    durationSeconds: 100,
+    inputs: [
+      { itemKey: "money", quantity: 85 },
+      { itemKey: "cloth", quantity: 1 },
+      { itemKey: "rope", quantity: 1 },
+      { itemKey: "wood_plank", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "backpack", quantity: 1 }],
   },
 ];
 

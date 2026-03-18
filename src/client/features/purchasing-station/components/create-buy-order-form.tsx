@@ -1,17 +1,13 @@
 import { useState } from "react";
-import { Button, InputNumber, Popconfirm } from "antd";
+import { Button, InputNumber, Popconfirm, Spin } from "antd";
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
+import { trpc } from "@/client/lib/trpc";
 
-const PURCHASABLE_ITEMS = [
-  "iron_ore",
-  "wood",
-  "cotton",
-  "coal",
-  "water",
-  "iron_ingot",
-  "wood_plank",
-  "cloth",
-];
+const ITEM_TIERS = [
+  { tier: "base_material", label: "基础材料" },
+  { tier: "processed_goods", label: "加工品" },
+  { tier: "advanced_goods", label: "高级品" },
+] as const;
 
 type CreateBuyOrderFormProps = {
   loading: boolean;
@@ -22,10 +18,20 @@ export function CreateBuyOrderForm({
   loading,
   onCreateOrder,
 }: CreateBuyOrderFormProps) {
+  const { data: itemDefinitions, isLoading: itemCatalogLoading } =
+    trpc.item.definitions.useQuery();
+
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(1);
 
+  const purchasableItemGroups = ITEM_TIERS.map(({ tier, label }) => ({
+    label,
+    itemKeys:
+      itemDefinitions?.filter((item) => item.tier === tier).map((item) => item.key) ?? [],
+  }));
+
+  const hasAnyItem = purchasableItemGroups.some((group) => group.itemKeys.length > 0);
   const canSubmit = selectedItemKey && quantity > 0 && unitPrice > 0;
   const totalCost = unitPrice * quantity;
 
@@ -43,32 +49,49 @@ export function CreateBuyOrderForm({
 
       <div className="space-y-1.5">
         <label className="text-xs text-slate-600">选择收购物品</label>
-        <div className="flex flex-wrap gap-1.5">
-          {PURCHASABLE_ITEMS.map((itemKey) => {
-            const display = getItemDisplay(itemKey);
-            const isSelected = selectedItemKey === itemKey;
-            return (
-              <button
-                key={itemKey}
-                type="button"
-                onClick={() => {
-                  setSelectedItemKey(itemKey);
-                  setQuantity(1);
-                }}
-                disabled={loading}
-                className={[
-                  "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition",
-                  isSelected
-                    ? "border-violet-400 bg-violet-50 font-medium text-violet-800 shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
-                ].join(" ")}
-              >
-                <span>{display.icon}</span>
-                <span>{display.name}</span>
-              </button>
-            );
-          })}
-        </div>
+        {itemCatalogLoading ? (
+          <div className="flex justify-center rounded-md border border-dashed border-slate-200 py-6">
+            <Spin size="small" />
+          </div>
+        ) : hasAnyItem ? (
+          <div className="space-y-2">
+            {purchasableItemGroups.map((group) => (
+              <div key={group.label} className="space-y-1">
+                <p className="text-[11px] font-medium text-slate-500">{group.label}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.itemKeys.map((itemKey) => {
+                    const display = getItemDisplay(itemKey);
+                    const isSelected = selectedItemKey === itemKey;
+                    return (
+                      <button
+                        key={itemKey}
+                        type="button"
+                        onClick={() => {
+                          setSelectedItemKey(itemKey);
+                          setQuantity(1);
+                        }}
+                        disabled={loading || itemCatalogLoading}
+                        className={[
+                          "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition",
+                          isSelected
+                            ? "border-violet-400 bg-violet-50 font-medium text-violet-800 shadow-sm"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                        ].join(" ")}
+                      >
+                        <span>{display.icon}</span>
+                        <span>{display.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400">
+            暂无可收购物品
+          </p>
+        )}
       </div>
 
       {selectedItemKey ? (
