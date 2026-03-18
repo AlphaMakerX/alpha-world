@@ -27,6 +27,7 @@ const ITEM_DEFINITIONS: ItemDefinition[] = [
   { key: "books", name: "书籍", tier: "advanced_goods" },
   { key: "reinforced_wall", name: "加固墙材", tier: "advanced_goods" },
   { key: "backpack", name: "背包", tier: "advanced_goods" },
+  { key: "land_reclamation_badge", name: "开垦土地徽章", tier: "advanced_goods" },
 ];
 
 export function listItemDefinitions(): ItemDefinition[] {

@@ -17,6 +17,7 @@ import { PurchasingStationTransactionHistory } from "@/client/features/purchasin
 export type FactoryActionProps = {
   recipes: FactoryRecipe[];
   orders?: FactoryOrders;
+  inventoryItems: InventoryItem[];
   productionLoading: boolean;
   onStartProduction: (recipeId: string, quantity: number) => void;
 };
@@ -63,6 +64,7 @@ export function BuildingActionSection({
     <FactorySection
       factoryRecipes={factory.recipes}
       factoryOrders={factory.orders}
+      inventoryItems={factory.inventoryItems}
       productionLoading={factory.productionLoading}
       onStartProduction={factory.onStartProduction}
     />

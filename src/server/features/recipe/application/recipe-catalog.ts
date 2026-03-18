@@ -229,6 +229,30 @@ const recipes: Recipe[] = [
     ],
     outputs: [{ itemKey: "backpack", quantity: 1 }],
   },
+  {
+    id: "craft_land_reclamation_badge",
+    name: "铸造开垦土地徽章",
+    category: "assembly",
+    durationSeconds: 480,
+    inputs: [
+      { itemKey: "money", quantity: 1200 },
+      { itemKey: "wood_plank", quantity: 20 },
+      { itemKey: "iron_ingot", quantity: 16 },
+      { itemKey: "steel", quantity: 10 },
+      { itemKey: "brick", quantity: 18 },
+      { itemKey: "cloth", quantity: 12 },
+      { itemKey: "rope", quantity: 10 },
+      { itemKey: "paper", quantity: 10 },
+      { itemKey: "tools", quantity: 4 },
+      { itemKey: "machine_parts", quantity: 3 },
+      { itemKey: "reinforced_wall", quantity: 2 },
+      { itemKey: "books", quantity: 2 },
+      { itemKey: "backpack", quantity: 2 },
+      { itemKey: "furniture", quantity: 1 },
+      { itemKey: "sculpture", quantity: 1 },
+    ],
+    outputs: [{ itemKey: "land_reclamation_badge", quantity: 1 }],
+  },
 ];
 
 export function listRecipes(): Recipe[] {

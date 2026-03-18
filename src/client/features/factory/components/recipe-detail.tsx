@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { FactoryRecipe } from "@/client/features/factory/types/factory-ui";
+import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { ItemTile } from "@/client/features/item/components/item-tile";
 
 type RecipeDetailProps = {
   recipe: FactoryRecipe | null;
+  inventoryItems: InventoryItem[];
   productionLoading: boolean;
   onStartProduction: (recipeId: string, quantity: number) => void;
 };
@@ -19,8 +21,15 @@ function formatDuration(seconds: number): string {
   return rm > 0 ? `${h} 时 ${rm} 分` : `${h} 时`;
 }
 
-export function RecipeDetail({ recipe, productionLoading, onStartProduction }: RecipeDetailProps) {
+export function RecipeDetail({ recipe, inventoryItems, productionLoading, onStartProduction }: RecipeDetailProps) {
   const [quantity, setQuantity] = useState(1);
+  const inventoryByItemKey = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of inventoryItems) {
+      map.set(item.itemKey, item.quantity);
+    }
+    return map;
+  }, [inventoryItems]);
 
   useEffect(() => {
     setQuantity(1);
@@ -31,6 +40,20 @@ export function RecipeDetail({ recipe, productionLoading, onStartProduction }: R
   }
 
   const totalDuration = recipe.durationSeconds * quantity;
+  const inputChecks = recipe.inputs.map((input) => {
+    const requiredQuantity = input.quantity * quantity;
+    const ownedQuantity = inventoryByItemKey.get(input.itemKey) ?? 0;
+    const isMoney = input.itemKey === "money";
+    return {
+      ...input,
+      requiredQuantity,
+      ownedQuantity,
+      isMoney,
+      isInsufficient: !isMoney && ownedQuantity < requiredQuantity,
+    };
+  });
+  const hasInsufficientInputs = inputChecks.some((input) => input.isInsufficient);
+  const canStartProduction = !productionLoading && !hasInsufficientInputs;
 
   return (
     <>
@@ -58,17 +81,20 @@ export function RecipeDetail({ recipe, productionLoading, onStartProduction }: R
           <p className="text-xs font-medium text-amber-700">所需材料{quantity > 1 && ` (×${quantity})`}</p>
           {recipe.inputs.length ? (
             <div className="flex flex-wrap gap-2">
-              {recipe.inputs.map((input) => (
+              {inputChecks.map((input) => (
                 <ItemTile
                   key={`${recipe.id}-in-${input.itemKey}`}
                   itemKey={input.itemKey}
-                  quantity={input.quantity * quantity}
+                  quantity={input.requiredQuantity}
+                  ownedQuantity={input.isMoney ? undefined : input.ownedQuantity}
+                  isInsufficient={input.isInsufficient}
                 />
               ))}
             </div>
           ) : (
             <p className="text-xs text-slate-500">无</p>
           )}
+          {hasInsufficientInputs ? <p className="text-xs text-red-600">材料不足，无法开始制造</p> : null}
         </div>
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-emerald-700">产出预览{quantity > 1 && ` (×${quantity})`}</p>
@@ -93,9 +119,9 @@ export function RecipeDetail({ recipe, productionLoading, onStartProduction }: R
         okText="确认制造"
         cancelText="取消"
         onConfirm={() => onStartProduction(recipe.id, quantity)}
-        disabled={productionLoading}
+        disabled={!canStartProduction}
       >
-        <Button type="primary" block loading={productionLoading} disabled={productionLoading}>
+        <Button type="primary" block loading={productionLoading} disabled={!canStartProduction}>
           制造{quantity > 1 && ` ×${quantity}`}
         </Button>
       </Popconfirm>

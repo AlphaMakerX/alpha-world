@@ -471,6 +471,7 @@ export function WorldMap() {
         factory={{
           recipes: factoryRecipesData?.recipes ?? [],
           orders: factoryOrdersData,
+          inventoryItems: inventoryData?.items ?? [],
           productionLoading: startProductionMutation.isPending,
           onStartProduction: (recipeId, quantity) => void handleStartProduction(recipeId, quantity),
         }}

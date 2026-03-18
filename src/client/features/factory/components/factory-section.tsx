@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FactoryOrders, FactoryRecipe } from "@/client/features/factory/types/factory-ui";
+import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { FactoryOrdersSection } from "@/client/features/factory-orders/components/factory-orders-section";
 import { RecipeDetail } from "@/client/features/factory/components/recipe-detail";
 import { RecipeList } from "@/client/features/factory/components/recipe-list";
@@ -10,6 +11,7 @@ type RecipeFilter = "all" | RecipeCategory;
 type FactorySectionProps = {
   factoryRecipes: FactoryRecipe[];
   factoryOrders?: FactoryOrders;
+  inventoryItems: InventoryItem[];
   productionLoading: boolean;
   onStartProduction: (recipeId: string, quantity: number) => void;
 };
@@ -17,6 +19,7 @@ type FactorySectionProps = {
 export function FactorySection({
   factoryRecipes,
   factoryOrders,
+  inventoryItems,
   productionLoading,
   onStartProduction,
 }: FactorySectionProps) {
@@ -79,6 +82,7 @@ export function FactorySection({
           <div className="space-y-3 rounded-lg border border-blue-100 bg-gradient-to-b from-white to-blue-50/40 p-3">
             <RecipeDetail
               recipe={selectedRecipe}
+              inventoryItems={inventoryItems}
               productionLoading={productionLoading}
               onStartProduction={onStartProduction}
             />
