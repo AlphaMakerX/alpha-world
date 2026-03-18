@@ -1,18 +1,21 @@
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
 
-export type FactoryRecipe = {
+export type RecipeCategory = "procurement" | "processing" | "assembly";
+
+export type Recipe = {
   id: string;
   name: string;
+  category: RecipeCategory;
   durationSeconds: number;
   inputs: ItemStack[];
   outputs: ItemStack[];
 };
 
-const recipes: FactoryRecipe[] = [
-  // 基础材料：用金币采购
+const recipes: Recipe[] = [
   {
     id: "buy_iron_ore",
     name: "采购铁矿石",
+    category: "procurement",
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 120 }],
     outputs: [{ itemKey: "iron_ore", quantity: 6 }],
@@ -20,6 +23,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "buy_wood",
     name: "采购木材",
+    category: "procurement",
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 80 }],
     outputs: [{ itemKey: "wood", quantity: 8 }],
@@ -27,6 +31,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "buy_cotton",
     name: "采购棉花",
+    category: "procurement",
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 100 }],
     outputs: [{ itemKey: "cotton", quantity: 5 }],
@@ -34,6 +39,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "buy_coal",
     name: "采购煤炭",
+    category: "procurement",
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 60 }],
     outputs: [{ itemKey: "coal", quantity: 4 }],
@@ -41,6 +47,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "buy_water",
     name: "采购水资源",
+    category: "procurement",
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 40 }],
     outputs: [{ itemKey: "water", quantity: 6 }],
@@ -48,14 +55,15 @@ const recipes: FactoryRecipe[] = [
   {
     id: "buy_stone",
     name: "采购石料",
+    category: "procurement",
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 70 }],
     outputs: [{ itemKey: "stone", quantity: 6 }],
   },
-  // 加工品：基础材料加工
   {
     id: "smelt_iron_ingot",
     name: "冶炼铁锭",
+    category: "processing",
     durationSeconds: 60,
     inputs: [
       { itemKey: "money", quantity: 40 },
@@ -67,6 +75,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "saw_wood_plank",
     name: "木板加工",
+    category: "processing",
     durationSeconds: 30,
     inputs: [
       { itemKey: "money", quantity: 20 },
@@ -77,6 +86,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "woven_cloth",
     name: "纺织布料",
+    category: "processing",
     durationSeconds: 45,
     inputs: [
       { itemKey: "money", quantity: 30 },
@@ -88,6 +98,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "forge_steel",
     name: "锻造钢材",
+    category: "processing",
     durationSeconds: 70,
     inputs: [
       { itemKey: "money", quantity: 50 },
@@ -99,6 +110,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "kiln_brick",
     name: "烧制砖块",
+    category: "processing",
     durationSeconds: 55,
     inputs: [
       { itemKey: "money", quantity: 25 },
@@ -111,6 +123,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "pulp_paper",
     name: "造纸",
+    category: "processing",
     durationSeconds: 40,
     inputs: [
       { itemKey: "money", quantity: 20 },
@@ -122,6 +135,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "twist_rope",
     name: "搓绳",
+    category: "processing",
     durationSeconds: 35,
     inputs: [
       { itemKey: "money", quantity: 15 },
@@ -129,10 +143,10 @@ const recipes: FactoryRecipe[] = [
     ],
     outputs: [{ itemKey: "rope", quantity: 1 }],
   },
-  // 高级品：由加工品进一步组装
   {
     id: "assemble_furniture",
     name: "组装家具",
+    category: "assembly",
     durationSeconds: 120,
     inputs: [
       { itemKey: "money", quantity: 90 },
@@ -145,6 +159,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "forge_tools",
     name: "打造工具组",
+    category: "assembly",
     durationSeconds: 110,
     inputs: [
       { itemKey: "money", quantity: 80 },
@@ -156,6 +171,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "assemble_machine_parts",
     name: "装配机器零件",
+    category: "assembly",
     durationSeconds: 140,
     inputs: [
       { itemKey: "money", quantity: 120 },
@@ -167,6 +183,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "carve_sculpture",
     name: "雕刻雕塑",
+    category: "assembly",
     durationSeconds: 130,
     inputs: [
       { itemKey: "money", quantity: 95 },
@@ -178,6 +195,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "bind_books",
     name: "装订书籍",
+    category: "assembly",
     durationSeconds: 90,
     inputs: [
       { itemKey: "money", quantity: 70 },
@@ -189,6 +207,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "build_reinforced_wall",
     name: "制作加固墙材",
+    category: "assembly",
     durationSeconds: 150,
     inputs: [
       { itemKey: "money", quantity: 130 },
@@ -200,6 +219,7 @@ const recipes: FactoryRecipe[] = [
   {
     id: "craft_backpack",
     name: "缝制背包",
+    category: "assembly",
     durationSeconds: 100,
     inputs: [
       { itemKey: "money", quantity: 85 },
@@ -211,10 +231,14 @@ const recipes: FactoryRecipe[] = [
   },
 ];
 
-export function listFactoryRecipes(): FactoryRecipe[] {
+export function listRecipes(): Recipe[] {
   return recipes;
 }
 
-export function getFactoryRecipeById(recipeId: string): FactoryRecipe | null {
+export function listRecipesByCategory(category: RecipeCategory): Recipe[] {
+  return recipes.filter((recipe) => recipe.category === category);
+}
+
+export function getRecipeById(recipeId: string): Recipe | null {
   return recipes.find((recipe) => recipe.id === recipeId) ?? null;
 }

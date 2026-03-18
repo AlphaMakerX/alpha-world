@@ -1,6 +1,6 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
-import { getFactoryRecipeById } from "@/server/features/factory/application/factory-recipe-catalog";
+import { getRecipeById } from "@/server/features/recipe/application/recipe-catalog";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
@@ -64,7 +64,7 @@ export async function executeStartFactoryProductionUseCase(
     };
   }
 
-  const recipe = getFactoryRecipeById(command.recipeId);
+  const recipe = getRecipeById(command.recipeId);
   if (!recipe) {
     return {
       ok: false,

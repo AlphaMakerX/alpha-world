@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { executeListFactoryRecipesUseCase as executeListFactoryRecipesUseCaseImpl } from "@/server/features/factory/application/list-factory-recipes-use-case";
+import { executeListFactoryRecipesUseCase as executeListFactoryRecipesUseCaseImpl } from "@/server/features/recipe/application";
 import {
   executeListFactoryOrdersUseCase as executeListFactoryOrdersUseCaseImpl,
   type ListFactoryOrdersResult,
