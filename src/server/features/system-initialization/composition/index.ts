@@ -8,7 +8,7 @@ import { systemAccountService, transactionLedgerRepository, userRepository } fro
 import { systemInitializationRepository } from "@/server/features/system-initialization/infrastructure";
 
 const initializeSystemSchema = z.object({
-  step: z.enum(["all", "adam", "bot1", "plot"]).optional(),
+  step: z.enum(["all", "adam", "bot1-manager", "plot"]).optional(),
 });
 
 export async function executeInitializeSystemUseCase(input?: unknown): Promise<InitializeSystemResult> {

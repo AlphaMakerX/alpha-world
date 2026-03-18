@@ -1,16 +1,19 @@
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { executeAdamStep } from "./execute-adam-step";
-import { executeBot1Step } from "./execute-bot1-step";
+import { executeBot1ManagerStep } from "./execute-bot1-manager-step";
 import { executePlotStep } from "./execute-plot-step";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import { ADAM_PERSONA_CONFIG, BOT1_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
+import {
+  ADAM_PERSONA_CONFIG,
+  BOT1_MANAGER_PERSONA_CONFIG,
+} from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 const DEFAULT_STEP: InitializeSystemRequestedStep = "all";
 
-export type InitializeSystemRequestedStep = "all" | "adam" | "bot1" | "plot";
+export type InitializeSystemRequestedStep = "all" | "adam" | "bot1-manager" | "plot";
 export type InitializeSystemStep = Exclude<InitializeSystemRequestedStep, "all">;
 
 export type InitializeSystemCommand = {
@@ -80,11 +83,11 @@ export async function executeInitializeSystemUseCase(
         return adamResult;
       }
 
-      const bot1Result = await executeBot1Step({
+      const bot1ManagerResult = await executeBot1ManagerStep({
         deps,
       });
-      if (isFailureResult(bot1Result)) {
-        return bot1Result;
+      if (isFailureResult(bot1ManagerResult)) {
+        return bot1ManagerResult;
       }
 
       const plotResult = await executePlotStep({
@@ -97,11 +100,11 @@ export async function executeInitializeSystemUseCase(
       return {
         ok: true,
         summary: {
-          executedSteps: ["adam", "bot1", "plot"],
+          executedSteps: ["adam", "bot1-manager", "plot"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
-          botUsername: BOT1_PERSONA_CONFIG.username,
-          transferredAmount: BOT1_PERSONA_CONFIG.transferAmount,
-          transferSkipped: bot1Result.transferSkipped,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
+          transferredAmount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
+          transferSkipped: bot1ManagerResult.transferSkipped,
           plotsSeededCount: plotResult.plotsSeededCount,
           plotRange: plotResult.plotRange,
         },
@@ -120,7 +123,7 @@ export async function executeInitializeSystemUseCase(
         summary: {
           executedSteps: ["adam"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
-          botUsername: BOT1_PERSONA_CONFIG.username,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: 0,
           transferSkipped: true,
           plotsSeededCount: 0,
@@ -128,22 +131,22 @@ export async function executeInitializeSystemUseCase(
         },
       };
     }
-    case "bot1": {
-      const bot1Result = await executeBot1Step({
+    case "bot1-manager": {
+      const bot1ManagerResult = await executeBot1ManagerStep({
         deps,
       });
-      if (isFailureResult(bot1Result)) {
-        return bot1Result;
+      if (isFailureResult(bot1ManagerResult)) {
+        return bot1ManagerResult;
       }
 
       return {
         ok: true,
         summary: {
-          executedSteps: ["bot1"],
+          executedSteps: ["bot1-manager"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
-          botUsername: BOT1_PERSONA_CONFIG.username,
-          transferredAmount: BOT1_PERSONA_CONFIG.transferAmount,
-          transferSkipped: bot1Result.transferSkipped,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
+          transferredAmount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
+          transferSkipped: bot1ManagerResult.transferSkipped,
           plotsSeededCount: 0,
           plotRange: null,
         },
@@ -162,7 +165,7 @@ export async function executeInitializeSystemUseCase(
         summary: {
           executedSteps: ["plot"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
-          botUsername: BOT1_PERSONA_CONFIG.username,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: 0,
           transferSkipped: true,
           plotsSeededCount: plotResult.plotsSeededCount,

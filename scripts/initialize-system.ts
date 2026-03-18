@@ -1,7 +1,7 @@
 import { executeInitializeSystemUseCase } from "@/server/features/system-initialization/composition";
 import { db } from "@/server/lib/db";
 
-type Step = "adam" | "bot1" | "plot";
+type Step = "adam" | "bot1-manager" | "plot";
 type RequestedStep = "all" | Step;
 
 function parseNumberArg(name: string): number | undefined {
@@ -28,8 +28,8 @@ function parseArgs(): {
   const step = process.argv.find((arg) => arg.startsWith("--step="))?.split("=")[1] as
     | RequestedStep
     | undefined;
-  if (step && !["all", "adam", "bot1", "plot"].includes(step)) {
-    throw new Error("参数 --step 仅支持 all,adam,bot1,plot");
+  if (step && !["all", "adam", "bot1-manager", "plot"].includes(step)) {
+    throw new Error("参数 --step 仅支持 all,adam,bot1-manager,plot");
   }
 
   const totalRows = parseNumberArg("totalRows");
@@ -65,14 +65,17 @@ async function initializeSystem() {
   if (result.summary.executedSteps.includes("adam")) {
     console.log(`Adam initialized: "${result.summary.adamUsername}".`);
   }
-  if (result.summary.executedSteps.includes("bot1")) {
-    console.log(`Bot initialized: "${result.summary.botUsername}".`);
+  if (result.summary.executedSteps.includes("bot1-manager")) {
+    console.log(`Bot1 Manager initialized: "${result.summary.botUsername}".`);
   }
-  if (result.summary.executedSteps.includes("bot1") && result.summary.transferSkipped) {
-    console.log("Initial bot transfer already exists, skipping.");
-  } else if (result.summary.executedSteps.includes("bot1")) {
+  if (
+    result.summary.executedSteps.includes("bot1-manager") &&
+    result.summary.transferSkipped
+  ) {
+    console.log("Initial manager budget transfer already exists, skipping.");
+  } else if (result.summary.executedSteps.includes("bot1-manager")) {
     console.log(
-      `Transferred ${result.summary.transferredAmount.toLocaleString()} to "${result.summary.botUsername}".`,
+      `Transferred ${result.summary.transferredAmount.toLocaleString()} budget to "${result.summary.botUsername}".`,
     );
   }
   if (result.summary.executedSteps.includes("plot") && result.summary.plotRange) {

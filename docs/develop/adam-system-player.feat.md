@@ -90,7 +90,7 @@
 ## 初始化
 
 ```bash
-# 先配置 .env.local（必须包含 ADAM_INITIAL_PASSWORD / BOT1_INITIAL_PASSWORD）
+# 先配置 .env.local（必须包含 ADAM_INITIAL_PASSWORD / BOT1_MANAGER_INITIAL_PASSWORD）
 npm run drizzle:push    # 推送 schema（含 money_transactions 表）
-npm run init:system     # 创建 Adam / Bot1 系统玩家并执行初始化转账
+npm run init:system     # 创建 Adam / Bot1 Manager 系统玩家并执行初始化转账
 ```

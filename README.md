@@ -56,7 +56,7 @@ src/
 初始化系统账号时，以下变量为必填：
 
 - `ADAM_INITIAL_PASSWORD`
-- `BOT1_INITIAL_PASSWORD`
+- `BOT1_MANAGER_INITIAL_PASSWORD`
 
 推荐流程：
 

@@ -1,4 +1,4 @@
-export const PERSONA_IDS = ["adam", "bot1"] as const;
+export const PERSONA_IDS = ["adam", "bot1-manager"] as const;
 
 export type PersonaId = (typeof PERSONA_IDS)[number];
 
@@ -8,7 +8,11 @@ export type PersonaSkillKey =
   | "economy_observability"
   | "scripted_playbook"
   | "transaction_demo"
-  | "user_guidance";
+  | "user_guidance"
+  | "purchasing_station_operations"
+  | "buy_order_management"
+  | "economic_stabilization"
+  | "budget_governance";
 
 export type PersonaDefinition = {
   personaId: PersonaId;
