@@ -1,56 +1,19 @@
 import { executeInitializeSystemUseCase } from "@/server/features/system-initialization/composition";
 import { db } from "@/server/lib/db";
 
-type Step = "adam" | "bot1-manager" | "plot";
+type Step = "adam" | "bot1-manager" | "plot" | "bot1-manager-plot-purchase";
 type RequestedStep = "all" | Step;
 
-function parseNumberArg(name: string): number | undefined {
-  const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.split("=")[1];
-  if (!raw) {
-    return undefined;
-  }
-  const num = Number(raw);
-  if (Number.isNaN(num)) {
-    throw new Error(`参数 --${name} 必须是数字`);
-  }
-  return num;
-}
-
-function parseArgs(): {
-  step?: RequestedStep;
-  plotConfig?: {
-    totalRows?: number;
-    colsPerRow?: number;
-    minPrice?: number;
-    maxPrice?: number;
-  };
-} {
+function parseArgs(): { step?: RequestedStep } {
   const step = process.argv.find((arg) => arg.startsWith("--step="))?.split("=")[1] as
     | RequestedStep
     | undefined;
-  if (step && !["all", "adam", "bot1-manager", "plot"].includes(step)) {
-    throw new Error("参数 --step 仅支持 all,adam,bot1-manager,plot");
+  if (step && !["all", "adam", "bot1-manager", "plot", "bot1-manager-plot-purchase"].includes(step)) {
+    throw new Error("参数 --step 仅支持 all,adam,bot1-manager,plot,bot1-manager-plot-purchase");
   }
-
-  const totalRows = parseNumberArg("totalRows");
-  const colsPerRow = parseNumberArg("colsPerRow");
-  const minPrice = parseNumberArg("minPrice");
-  const maxPrice = parseNumberArg("maxPrice");
-
-  const hasPlotConfig = [totalRows, colsPerRow, minPrice, maxPrice].some(
-    (value) => value !== undefined,
-  );
 
   return {
     step,
-    plotConfig: hasPlotConfig
-      ? {
-          totalRows,
-          colsPerRow,
-          minPrice,
-          maxPrice,
-        }
-      : undefined,
   };
 }
 
@@ -82,6 +45,9 @@ async function initializeSystem() {
     console.log(
       `Seeded plots ${result.summary.plotRange.from} ~ ${result.summary.plotRange.to} (${result.summary.plotsSeededCount} plots).`,
     );
+  }
+  if (result.summary.executedSteps.includes("bot1-manager-plot-purchase")) {
+    console.log(`Bot1 Manager purchased ${result.summary.botPurchasedPlotsCount} plots.`);
   }
 }
 

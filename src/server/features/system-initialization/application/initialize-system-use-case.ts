@@ -1,7 +1,9 @@
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { executeAdamStep } from "./execute-adam-step";
 import { executeBot1ManagerStep } from "./execute-bot1-manager-step";
+import { executeBot1ManagerPlotPurchaseStep } from "./execute-bot1-manager-plot-purchase-step";
 import { executePlotStep } from "./execute-plot-step";
+import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
@@ -13,7 +15,12 @@ import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/us
 
 const DEFAULT_STEP: InitializeSystemRequestedStep = "all";
 
-export type InitializeSystemRequestedStep = "all" | "adam" | "bot1-manager" | "plot";
+export type InitializeSystemRequestedStep =
+  | "all"
+  | "adam"
+  | "bot1-manager"
+  | "plot"
+  | "bot1-manager-plot-purchase";
 export type InitializeSystemStep = Exclude<InitializeSystemRequestedStep, "all">;
 
 export type InitializeSystemCommand = {
@@ -29,6 +36,7 @@ type InitializeSystemSuccessResult = {
     transferredAmount: number;
     transferSkipped: boolean;
     plotsSeededCount: number;
+    botPurchasedPlotsCount: number;
     plotRange: {
       from: string;
       to: string;
@@ -49,6 +57,8 @@ export type InitializeSystemUseCaseDeps = {
   transactionLedgerRepository: TransactionLedgerRepository;
   passwordHasher: PasswordHasher;
   systemAccountService: SystemAccountService;
+  plotRepository: PlotRepository;
+  transact: <T>(fn: () => Promise<T>) => Promise<T>;
   systemInitializationRepository: {
     hasMoneyTransfer(input: {
       fromUserId: string;
@@ -97,15 +107,23 @@ export async function executeInitializeSystemUseCase(
         return plotResult;
       }
 
+      const bot1ManagerPlotPurchaseResult = await executeBot1ManagerPlotPurchaseStep({
+        deps,
+      });
+      if (isFailureResult(bot1ManagerPlotPurchaseResult)) {
+        return bot1ManagerPlotPurchaseResult;
+      }
+
       return {
         ok: true,
         summary: {
-          executedSteps: ["adam", "bot1-manager", "plot"],
+          executedSteps: ["adam", "bot1-manager", "plot", "bot1-manager-plot-purchase"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
           botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
           transferSkipped: bot1ManagerResult.transferSkipped,
           plotsSeededCount: plotResult.plotsSeededCount,
+          botPurchasedPlotsCount: bot1ManagerPlotPurchaseResult.purchasedPlotsCount,
           plotRange: plotResult.plotRange,
         },
       };
@@ -127,6 +145,7 @@ export async function executeInitializeSystemUseCase(
           transferredAmount: 0,
           transferSkipped: true,
           plotsSeededCount: 0,
+          botPurchasedPlotsCount: 0,
           plotRange: null,
         },
       };
@@ -139,15 +158,23 @@ export async function executeInitializeSystemUseCase(
         return bot1ManagerResult;
       }
 
+      const bot1ManagerPlotPurchaseResult = await executeBot1ManagerPlotPurchaseStep({
+        deps,
+      });
+      if (isFailureResult(bot1ManagerPlotPurchaseResult)) {
+        return bot1ManagerPlotPurchaseResult;
+      }
+
       return {
         ok: true,
         summary: {
-          executedSteps: ["bot1-manager"],
+          executedSteps: ["bot1-manager", "bot1-manager-plot-purchase"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
           botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
           transferSkipped: bot1ManagerResult.transferSkipped,
           plotsSeededCount: 0,
+          botPurchasedPlotsCount: bot1ManagerPlotPurchaseResult.purchasedPlotsCount,
           plotRange: null,
         },
       };
@@ -169,7 +196,30 @@ export async function executeInitializeSystemUseCase(
           transferredAmount: 0,
           transferSkipped: true,
           plotsSeededCount: plotResult.plotsSeededCount,
+          botPurchasedPlotsCount: 0,
           plotRange: plotResult.plotRange,
+        },
+      };
+    }
+    case "bot1-manager-plot-purchase": {
+      const bot1ManagerPlotPurchaseResult = await executeBot1ManagerPlotPurchaseStep({
+        deps,
+      });
+      if (isFailureResult(bot1ManagerPlotPurchaseResult)) {
+        return bot1ManagerPlotPurchaseResult;
+      }
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["bot1-manager-plot-purchase"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
+          transferredAmount: 0,
+          transferSkipped: true,
+          plotsSeededCount: 0,
+          botPurchasedPlotsCount: bot1ManagerPlotPurchaseResult.purchasedPlotsCount,
+          plotRange: null,
         },
       };
     }

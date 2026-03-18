@@ -6,9 +6,11 @@ import {
 import { passwordHasher } from "@/server/features/auth/infrastructure";
 import { systemAccountService, transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
 import { systemInitializationRepository } from "@/server/features/system-initialization/infrastructure";
+import { plotRepository } from "@/server/features/plot/infrastructure";
+import { transact } from "@/server/lib/db";
 
 const initializeSystemSchema = z.object({
-  step: z.enum(["all", "adam", "bot1-manager", "plot"]).optional(),
+  step: z.enum(["all", "adam", "bot1-manager", "plot", "bot1-manager-plot-purchase"]).optional(),
 });
 
 export async function executeInitializeSystemUseCase(input?: unknown): Promise<InitializeSystemResult> {
@@ -26,6 +28,8 @@ export async function executeInitializeSystemUseCase(input?: unknown): Promise<I
     transactionLedgerRepository,
     passwordHasher,
     systemAccountService,
+    plotRepository,
+    transact,
     systemInitializationRepository,
   });
 }
