@@ -1,15 +1,32 @@
 import { executeInitializeSystemUseCase } from "@/server/features/system-initialization/composition";
 import { db } from "@/server/lib/db";
 
-type Step = "adam" | "bot1-manager" | "plot" | "bot1-manager-plot-purchase";
+type Step =
+  | "adam"
+  | "bot1-manager"
+  | "plot"
+  | "bot1-manager-plot-purchase"
+  | "bot1-manager-purchasing-station-build";
 type RequestedStep = "all" | Step;
 
 function parseArgs(): { step?: RequestedStep } {
   const step = process.argv.find((arg) => arg.startsWith("--step="))?.split("=")[1] as
     | RequestedStep
     | undefined;
-  if (step && !["all", "adam", "bot1-manager", "plot", "bot1-manager-plot-purchase"].includes(step)) {
-    throw new Error("参数 --step 仅支持 all,adam,bot1-manager,plot,bot1-manager-plot-purchase");
+  if (
+    step &&
+    ![
+      "all",
+      "adam",
+      "bot1-manager",
+      "plot",
+      "bot1-manager-plot-purchase",
+      "bot1-manager-purchasing-station-build",
+    ].includes(step)
+  ) {
+    throw new Error(
+      "参数 --step 仅支持 all,adam,bot1-manager,plot,bot1-manager-plot-purchase,bot1-manager-purchasing-station-build",
+    );
   }
 
   return {
@@ -48,6 +65,9 @@ async function initializeSystem() {
   }
   if (result.summary.executedSteps.includes("bot1-manager-plot-purchase")) {
     console.log(`Bot1 Manager purchased ${result.summary.botPurchasedPlotsCount} plots.`);
+  }
+  if (result.summary.executedSteps.includes("bot1-manager-purchasing-station-build")) {
+    console.log("Bot1 Manager built a purchasing station.");
   }
 }
 

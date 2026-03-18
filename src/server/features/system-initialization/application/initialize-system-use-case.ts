@@ -2,7 +2,9 @@ import type { PasswordHasher } from "@/server/features/auth/domain/services/pass
 import { executeAdamStep } from "./execute-adam-step";
 import { executeBot1ManagerStep } from "./execute-bot1-manager-step";
 import { executeBot1ManagerPlotPurchaseStep } from "./execute-bot1-manager-plot-purchase-step";
+import { executeBot1ManagerPurchasingStationBuildStep } from "./execute-bot1-manager-purchasing-station-build-step";
 import { executePlotStep } from "./execute-plot-step";
+import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
@@ -20,7 +22,8 @@ export type InitializeSystemRequestedStep =
   | "adam"
   | "bot1-manager"
   | "plot"
-  | "bot1-manager-plot-purchase";
+  | "bot1-manager-plot-purchase"
+  | "bot1-manager-purchasing-station-build";
 export type InitializeSystemStep = Exclude<InitializeSystemRequestedStep, "all">;
 
 export type InitializeSystemCommand = {
@@ -54,6 +57,7 @@ export type InitializeSystemResult = InitializeSystemSuccessResult | InitializeS
 
 export type InitializeSystemUseCaseDeps = {
   userRepository: UserRepository;
+  buildingRepository: BuildingRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
   passwordHasher: PasswordHasher;
   systemAccountService: SystemAccountService;
@@ -114,10 +118,24 @@ export async function executeInitializeSystemUseCase(
         return bot1ManagerPlotPurchaseResult;
       }
 
+      const bot1ManagerPurchasingStationBuildResult =
+        await executeBot1ManagerPurchasingStationBuildStep({
+          deps,
+        });
+      if (isFailureResult(bot1ManagerPurchasingStationBuildResult)) {
+        return bot1ManagerPurchasingStationBuildResult;
+      }
+
       return {
         ok: true,
         summary: {
-          executedSteps: ["adam", "bot1-manager", "plot", "bot1-manager-plot-purchase"],
+          executedSteps: [
+            "adam",
+            "bot1-manager",
+            "plot",
+            "bot1-manager-plot-purchase",
+            "bot1-manager-purchasing-station-build",
+          ],
           adamUsername: ADAM_PERSONA_CONFIG.username,
           botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
@@ -158,23 +176,16 @@ export async function executeInitializeSystemUseCase(
         return bot1ManagerResult;
       }
 
-      const bot1ManagerPlotPurchaseResult = await executeBot1ManagerPlotPurchaseStep({
-        deps,
-      });
-      if (isFailureResult(bot1ManagerPlotPurchaseResult)) {
-        return bot1ManagerPlotPurchaseResult;
-      }
-
       return {
         ok: true,
         summary: {
-          executedSteps: ["bot1-manager", "bot1-manager-plot-purchase"],
+          executedSteps: ["bot1-manager"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
           botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
           transferSkipped: bot1ManagerResult.transferSkipped,
           plotsSeededCount: 0,
-          botPurchasedPlotsCount: bot1ManagerPlotPurchaseResult.purchasedPlotsCount,
+          botPurchasedPlotsCount: 0,
           plotRange: null,
         },
       };
@@ -219,6 +230,29 @@ export async function executeInitializeSystemUseCase(
           transferSkipped: true,
           plotsSeededCount: 0,
           botPurchasedPlotsCount: bot1ManagerPlotPurchaseResult.purchasedPlotsCount,
+          plotRange: null,
+        },
+      };
+    }
+    case "bot1-manager-purchasing-station-build": {
+      const bot1ManagerPurchasingStationBuildResult =
+        await executeBot1ManagerPurchasingStationBuildStep({
+          deps,
+        });
+      if (isFailureResult(bot1ManagerPurchasingStationBuildResult)) {
+        return bot1ManagerPurchasingStationBuildResult;
+      }
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["bot1-manager-purchasing-station-build"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
+          transferredAmount: 0,
+          transferSkipped: true,
+          plotsSeededCount: 0,
+          botPurchasedPlotsCount: 0,
           plotRange: null,
         },
       };
