@@ -19,14 +19,13 @@ import {
   updatePlayerAnimation,
 } from '../gameplay/world-map-player'
 import type { BuildingType } from '@/client/features/building/types/building-ui'
-import type { PlotRenderResult, WorldMapPlot } from '../rendering/world-map-plot'
+import type { PlotRenderResult, WorldMapPlot, WorldMapRenderablePlot } from '../rendering/world-map-plot'
 
 type PhaserModule = typeof import('phaser')
 
 type WorldMapSceneOptions = {
-  existingPlotIds?: ReadonlySet<string>
-  highlightedPlotIds?: ReadonlySet<string>
-  buildingTypeByPlotId?: ReadonlyMap<string, BuildingType>
+  plots?: ReadonlyArray<WorldMapRenderablePlot>
+  currentUserId?: string
   onOpenExistingPlot?: (plotId: string) => void
   onSceneReady?: () => void
 }
@@ -34,9 +33,8 @@ type WorldMapSceneOptions = {
 export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
 
 type SyncMapDataPayload = {
-  existingPlotIds: ReadonlySet<string>
-  highlightedPlotIds: ReadonlySet<string>
-  buildingTypeByPlotId: ReadonlyMap<string, BuildingType>
+  plots: ReadonlyArray<WorldMapRenderablePlot>
+  currentUserId?: string
 }
 
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
@@ -55,10 +53,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     private nearbyPlotText!: Phaser.GameObjects.Text
     private interactHintText!: Phaser.GameObjects.Text
     private interactKey!: Phaser.Input.Keyboard.Key
-    private existingPlotIds: ReadonlySet<string> = options.existingPlotIds ?? new Set<string>()
-    private highlightedPlotIds: ReadonlySet<string> = options.highlightedPlotIds ?? new Set<string>()
-    private buildingTypeByPlotId: ReadonlyMap<string, BuildingType> =
-      options.buildingTypeByPlotId ?? new Map<string, BuildingType>()
+    private plotsData: ReadonlyArray<WorldMapRenderablePlot> = options.plots ?? []
+    private currentUserId: string | undefined = options.currentUserId
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -191,18 +187,16 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         this.roads,
         HORIZONTAL_ROAD_CENTERS,
         VERTICAL_ROAD_CENTERS_IN_MAP,
-        this.existingPlotIds,
-        this.highlightedPlotIds,
-        this.buildingTypeByPlotId
+        this.plotsData,
+        this.currentUserId
       )
       this.plots = renderResult.plots
       this.plotRenderObjects = renderResult.renderObjects
     }
 
     private syncMapData(payload: SyncMapDataPayload): void {
-      this.existingPlotIds = payload.existingPlotIds
-      this.highlightedPlotIds = payload.highlightedPlotIds
-      this.buildingTypeByPlotId = payload.buildingTypeByPlotId
+      this.plotsData = payload.plots
+      this.currentUserId = payload.currentUserId
       this.renderPlots()
     }
 

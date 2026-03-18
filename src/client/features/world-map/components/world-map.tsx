@@ -16,6 +16,7 @@ import { getBuildingCapabilities } from "@/client/features/building/model/buildi
 import type { BuildingType } from "@/client/features/building/types/building-ui";
 import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilities";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
+import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
 
 export function WorldMap() {
   const router = useRouter();
@@ -44,52 +45,23 @@ export function WorldMap() {
   const [personModalOpen, setPersonModalOpen] = useState(false);
   const [gameInfoModalOpen, setGameInfoModalOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
-  const existingPlotIds = useMemo(
+  const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
+  const worldMapPlots = useMemo<WorldMapRenderablePlot[]>(
     () =>
-      new Set((data?.plots ?? []).map((plot) => `P${plot.x}-${String(plot.y).padStart(2, "0")}`)),
+      (data?.plots ?? []).map((plot) => ({
+        id: `P${plot.x}-${String(plot.y).padStart(2, "0")}`,
+        ownerUserId: plot.ownerUserId,
+        buildingType: plot.building?.type,
+      })),
     [data?.plots],
   );
-  const existingPlotIdsKey = useMemo(() => Array.from(existingPlotIds).sort().join("|"), [existingPlotIds]);
-  const plotWorldIdByDbId = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const plot of data?.plots ?? []) {
-      map.set(plot.id, `P${plot.x}-${String(plot.y).padStart(2, "0")}`);
-    }
-    return map;
-  }, [data?.plots]);
-  const myPlotIds = useMemo(() => {
-    const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
-    if (!currentUserId) {
-      return new Set<string>();
-    }
-
-    return new Set(
-      (data?.plots ?? [])
-        .filter((plot) => plot.ownerUserId === currentUserId)
-        .map((plot) => `P${plot.x}-${String(plot.y).padStart(2, "0")}`),
-    );
-  }, [authStatus, data?.plots, meData?.user.id]);
-  const myPlotIdsKey = useMemo(() => Array.from(myPlotIds).sort().join("|"), [myPlotIds]);
-  const buildingTypeByPlotId = useMemo(() => {
-    const map = new Map<string, BuildingType>();
-    for (const plot of data?.plots ?? []) {
-      const worldPlotId = plotWorldIdByDbId.get(plot.id);
-      if (worldPlotId) {
-        const buildingType = plot.building?.type;
-        if (buildingType) {
-          map.set(worldPlotId, buildingType);
-        }
-      }
-    }
-    return map;
-  }, [data?.plots, plotWorldIdByDbId]);
-  const buildingTypeByPlotIdKey = useMemo(
+  const worldMapPlotsKey = useMemo(
     () =>
-      Array.from(buildingTypeByPlotId.entries())
-        .sort(([plotA], [plotB]) => plotA.localeCompare(plotB))
-        .map(([plotId, type]) => `${plotId}:${type}`)
+      worldMapPlots
+        .map((plot) => `${plot.id}:${plot.ownerUserId ?? ""}:${plot.buildingType ?? ""}`)
+        .sort()
         .join("|"),
-    [buildingTypeByPlotId],
+    [worldMapPlots],
   );
   const plotById = useMemo(() => {
     const map = new Map<string, Plot>();
@@ -99,7 +71,6 @@ export function WorldMap() {
     return map;
   }, [data?.plots]);
   const selectedPlot = selectedPlotId ? plotById.get(selectedPlotId) : undefined;
-  const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
   const selectedPlotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
   const selectedBuildingCapabilities = getBuildingCapabilities(
     selectedPlot?.building,
@@ -395,9 +366,8 @@ export function WorldMap() {
       const Phaser = (await import("phaser")).default;
 
       const WorldMapScene = createWorldMapScene(Phaser, {
-        existingPlotIds,
-        highlightedPlotIds: myPlotIds,
-        buildingTypeByPlotId,
+        plots: worldMapPlots,
+        currentUserId,
         onOpenExistingPlot: (plotId) => {
           setSelectedPlotId((prev) => (prev === plotId ? null : plotId));
         },
@@ -452,18 +422,14 @@ export function WorldMap() {
     }
 
     gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
-      existingPlotIds,
-      highlightedPlotIds: myPlotIds,
-      buildingTypeByPlotId,
+      plots: worldMapPlots,
+      currentUserId,
     });
   }, [
     isGameReady,
-    existingPlotIds,
-    existingPlotIdsKey,
-    myPlotIds,
-    myPlotIdsKey,
-    buildingTypeByPlotId,
-    buildingTypeByPlotIdKey,
+    worldMapPlots,
+    worldMapPlotsKey,
+    currentUserId,
   ]);
 
   return (
