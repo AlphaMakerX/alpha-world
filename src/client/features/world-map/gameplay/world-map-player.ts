@@ -5,13 +5,17 @@ const DUDE_TEXTURE_KEY = 'dude'
 const dudeUrl = new URL('../../../../../public/assets/dude.png', import.meta.url).href
 
 export type PlayerSprite = Phaser.GameObjects.Sprite & { body: Phaser.Physics.Arcade.Body }
+export type PlayerPosition = { x: number; y: number }
 
 export function preloadPlayerAssets(scene: Phaser.Scene): void {
   scene.load.spritesheet(DUDE_TEXTURE_KEY, dudeUrl, { frameWidth: 32, frameHeight: 48 })
 }
 
-export function createPlayer(scene: Phaser.Scene): PlayerSprite {
-  const player = scene.physics.add.sprite(140, MAP_HEIGHT / 2, DUDE_TEXTURE_KEY) as PlayerSprite
+export function createPlayer(
+  scene: Phaser.Scene,
+  position: PlayerPosition = { x: 140, y: MAP_HEIGHT / 2 },
+): PlayerSprite {
+  const player = scene.physics.add.sprite(position.x, position.y, DUDE_TEXTURE_KEY) as PlayerSprite
   player.setOrigin(0.5, 1)
   player.setFrame(4)
   player.setDepth(20)

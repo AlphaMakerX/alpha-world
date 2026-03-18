@@ -15,6 +15,7 @@ import {
   createPlayer,
   createPlayerAnimations,
   preloadPlayerAssets,
+  type PlayerPosition,
   type PlayerSprite,
   updatePlayerAnimation,
 } from '../gameplay/world-map-player'
@@ -26,6 +27,8 @@ type PhaserModule = typeof import('phaser')
 type WorldMapSceneOptions = {
   plots?: ReadonlyArray<WorldMapRenderablePlot>
   currentUserId?: string
+  playerPosition?: PlayerPosition
+  onPlayerPositionChange?: (position: PlayerPosition) => void
   onOpenExistingPlot?: (plotId: string) => void
   onSceneReady?: () => void
 }
@@ -35,6 +38,7 @@ export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
 type SyncMapDataPayload = {
   plots: ReadonlyArray<WorldMapRenderablePlot>
   currentUserId?: string
+  playerPosition?: PlayerPosition
 }
 
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
@@ -55,6 +59,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     private interactKey!: Phaser.Input.Keyboard.Key
     private plotsData: ReadonlyArray<WorldMapRenderablePlot> = options.plots ?? []
     private currentUserId: string | undefined = options.currentUserId
+    private playerPosition: PlayerPosition | undefined = options.playerPosition
+    private hasAppliedPersistedPlayerPosition = false
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -71,7 +77,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.createRoadNetwork()
       this.renderPlots()
       createPlayerAnimations(this)
-      this.player = createPlayer(this)
+      this.player = createPlayer(this, this.playerPosition)
 
       // 相机跟随玩家，地图尺寸由常量统一控制，便于后续扩展更大场景。
       this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
@@ -132,6 +138,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
 
     update(): void {
       if (this.isDOMInputFocused()) return
+      const prevX = this.player.x
+      const prevY = this.player.y
 
       movePlayerByCursorsOnRoads({
         player: this.player,
@@ -144,6 +152,12 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       })
 
       updatePlayerAnimation(this.player, this.cursors)
+      if (prevX !== this.player.x || prevY !== this.player.y) {
+        options.onPlayerPositionChange?.({
+          x: this.player.x,
+          y: this.player.y,
+        })
+      }
       this.updateNearbyPlotUI()
     }
 
@@ -196,7 +210,22 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
 
     private syncMapData(payload: SyncMapDataPayload): void {
       this.plotsData = payload.plots
+      this.playerPosition = payload.playerPosition
+      const switchedAccount =
+        payload.currentUserId !== this.currentUserId ||
+        (payload.currentUserId === undefined && this.currentUserId !== undefined)
       this.currentUserId = payload.currentUserId
+      if (switchedAccount) {
+        this.hasAppliedPersistedPlayerPosition = false
+      }
+      if (
+        payload.currentUserId &&
+        payload.playerPosition &&
+        !this.hasAppliedPersistedPlayerPosition
+      ) {
+        this.player.setPosition(payload.playerPosition.x, payload.playerPosition.y)
+        this.hasAppliedPersistedPlayerPosition = true
+      }
       this.renderPlots()
     }
 

@@ -6,6 +6,10 @@ type GetCurrentUserSuccessResult = {
     id: string;
     username: string;
     money: number;
+    position: {
+      x: number;
+      y: number;
+    };
   };
 };
 
@@ -41,6 +45,10 @@ export async function executeGetCurrentUserUseCase(input: {
       id: user.id,
       username: user.username.getValue(),
       money: user.money,
+      position: {
+        x: user.positionX,
+        y: user.positionY,
+      },
     },
   };
 }

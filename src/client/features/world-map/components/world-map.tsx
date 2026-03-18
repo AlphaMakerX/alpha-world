@@ -18,6 +18,15 @@ import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilit
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
 
+const MAP_MAX_X = 3200;
+const MAP_MAX_Y = 1200;
+const POSITION_SYNC_INTERVAL_MS = 2000;
+const POSITION_MIN_DISTANCE_TO_SYNC = 20;
+
+function getDistance(from: { x: number; y: number }, to: { x: number; y: number }): number {
+  return Math.hypot(to.x - from.x, to.y - from.y);
+}
+
 export function WorldMap() {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
@@ -31,6 +40,7 @@ export function WorldMap() {
     enabled: authStatus === "authenticated",
   });
   const purchaseMutation = trpc.plot.purchase.useMutation();
+  const updatePositionMutation = trpc.person.updatePosition.useMutation();
   const buildMutation = trpc.building.build.useMutation();
   const startProductionMutation = trpc.factory.startProduction.useMutation();
   const createShopListingMutation = trpc.shop.createListing.useMutation();
@@ -45,7 +55,11 @@ export function WorldMap() {
   const [personModalOpen, setPersonModalOpen] = useState(false);
   const [gameInfoModalOpen, setGameInfoModalOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const isAuthenticatedRef = useRef(false);
   const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
+  const playerPosition = authStatus === "authenticated" ? meData?.user.position : undefined;
   const worldMapPlots = useMemo<WorldMapRenderablePlot[]>(
     () =>
       (data?.plots ?? []).map((plot) => ({
@@ -163,6 +177,16 @@ export function WorldMap() {
   const handleLogout = async () => {
     try {
       setLogoutLoading(true);
+      const latestPosition = pendingPlayerPositionRef.current;
+      if (latestPosition && authStatus === "authenticated") {
+        try {
+          await updatePositionMutation.mutateAsync({ position: latestPosition });
+          lastSyncedPlayerPositionRef.current = latestPosition;
+          pendingPlayerPositionRef.current = null;
+        } catch {
+          // 下线前保存位置失败时不阻塞登出流程。
+        }
+      }
       await signOut({ redirect: false });
       await Promise.all([trpcUtils.person.me.invalidate(), trpcUtils.plot.list.invalidate()]);
       router.refresh();
@@ -171,6 +195,47 @@ export function WorldMap() {
       setLogoutLoading(false);
     }
   };
+
+  useEffect(() => {
+    isAuthenticatedRef.current = authStatus === "authenticated";
+  }, [authStatus]);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !currentUserId) {
+      pendingPlayerPositionRef.current = null;
+      lastSyncedPlayerPositionRef.current = null;
+      return;
+    }
+    if (playerPosition) {
+      lastSyncedPlayerPositionRef.current = playerPosition;
+    }
+  }, [authStatus, currentUserId, playerPosition?.x, playerPosition?.y]);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !currentUserId) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      const pendingPosition = pendingPlayerPositionRef.current;
+      if (!pendingPosition || updatePositionMutation.isPending) {
+        return;
+      }
+      void updatePositionMutation
+        .mutateAsync({ position: pendingPosition })
+        .then(() => {
+          lastSyncedPlayerPositionRef.current = pendingPosition;
+          pendingPlayerPositionRef.current = null;
+        })
+        .catch(() => {
+          // 定时同步失败时保留待同步坐标，等待下一轮重试。
+        });
+    }, POSITION_SYNC_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [authStatus, currentUserId, updatePositionMutation]);
 
   const handleBuild = async (buildingType: BuildingType) => {
     if (!selectedPlot) {
@@ -368,6 +433,28 @@ export function WorldMap() {
       const WorldMapScene = createWorldMapScene(Phaser, {
         plots: worldMapPlots,
         currentUserId,
+        playerPosition,
+        onPlayerPositionChange: (position) => {
+          if (!isAuthenticatedRef.current) {
+            return;
+          }
+          const clampedPosition = {
+            x: Number(Math.max(0, Math.min(MAP_MAX_X, position.x)).toFixed(2)),
+            y: Number(Math.max(0, Math.min(MAP_MAX_Y, position.y)).toFixed(2)),
+          };
+          const lastSynced = lastSyncedPlayerPositionRef.current;
+          if (lastSynced && lastSynced.x === clampedPosition.x && lastSynced.y === clampedPosition.y) {
+            return;
+          }
+          const baselinePosition = pendingPlayerPositionRef.current ?? lastSynced;
+          if (
+            baselinePosition &&
+            getDistance(baselinePosition, clampedPosition) < POSITION_MIN_DISTANCE_TO_SYNC
+          ) {
+            return;
+          }
+          pendingPlayerPositionRef.current = clampedPosition;
+        },
         onOpenExistingPlot: (plotId) => {
           setSelectedPlotId((prev) => (prev === plotId ? null : plotId));
         },
@@ -424,12 +511,15 @@ export function WorldMap() {
     gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
       plots: worldMapPlots,
       currentUserId,
+      playerPosition,
     });
   }, [
     isGameReady,
     worldMapPlots,
     worldMapPlotsKey,
     currentUserId,
+    playerPosition?.x,
+    playerPosition?.y,
   ]);
 
   return (

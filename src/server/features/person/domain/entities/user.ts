@@ -6,6 +6,8 @@ type UserProps = {
   username: Username;
   passwordHash: string;
   money: number;
+  positionX: number;
+  positionY: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -18,6 +20,8 @@ export class User {
     username: string;
     passwordHash: string;
     initialMoney?: number;
+    positionX?: number;
+    positionY?: number;
   }): User {
     if (!input.id) {
       throw new DomainError("用户 ID 不能为空");
@@ -29,6 +33,8 @@ export class User {
     if (initialMoney < 0) {
       throw new DomainError("用户余额不能小于 0");
     }
+    const positionX = input.positionX ?? 140;
+    const positionY = input.positionY ?? 600;
 
     const now = new Date();
     return new User({
@@ -36,6 +42,8 @@ export class User {
       username: Username.create(input.username),
       passwordHash: input.passwordHash,
       money: initialMoney,
+      positionX,
+      positionY,
       createdAt: now,
       updatedAt: now,
     });
@@ -44,6 +52,9 @@ export class User {
   static rehydrate(props: UserProps): User {
     if (props.money < 0) {
       throw new DomainError("用户余额不能小于 0");
+    }
+    if (!Number.isFinite(props.positionX) || !Number.isFinite(props.positionY)) {
+      throw new DomainError("用户坐标必须是有效数字");
     }
     return new User(props);
   }
@@ -64,6 +75,15 @@ export class User {
       throw new DomainError("收款金额不能小于 0");
     }
     this.props.money += amount;
+    this.props.updatedAt = new Date();
+  }
+
+  updatePosition(position: { x: number; y: number }): void {
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+      throw new DomainError("用户坐标必须是有效数字");
+    }
+    this.props.positionX = position.x;
+    this.props.positionY = position.y;
     this.props.updatedAt = new Date();
   }
 
@@ -93,6 +113,14 @@ export class User {
 
   get createdAt() {
     return this.props.createdAt;
+  }
+
+  get positionX() {
+    return this.props.positionX;
+  }
+
+  get positionY() {
+    return this.props.positionY;
   }
 
   get updatedAt() {

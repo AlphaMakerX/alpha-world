@@ -12,6 +12,10 @@ import {
   type GetCurrentUserResult,
 } from "@/server/features/person/application/get-current-user-use-case";
 import {
+  executeUpdateUserPositionUseCase as executeUpdateUserPositionUseCaseImpl,
+  type UpdateUserPositionResult,
+} from "@/server/features/person/application/update-user-position-use-case";
+import {
   executeGetWealthLeaderboardUseCase as executeGetWealthLeaderboardUseCaseImpl,
   type GetWealthLeaderboardResult,
 } from "@/server/features/person/application/get-wealth-leaderboard-use-case";
@@ -24,6 +28,14 @@ export const getCurrentUserSchema = z.object({
 
 export const getPersonaProfileSchema = z.object({
   personaId: z.enum(PERSONA_IDS),
+});
+
+export const updateUserPositionSchema = z.object({
+  userId: z.string().uuid("用户 ID 格式不正确"),
+  position: z.object({
+    x: z.number().finite().min(0).max(3200),
+    y: z.number().finite().min(0).max(1200),
+  }),
 });
 
 export async function executeGetCurrentUserUseCase(
@@ -46,6 +58,23 @@ export async function executeGetCurrentUserUseCase(
 export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLeaderboardResult> {
   return executeGetWealthLeaderboardUseCaseImpl({
     personQueryRepository,
+  });
+}
+
+export async function executeUpdateUserPositionUseCase(
+  input: unknown,
+): Promise<UpdateUserPositionResult | { ok: false; error: string; status: 400 }> {
+  const parsed = updateUserPositionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "参数校验失败",
+      status: 400,
+    };
+  }
+
+  return executeUpdateUserPositionUseCaseImpl(parsed.data, {
+    userRepository,
   });
 }
 

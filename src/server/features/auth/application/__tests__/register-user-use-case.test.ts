@@ -50,6 +50,8 @@ function createAdamUser() {
     username: { getValue: () => "adam" } as any,
     passwordHash: "adam-hash",
     money: 1_000_000_000,
+    positionX: 140,
+    positionY: 600,
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
   });

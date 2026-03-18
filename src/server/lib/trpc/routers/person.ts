@@ -8,7 +8,9 @@ import {
   executeGetWealthLeaderboardUseCase,
   executeGetAdamProfileUseCase,
   executeGetPersonaProfileUseCase,
+  executeUpdateUserPositionUseCase,
   getPersonaProfileSchema,
+  updateUserPositionSchema,
 } from "@/server/features/person/composition";
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
 
@@ -18,6 +20,16 @@ export const personRouter = createTRPCRouter({
       await executeGetCurrentUserUseCase({ userId: ctx.userId }),
     );
   }),
+  updatePosition: protectedProcedure
+    .input(updateUserPositionSchema.omit({ userId: true }))
+    .mutation(async ({ input, ctx }) => {
+      return unwrapUseCaseResult(
+        await executeUpdateUserPositionUseCase({
+          userId: ctx.userId,
+          position: input.position,
+        }),
+      );
+    }),
   wealthLeaderboard: publicProcedure.query(() =>
     executeGetWealthLeaderboardUseCase(),
   ),
