@@ -1,17 +1,11 @@
 import { randomUUID } from "crypto";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
-import { ADAM_USER_ID } from "@/server/features/person/domain/constants/adam";
-import {
-  BOT1_INITIAL_PASSWORD,
-  BOT1_TRANSFER_AMOUNT,
-  BOT1_TRANSFER_REFERENCE_ID,
-  BOT1_USERNAME,
-} from "@/server/features/person/domain/constants/bot";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
+import { ADAM_PERSONA_CONFIG, BOT1_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 type ExecuteBot1StepDeps = {
   userRepository: UserRepository;
@@ -27,12 +21,21 @@ type ExecuteBot1StepDeps = {
   };
 };
 
+function getBot1InitialPasswordFromEnv(): string {
+  const envKey = BOT1_PERSONA_CONFIG.initialPasswordEnvKey;
+  const value = process.env[envKey];
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${envKey} is not set. Please configure it in your environment.`);
+  }
+  return value;
+}
+
 export async function executeBot1Step(input: {
   deps: ExecuteBot1StepDeps;
 }): Promise<{ transferSkipped: boolean }> {
   let transferSkipped = false;
-  const botPasswordHash = await input.deps.passwordHasher.hash(BOT1_INITIAL_PASSWORD);
-  const botUsername = Username.create(BOT1_USERNAME).getValue();
+  const botPasswordHash = await input.deps.passwordHasher.hash(getBot1InitialPasswordFromEnv());
+  const botUsername = Username.create(BOT1_PERSONA_CONFIG.username).getValue();
 
   let bot = await input.deps.userRepository.findByUsername(Username.create(botUsername));
   if (!bot) {
@@ -48,9 +51,9 @@ export async function executeBot1Step(input: {
   await input.deps.userRepository.save(bot);
 
   const transferExists = await input.deps.systemInitializationRepository.hasMoneyTransfer({
-    fromUserId: ADAM_USER_ID,
+    fromUserId: ADAM_PERSONA_CONFIG.userId,
     toUserId: bot.id,
-    referenceId: BOT1_TRANSFER_REFERENCE_ID,
+    referenceId: BOT1_PERSONA_CONFIG.transferReferenceId,
   });
   if (transferExists) {
     transferSkipped = true;
@@ -60,17 +63,17 @@ export async function executeBot1Step(input: {
   const adamSystemAccount = await input.deps.systemAccountService.getSystemAccount();
   const latestBot = bot;
 
-  adamSystemAccount.spendMoney(BOT1_TRANSFER_AMOUNT);
-  latestBot.receiveMoney(BOT1_TRANSFER_AMOUNT);
+  adamSystemAccount.spendMoney(BOT1_PERSONA_CONFIG.transferAmount);
+  latestBot.receiveMoney(BOT1_PERSONA_CONFIG.transferAmount);
   await input.deps.userRepository.save(adamSystemAccount);
   await input.deps.userRepository.save(latestBot);
 
   await input.deps.transactionLedgerRepository.record({
     fromUserId: adamSystemAccount.id,
     toUserId: latestBot.id,
-    amount: BOT1_TRANSFER_AMOUNT,
+    amount: BOT1_PERSONA_CONFIG.transferAmount,
     type: "system_init_transfer",
-    referenceId: BOT1_TRANSFER_REFERENCE_ID,
+    referenceId: BOT1_PERSONA_CONFIG.transferReferenceId,
     description: `系统初始化转账 -> ${latestBot.username.getValue()}`,
   });
 

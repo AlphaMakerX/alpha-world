@@ -5,11 +5,7 @@ import { executePlotStep } from "./execute-plot-step";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import { ADAM_USERNAME } from "@/server/features/person/domain/constants/adam";
-import {
-  BOT1_TRANSFER_AMOUNT,
-  BOT1_USERNAME,
-} from "@/server/features/person/domain/constants/bot";
+import { ADAM_PERSONA_CONFIG, BOT1_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 const DEFAULT_STEP: InitializeSystemRequestedStep = "all";
@@ -76,7 +72,7 @@ export async function executeInitializeSystemUseCase(
   const requestedStep = command.step ?? DEFAULT_STEP;
   const executedSteps: InitializeSystemStep[] = [];
 
-  if (BOT1_TRANSFER_AMOUNT <= 0) {
+  if (BOT1_PERSONA_CONFIG.transferAmount <= 0) {
     return {
       ok: false,
       error: "转账金额必须大于 0",
@@ -149,9 +145,9 @@ export async function executeInitializeSystemUseCase(
     ok: true,
     summary: {
       executedSteps,
-      adamUsername: ADAM_USERNAME,
-      botUsername: BOT1_USERNAME,
-      transferredAmount: executedSteps.includes("bot1") ? BOT1_TRANSFER_AMOUNT : 0,
+      adamUsername: ADAM_PERSONA_CONFIG.username,
+      botUsername: BOT1_PERSONA_CONFIG.username,
+      transferredAmount: executedSteps.includes("bot1") ? BOT1_PERSONA_CONFIG.transferAmount : 0,
       transferSkipped,
       plotsSeededCount,
       plotRange,

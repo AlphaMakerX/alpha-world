@@ -9,7 +9,7 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { ADAM_USER_ID } from "@/server/features/person/domain/constants/adam";
+import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 /**
  * 构造 RegisterUserUseCase 的 mock 依赖。
@@ -46,7 +46,7 @@ function createMockDeps(
  */
 function createAdamUser() {
   return User.rehydrate({
-    id: ADAM_USER_ID,
+    id: ADAM_PERSONA_CONFIG.userId,
     username: { getValue: () => "adam" } as any,
     passwordHash: "adam-hash",
     money: 1_000_000_000,
@@ -214,7 +214,7 @@ describe("executeRegisterUserUseCase", () => {
     // Assert: 交易记录包含正确的转账方、金额和类型
     expect(deps.transactionLedgerRepository.record).toHaveBeenCalledWith(
       expect.objectContaining({
-        fromUserId: ADAM_USER_ID,
+        fromUserId: ADAM_PERSONA_CONFIG.userId,
         amount: 10000,
         type: "registration_grant",
       }),

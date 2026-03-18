@@ -5,7 +5,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
-import { ADAM_USERNAME } from "@/server/features/person/domain/constants/adam";
+import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 export type RegisterUserCommand = {
@@ -41,7 +41,7 @@ export async function executeRegisterUserUseCase(
   command: RegisterUserCommand,
   deps: RegisterUserUseCaseDeps,
 ): Promise<RegisterUserResult> {
-  if (command.username.trim().toLowerCase() === ADAM_USERNAME) {
+  if (command.username.trim().toLowerCase() === ADAM_PERSONA_CONFIG.username) {
     return {
       ok: false,
       error: "该用户名为系统保留名称",

@@ -2,3 +2,4 @@
 export { executeGetCurrentUserUseCase } from "./get-current-user-use-case";
 export { executeGetWealthLeaderboardUseCase } from "./get-wealth-leaderboard-use-case";
 export { executeGetAdamProfileUseCase } from "./get-adam-profile-use-case";
+export { executeGetPersonaProfileUseCase } from "./get-persona-profile-use-case";

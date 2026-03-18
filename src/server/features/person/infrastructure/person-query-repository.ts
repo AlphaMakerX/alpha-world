@@ -6,7 +6,7 @@ import type {
   WealthLeaderboardItem,
 } from "@/server/features/person/domain/repositories/person-query-repository";
 import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
-import { ADAM_USER_ID } from "@/server/features/person/domain/constants/adam";
+import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 class DrizzlePersonQueryRepository implements PersonQueryRepository {
   async listWealthLeaderboard(limit: number): Promise<WealthLeaderboardItem[]> {
@@ -30,7 +30,7 @@ class DrizzlePersonQueryRepository implements PersonQueryRepository {
     transactions: AdamTransactionRecord[];
   }> {
     const adamRow = await db.query.users.findFirst({
-      where: eq(users.id, ADAM_USER_ID),
+      where: eq(users.id, ADAM_PERSONA_CONFIG.userId),
     });
 
     const rows = await db
@@ -46,8 +46,8 @@ class DrizzlePersonQueryRepository implements PersonQueryRepository {
       .from(moneyTransactions)
       .where(
         or(
-          eq(moneyTransactions.fromUserId, ADAM_USER_ID),
-          eq(moneyTransactions.toUserId, ADAM_USER_ID),
+          eq(moneyTransactions.fromUserId, ADAM_PERSONA_CONFIG.userId),
+          eq(moneyTransactions.toUserId, ADAM_PERSONA_CONFIG.userId),
         ),
       )
       .orderBy(desc(moneyTransactions.createdAt))
@@ -55,8 +55,8 @@ class DrizzlePersonQueryRepository implements PersonQueryRepository {
 
     const userIds = new Set<string>();
     for (const row of rows) {
-      if (row.fromUserId !== ADAM_USER_ID) userIds.add(row.fromUserId);
-      if (row.toUserId !== ADAM_USER_ID) userIds.add(row.toUserId);
+      if (row.fromUserId !== ADAM_PERSONA_CONFIG.userId) userIds.add(row.fromUserId);
+      if (row.toUserId !== ADAM_PERSONA_CONFIG.userId) userIds.add(row.toUserId);
     }
 
     const usernameMap = new Map<string, string>();
@@ -71,7 +71,7 @@ class DrizzlePersonQueryRepository implements PersonQueryRepository {
     }
 
     const transactions: AdamTransactionRecord[] = rows.map((row) => {
-      const isOutgoing = row.fromUserId === ADAM_USER_ID;
+      const isOutgoing = row.fromUserId === ADAM_PERSONA_CONFIG.userId;
       const counterpartyId = isOutgoing ? row.toUserId : row.fromUserId;
       return {
         id: row.id,

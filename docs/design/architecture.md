@@ -302,8 +302,9 @@ Adam ──────────→ 新玩家
 
 1. 配置 `.env.local`（数据库连接、Auth 密钥）
 2. `npm run drizzle:push` — 推送数据库 Schema
-3. `npm run init:system` — 创建 Adam / Bot 用户并初始化地图种子地块
-4. `npm run dev` — 启动开发服务器（端口 8080）
+3. 配置 `ADAM_INITIAL_PASSWORD` 与 `BOT1_INITIAL_PASSWORD`
+4. `npm run init:system` — 创建 Adam / Bot 用户并初始化地图种子地块
+5. `npm run dev` — 启动开发服务器（端口 8080）
 
 ### 9.2 环境变量
 
@@ -313,6 +314,8 @@ Adam ──────────→ 新玩家
 | `NEXTAUTH_SECRET` / `AUTH_SECRET` | JWT 签名密钥 |
 | `NEXTAUTH_URL` | 认证回调地址 |
 | `NEXT_PUBLIC_APP_URL` | 前端公开地址 |
+| `ADAM_INITIAL_PASSWORD` | 系统初始化时 Adam 的初始密码 |
+| `BOT1_INITIAL_PASSWORD` | 系统初始化时 Bot1 的初始密码 |
 
 ## 10. 设计系统
 

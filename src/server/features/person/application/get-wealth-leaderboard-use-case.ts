@@ -1,8 +1,5 @@
 import type { PersonQueryRepository } from "@/server/features/person/domain/repositories/person-query-repository";
-import {
-  ADAM_INITIAL_MONEY,
-  ADAM_USERNAME,
-} from "@/server/features/person/domain/constants/adam";
+import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 export type LeaderboardEntry = {
   rank: number;
@@ -30,8 +27,8 @@ export async function executeGetWealthLeaderboardUseCase(
     rank: index + 1,
     username: row.username,
     money: row.money,
-    isAdam: row.username === ADAM_USERNAME,
+    isAdam: row.username === ADAM_PERSONA_CONFIG.username,
   }));
 
-  return { ok: true, entries, totalMoneySupply: ADAM_INITIAL_MONEY };
+  return { ok: true, entries, totalMoneySupply: ADAM_PERSONA_CONFIG.initialMoney };
 }

@@ -15,7 +15,8 @@
     "drizzle:push": "dotenv -e ${ENV_FILE:-.env.local} -- drizzle-kit push",
     "init:system": "dotenv -e ${ENV_FILE:-.env.local} -- tsx scripts/initialize-system.ts",
     "drizzle:push:dev": "ENV_FILE=.env.development npm run drizzle:push",
-    "init:system:dev": "ENV_FILE=.env.development npm run init:system"
+    "init:system:dev": "ENV_FILE=.env.development npm run init:system",
+    "drizzle:studio": "dotenv -e ${ENV_FILE:-.env.local} -- drizzle-kit studio"
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.3.0",

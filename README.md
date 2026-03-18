@@ -49,3 +49,19 @@ src/
 - 把初始化系统的脚本重构一下，不应该直接去数据库操作，而是通过 usecase 
 - 已购买和未购买的地块，做一下区别
 
+## 环境变量
+
+项目提供了示例文件：`.env.example`。
+
+初始化系统账号时，以下变量为必填：
+
+- `ADAM_INITIAL_PASSWORD`
+- `BOT1_INITIAL_PASSWORD`
+
+推荐流程：
+
+1. 复制 `.env.example` 到 `.env.local`
+2. 根据本地环境修改数据库与密钥配置
+3. 执行 `npm run drizzle:push`
+4. 执行 `npm run init:system`
+

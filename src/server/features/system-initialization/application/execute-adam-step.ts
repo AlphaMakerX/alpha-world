@@ -1,5 +1,5 @@
 import { User } from "@/server/features/person/domain/entities/user";
-import { ADAM_INITIAL_MONEY, ADAM_INITIAL_PASSWORD, ADAM_USER_ID, ADAM_USERNAME } from "@/server/features/person/domain/constants/adam";
+import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 
@@ -9,13 +9,16 @@ type ExecuteAdamStepDeps = {
 };
 
 export async function executeAdamStep(input: { deps: ExecuteAdamStepDeps }): Promise<void> {
-  const adamPasswordHash = await input.deps.passwordHasher.hash(ADAM_INITIAL_PASSWORD);
+  if (!ADAM_PERSONA_CONFIG.initialPassword || ADAM_PERSONA_CONFIG.initialPassword.trim().length === 0) {
+    throw new Error("ADAM_INITIAL_PASSWORD is not set. Please configure it in your environment.");
+  }
+  const adamPasswordHash = await input.deps.passwordHasher.hash(ADAM_PERSONA_CONFIG.initialPassword);
 
   const adam = User.register({
-    id: ADAM_USER_ID,
-    username: ADAM_USERNAME,
+    id: ADAM_PERSONA_CONFIG.userId,
+    username: ADAM_PERSONA_CONFIG.username,
     passwordHash: adamPasswordHash,
-    initialMoney: ADAM_INITIAL_MONEY,
+    initialMoney: ADAM_PERSONA_CONFIG.initialMoney,
   });
 
   await input.deps.userRepository.save(adam);
