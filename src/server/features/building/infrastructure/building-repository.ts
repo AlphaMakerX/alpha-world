@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain";
 import { buildings } from "@/server/features/building/infrastructure/schema";
@@ -18,7 +18,7 @@ function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
 
 export class DrizzleBuildingRepository implements BuildingRepository {
   async findById(id: number): Promise<Building | null> {
-    const record = await db.query.buildings.findFirst({
+    const record = await getDbClient().query.buildings.findFirst({
       where: eq(buildings.id, id),
     });
     if (!record) {
@@ -29,7 +29,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
   }
 
   async findByPlotId(plotId: number): Promise<Building | null> {
-    const record = await db.query.buildings.findFirst({
+    const record = await getDbClient().query.buildings.findFirst({
       where: eq(buildings.plotId, plotId),
     });
     if (!record) {
@@ -43,7 +43,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
     if (plotIds.length === 0) {
       return new Map<number, Building>();
     }
-    const records = await db.query.buildings.findMany({
+    const records = await getDbClient().query.buildings.findMany({
       where: inArray(buildings.plotId, plotIds),
       orderBy: asc(buildings.id),
     });
@@ -55,7 +55,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
   }
 
   async findByOwnerUserId(ownerUserId: string): Promise<Building[]> {
-    const records = await db
+    const records = await getDbClient()
       .select({
         id: buildings.id,
         plotId: buildings.plotId,
@@ -73,7 +73,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
 
   async save(building: Building): Promise<Building> {
     if (building.id > 0) {
-      const updated = await db
+      const updated = await getDbClient()
         .update(buildings)
         .set({
           plotId: building.plotId,
@@ -87,7 +87,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
       return toDomainBuilding(updated[0]);
     }
 
-    const inserted = await db
+    const inserted = await getDbClient()
       .insert(buildings)
       .values({
         plotId: building.plotId,

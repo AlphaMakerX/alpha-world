@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import type { BuyOrder, BuyOrderRepository, BuyOrderStatus } from "@/server/features/purchasing-station/domain";
 import { buyOrders } from "@/server/features/purchasing-station/infrastructure/schema";
 
@@ -20,7 +20,7 @@ function toBuyOrder(record: typeof buyOrders.$inferSelect): BuyOrder {
 export class DrizzleBuyOrderRepository implements BuyOrderRepository {
   async create(input: Omit<BuyOrder, "id" | "createdAt" | "updatedAt">): Promise<BuyOrder> {
     const now = new Date();
-    const inserted = await db
+    const inserted = await getDbClient()
       .insert(buyOrders)
       .values({
         buildingId: input.buildingId,
@@ -37,14 +37,14 @@ export class DrizzleBuyOrderRepository implements BuyOrderRepository {
   }
 
   async findById(id: number): Promise<BuyOrder | null> {
-    const record = await db.query.buyOrders.findFirst({
+    const record = await getDbClient().query.buyOrders.findFirst({
       where: eq(buyOrders.id, id),
     });
     return record ? toBuyOrder(record) : null;
   }
 
   async findActiveByBuildingId(buildingId: number): Promise<BuyOrder[]> {
-    const records = await db.query.buyOrders.findMany({
+    const records = await getDbClient().query.buyOrders.findMany({
       where: and(
         eq(buyOrders.buildingId, buildingId),
         eq(buyOrders.status, "active"),
@@ -54,14 +54,14 @@ export class DrizzleBuyOrderRepository implements BuyOrderRepository {
   }
 
   async updateStatus(id: number, status: BuyOrderStatus): Promise<void> {
-    await db
+    await getDbClient()
       .update(buyOrders)
       .set({ status, updatedAt: new Date() })
       .where(eq(buyOrders.id, id));
   }
 
   async updateQuantity(id: number, quantity: number): Promise<void> {
-    await db
+    await getDbClient()
       .update(buyOrders)
       .set({ quantity, updatedAt: new Date() })
       .where(eq(buyOrders.id, id));
