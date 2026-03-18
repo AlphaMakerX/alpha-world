@@ -55,7 +55,13 @@ export function createPlayerAnimations(scene: Phaser.Scene): void {
 export function updatePlayerAnimation(
   player: PlayerSprite,
   cursors: Phaser.Types.Input.Keyboard.CursorKeys,
+  isMoving = true,
 ): void {
+  if (!isMoving) {
+    player.anims.play('turn', true)
+    return
+  }
+
   if (cursors.left.isDown) {
     player.anims.play('left', true)
     return

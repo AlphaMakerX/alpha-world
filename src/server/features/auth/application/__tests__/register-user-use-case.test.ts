@@ -52,6 +52,9 @@ function createAdamUser() {
     money: 1_000_000_000,
     positionX: 140,
     positionY: 600,
+    staminaCurrent: 100,
+    staminaMax: 100,
+    staminaUpdatedAt: new Date("2025-01-01"),
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
   });

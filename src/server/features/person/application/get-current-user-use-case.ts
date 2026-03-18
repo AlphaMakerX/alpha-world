@@ -10,6 +10,10 @@ type GetCurrentUserSuccessResult = {
       x: number;
       y: number;
     };
+    stamina: {
+      current: number;
+      max: number;
+    };
   };
 };
 
@@ -48,6 +52,10 @@ export async function executeGetCurrentUserUseCase(input: {
       position: {
         x: user.positionX,
         y: user.positionY,
+      },
+      stamina: {
+        current: user.staminaCurrent,
+        max: user.staminaMax,
       },
     },
   };

@@ -19,6 +19,9 @@ export const users = pgTable(
     money: numeric("money", { precision: 12, scale: 2 }).notNull().default("10000"),
     positionX: numeric("position_x", { precision: 10, scale: 2 }).notNull().default("140"),
     positionY: numeric("position_y", { precision: 10, scale: 2 }).notNull().default("600"),
+    staminaCurrent: numeric("stamina_current", { precision: 10, scale: 2 }).notNull().default("100"),
+    staminaMax: numeric("stamina_max", { precision: 10, scale: 2 }).notNull().default("100"),
+    staminaUpdatedAt: timestamp("stamina_updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -27,6 +30,9 @@ export const users = pgTable(
     check("users_money_chk", sql`${table.money} >= 0`),
     check("users_position_x_chk", sql`${table.positionX} >= 0`),
     check("users_position_y_chk", sql`${table.positionY} >= 0`),
+    check("users_stamina_current_chk", sql`${table.staminaCurrent} >= 0`),
+    check("users_stamina_max_chk", sql`${table.staminaMax} > 0`),
+    check("users_stamina_within_max_chk", sql`${table.staminaCurrent} <= ${table.staminaMax}`),
   ],
 );
 

@@ -13,6 +13,9 @@ function toDomainUser(record: typeof users.$inferSelect) {
     money: Number(record.money),
     positionX: Number(record.positionX),
     positionY: Number(record.positionY),
+    staminaCurrent: Number(record.staminaCurrent),
+    staminaMax: Number(record.staminaMax),
+    staminaUpdatedAt: record.staminaUpdatedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
@@ -54,6 +57,9 @@ export class DrizzleUserRepository implements UserRepository {
         money: user.money.toString(),
         positionX: user.positionX.toString(),
         positionY: user.positionY.toString(),
+        staminaCurrent: user.staminaCurrent.toString(),
+        staminaMax: user.staminaMax.toString(),
+        staminaUpdatedAt: user.staminaUpdatedAt,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -65,6 +71,9 @@ export class DrizzleUserRepository implements UserRepository {
           money: user.money.toString(),
           positionX: user.positionX.toString(),
           positionY: user.positionY.toString(),
+          staminaCurrent: user.staminaCurrent.toString(),
+          staminaMax: user.staminaMax.toString(),
+          staminaUpdatedAt: user.staminaUpdatedAt,
           updatedAt: new Date(),
         },
       });

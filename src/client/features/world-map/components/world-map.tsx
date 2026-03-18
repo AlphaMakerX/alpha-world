@@ -3,6 +3,7 @@
 import { Modal, message } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createWorldMapScene, WORLD_MAP_SYNC_EVENT } from "./world-map-scene";
+import type { PlayerStaminaPayload } from "./world-map-scene";
 import { WorldMapHeader } from "./world-map-header";
 import { trpc } from "@/client/lib/trpc";
 import { signOut, useSession } from "next-auth/react";
@@ -17,11 +18,16 @@ import type { BuildingType } from "@/client/features/building/types/building-ui"
 import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilities";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
+import { PLAYER_MAX_STAMINA } from "@/shared/gameplay/player-stamina";
 
 const MAP_MAX_X = 3200;
 const MAP_MAX_Y = 1200;
 const POSITION_SYNC_INTERVAL_MS = 2000;
 const POSITION_MIN_DISTANCE_TO_SYNC = 20;
+const DEFAULT_PLAYER_STAMINA: PlayerStaminaPayload = {
+  current: PLAYER_MAX_STAMINA,
+  max: PLAYER_MAX_STAMINA,
+};
 
 function getDistance(from: { x: number; y: number }, to: { x: number; y: number }): number {
   return Math.hypot(to.x - from.x, to.y - from.y);
@@ -55,11 +61,13 @@ export function WorldMap() {
   const [personModalOpen, setPersonModalOpen] = useState(false);
   const [gameInfoModalOpen, setGameInfoModalOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [playerStamina, setPlayerStamina] = useState<PlayerStaminaPayload>(DEFAULT_PLAYER_STAMINA);
   const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const isAuthenticatedRef = useRef(false);
   const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
   const playerPosition = authStatus === "authenticated" ? meData?.user.position : undefined;
+  const serverPlayerStamina = authStatus === "authenticated" ? meData?.user.stamina : undefined;
   const worldMapPlots = useMemo<WorldMapRenderablePlot[]>(
     () =>
       (data?.plots ?? []).map((plot) => ({
@@ -180,8 +188,9 @@ export function WorldMap() {
       const latestPosition = pendingPlayerPositionRef.current;
       if (latestPosition && authStatus === "authenticated") {
         try {
-          await updatePositionMutation.mutateAsync({ position: latestPosition });
-          lastSyncedPlayerPositionRef.current = latestPosition;
+          const result = await updatePositionMutation.mutateAsync({ position: latestPosition });
+          lastSyncedPlayerPositionRef.current = result.user.position;
+          setPlayerStamina(result.user.stamina);
           pendingPlayerPositionRef.current = null;
         } catch {
           // 下线前保存位置失败时不阻塞登出流程。
@@ -199,6 +208,16 @@ export function WorldMap() {
   useEffect(() => {
     isAuthenticatedRef.current = authStatus === "authenticated";
   }, [authStatus]);
+
+  useEffect(() => {
+    if (serverPlayerStamina) {
+      setPlayerStamina(serverPlayerStamina);
+      return;
+    }
+    if (authStatus !== "authenticated") {
+      setPlayerStamina(DEFAULT_PLAYER_STAMINA);
+    }
+  }, [authStatus, serverPlayerStamina?.current, serverPlayerStamina?.max]);
 
   useEffect(() => {
     if (authStatus !== "authenticated" || !currentUserId) {
@@ -223,9 +242,18 @@ export function WorldMap() {
       }
       void updatePositionMutation
         .mutateAsync({ position: pendingPosition })
-        .then(() => {
-          lastSyncedPlayerPositionRef.current = pendingPosition;
+        .then((result) => {
+          lastSyncedPlayerPositionRef.current = result.user.position;
+          setPlayerStamina(result.user.stamina);
           pendingPlayerPositionRef.current = null;
+          if (isGameReady && gameRef.current) {
+            gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
+              plots: worldMapPlots,
+              currentUserId,
+              playerPosition: result.user.position,
+              playerStamina: result.user.stamina,
+            });
+          }
         })
         .catch(() => {
           // 定时同步失败时保留待同步坐标，等待下一轮重试。
@@ -235,7 +263,7 @@ export function WorldMap() {
     return () => {
       window.clearInterval(timer);
     };
-  }, [authStatus, currentUserId, updatePositionMutation]);
+  }, [authStatus, currentUserId, isGameReady, updatePositionMutation, worldMapPlots]);
 
   const handleBuild = async (buildingType: BuildingType) => {
     if (!selectedPlot) {
@@ -434,6 +462,7 @@ export function WorldMap() {
         plots: worldMapPlots,
         currentUserId,
         playerPosition,
+        playerStamina: serverPlayerStamina,
         onPlayerPositionChange: (position) => {
           if (!isAuthenticatedRef.current) {
             return;
@@ -454,6 +483,14 @@ export function WorldMap() {
             return;
           }
           pendingPlayerPositionRef.current = clampedPosition;
+        },
+        onPlayerStaminaChange: (stamina) => {
+          setPlayerStamina((previous) => {
+            if (previous.current === stamina.current && previous.max === stamina.max) {
+              return previous;
+            }
+            return stamina;
+          });
         },
         onOpenExistingPlot: (plotId) => {
           setSelectedPlotId((prev) => (prev === plotId ? null : plotId));
@@ -512,6 +549,7 @@ export function WorldMap() {
       plots: worldMapPlots,
       currentUserId,
       playerPosition,
+      playerStamina: serverPlayerStamina,
     });
   }, [
     isGameReady,
@@ -520,6 +558,8 @@ export function WorldMap() {
     currentUserId,
     playerPosition?.x,
     playerPosition?.y,
+    serverPlayerStamina?.current,
+    serverPlayerStamina?.max,
   ]);
 
   return (
@@ -529,6 +569,8 @@ export function WorldMap() {
         authStatus={authStatus}
         username={headerUsername}
         money={headerMoney}
+        staminaCurrent={playerStamina.current}
+        staminaMax={playerStamina.max}
         onOpenProfileClick={() => {
           if (authStatus !== "authenticated") {
             setLoginModalOpen(true);
