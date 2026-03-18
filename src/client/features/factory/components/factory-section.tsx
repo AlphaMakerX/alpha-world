@@ -4,6 +4,9 @@ import { FactoryOrdersSection } from "@/client/features/factory-orders/component
 import { RecipeDetail } from "@/client/features/factory/components/recipe-detail";
 import { RecipeList } from "@/client/features/factory/components/recipe-list";
 
+type RecipeCategory = FactoryRecipe["category"];
+type RecipeFilter = "all" | RecipeCategory;
+
 type FactorySectionProps = {
   factoryRecipes: FactoryRecipe[];
   factoryOrders?: FactoryOrders;
@@ -18,25 +21,46 @@ export function FactorySection({
   onStartProduction,
 }: FactorySectionProps) {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<RecipeFilter>("all");
+
+  const filteredRecipes = useMemo(
+    () =>
+      selectedCategory === "all"
+        ? factoryRecipes
+        : factoryRecipes.filter((recipe) => recipe.category === selectedCategory),
+    [factoryRecipes, selectedCategory],
+  );
+
   const selectedRecipe = useMemo(
-    () => factoryRecipes.find((recipe) => recipe.id === selectedRecipeId) ?? null,
-    [factoryRecipes, selectedRecipeId],
+    () => filteredRecipes.find((recipe) => recipe.id === selectedRecipeId) ?? null,
+    [filteredRecipes, selectedRecipeId],
   );
 
   useEffect(() => {
     if (!factoryRecipes.length) {
+      setSelectedCategory("all");
+      setSelectedRecipeId(null);
+      return;
+    }
+    if (selectedCategory !== "all" && !factoryRecipes.some((recipe) => recipe.category === selectedCategory)) {
+      setSelectedCategory("all");
+    }
+  }, [factoryRecipes, selectedCategory]);
+
+  useEffect(() => {
+    if (!filteredRecipes.length) {
       setSelectedRecipeId(null);
       return;
     }
     if (!selectedRecipeId) {
-      setSelectedRecipeId(factoryRecipes[0]?.id ?? null);
+      setSelectedRecipeId(filteredRecipes[0]?.id ?? null);
       return;
     }
-    const exists = factoryRecipes.some((recipe) => recipe.id === selectedRecipeId);
+    const exists = filteredRecipes.some((recipe) => recipe.id === selectedRecipeId);
     if (!exists) {
-      setSelectedRecipeId(factoryRecipes[0]?.id ?? null);
+      setSelectedRecipeId(filteredRecipes[0]?.id ?? null);
     }
-  }, [factoryRecipes, selectedRecipeId]);
+  }, [filteredRecipes, selectedRecipeId]);
 
   return (
     <div className="space-y-2">
@@ -44,9 +68,12 @@ export function FactorySection({
       {factoryRecipes.length ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <RecipeList
-            recipes={factoryRecipes}
+            allRecipes={factoryRecipes}
+            recipes={filteredRecipes}
             selectedRecipeId={selectedRecipeId}
+            selectedCategory={selectedCategory}
             disabled={productionLoading}
+            onSelectCategory={setSelectedCategory}
             onSelect={setSelectedRecipeId}
           />
           <div className="space-y-3 rounded-lg border border-blue-100 bg-gradient-to-b from-white to-blue-50/40 p-3">
