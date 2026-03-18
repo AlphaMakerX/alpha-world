@@ -8,6 +8,7 @@ import { systemAccountService, transactionLedgerRepository, userRepository } fro
 import { systemInitializationRepository } from "@/server/features/system-initialization/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
 import { buildingRepository } from "@/server/features/building/infrastructure";
+import { buyOrderRepository } from "@/server/features/purchasing-station/infrastructure";
 import { transact } from "@/server/lib/db";
 
 const initializeSystemSchema = z.object({
@@ -19,6 +20,7 @@ const initializeSystemSchema = z.object({
       "plot",
       "bot1-manager-plot-purchase",
       "bot1-manager-purchasing-station-build",
+      "bot1-manager-buy-orders",
     ])
     .optional(),
 });
@@ -40,6 +42,7 @@ export async function executeInitializeSystemUseCase(input?: unknown): Promise<I
     passwordHasher,
     systemAccountService,
     plotRepository,
+    buyOrderRepository,
     transact,
     systemInitializationRepository,
   });

@@ -3,12 +3,14 @@ import { executeAdamStep } from "./execute-adam-step";
 import { executeBot1ManagerStep } from "./execute-bot1-manager-step";
 import { executeBot1ManagerPlotPurchaseStep } from "./execute-bot1-manager-plot-purchase-step";
 import { executeBot1ManagerPurchasingStationBuildStep } from "./execute-bot1-manager-purchasing-station-build-step";
+import { executeBot1ManagerBuyOrdersStep } from "./execute-bot1-manager-buy-orders-step";
 import { executePlotStep } from "./execute-plot-step";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import {
   ADAM_PERSONA_CONFIG,
   BOT1_MANAGER_PERSONA_CONFIG,
@@ -23,7 +25,8 @@ export type InitializeSystemRequestedStep =
   | "bot1-manager"
   | "plot"
   | "bot1-manager-plot-purchase"
-  | "bot1-manager-purchasing-station-build";
+  | "bot1-manager-purchasing-station-build"
+  | "bot1-manager-buy-orders";
 export type InitializeSystemStep = Exclude<InitializeSystemRequestedStep, "all">;
 
 export type InitializeSystemCommand = {
@@ -62,6 +65,7 @@ export type InitializeSystemUseCaseDeps = {
   passwordHasher: PasswordHasher;
   systemAccountService: SystemAccountService;
   plotRepository: PlotRepository;
+  buyOrderRepository: BuyOrderRepository;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
   systemInitializationRepository: {
     hasMoneyTransfer(input: {
@@ -126,6 +130,13 @@ export async function executeInitializeSystemUseCase(
         return bot1ManagerPurchasingStationBuildResult;
       }
 
+      const bot1ManagerBuyOrdersResult = await executeBot1ManagerBuyOrdersStep({
+        deps,
+      });
+      if (isFailureResult(bot1ManagerBuyOrdersResult)) {
+        return bot1ManagerBuyOrdersResult;
+      }
+
       return {
         ok: true,
         summary: {
@@ -135,6 +146,7 @@ export async function executeInitializeSystemUseCase(
             "plot",
             "bot1-manager-plot-purchase",
             "bot1-manager-purchasing-station-build",
+            "bot1-manager-buy-orders",
           ],
           adamUsername: ADAM_PERSONA_CONFIG.username,
           botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
@@ -247,6 +259,28 @@ export async function executeInitializeSystemUseCase(
         ok: true,
         summary: {
           executedSteps: ["bot1-manager-purchasing-station-build"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
+          transferredAmount: 0,
+          transferSkipped: true,
+          plotsSeededCount: 0,
+          botPurchasedPlotsCount: 0,
+          plotRange: null,
+        },
+      };
+    }
+    case "bot1-manager-buy-orders": {
+      const bot1ManagerBuyOrdersResult = await executeBot1ManagerBuyOrdersStep({
+        deps,
+      });
+      if (isFailureResult(bot1ManagerBuyOrdersResult)) {
+        return bot1ManagerBuyOrdersResult;
+      }
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["bot1-manager-buy-orders"],
           adamUsername: ADAM_PERSONA_CONFIG.username,
           botUsername: BOT1_MANAGER_PERSONA_CONFIG.username,
           transferredAmount: 0,

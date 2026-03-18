@@ -6,7 +6,8 @@ type Step =
   | "bot1-manager"
   | "plot"
   | "bot1-manager-plot-purchase"
-  | "bot1-manager-purchasing-station-build";
+  | "bot1-manager-purchasing-station-build"
+  | "bot1-manager-buy-orders";
 type RequestedStep = "all" | Step;
 
 function parseArgs(): { step?: RequestedStep } {
@@ -22,10 +23,11 @@ function parseArgs(): { step?: RequestedStep } {
       "plot",
       "bot1-manager-plot-purchase",
       "bot1-manager-purchasing-station-build",
+      "bot1-manager-buy-orders",
     ].includes(step)
   ) {
     throw new Error(
-      "参数 --step 仅支持 all,adam,bot1-manager,plot,bot1-manager-plot-purchase,bot1-manager-purchasing-station-build",
+      "参数 --step 仅支持 all,adam,bot1-manager,plot,bot1-manager-plot-purchase,bot1-manager-purchasing-station-build,bot1-manager-buy-orders",
     );
   }
 
@@ -68,6 +70,9 @@ async function initializeSystem() {
   }
   if (result.summary.executedSteps.includes("bot1-manager-purchasing-station-build")) {
     console.log("Bot1 Manager built a purchasing station.");
+  }
+  if (result.summary.executedSteps.includes("bot1-manager-buy-orders")) {
+    console.log("Bot1 Manager published buy orders for badge production materials.");
   }
 }
 
