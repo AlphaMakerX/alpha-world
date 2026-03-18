@@ -4,7 +4,7 @@ export const BOT1_PERSONA_CONFIG = {
   username: "bot1",
   transferAmount: 10_000_000,
   transferReferenceId: "system_init_bot1_transfer_v1",
-  initialPasswordEnvKey: "BOT1_INITIAL_PASSWORD",
+  initialPasswordEnvKey: "BOT_INITIAL_PASSWORD",
 };
 
 export const BOT1_PERSONA_DEFINITION: PersonaDefinition = {

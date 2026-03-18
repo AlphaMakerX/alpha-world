@@ -70,32 +70,22 @@ export async function executeInitializeSystemUseCase(
   deps: InitializeSystemUseCaseDeps,
 ): Promise<InitializeSystemResult> {
   const requestedStep = command.step ?? DEFAULT_STEP;
-  const executedSteps: InitializeSystemStep[] = [];
-
-  if (BOT1_PERSONA_CONFIG.transferAmount <= 0) {
-    return {
-      ok: false,
-      error: "转账金额必须大于 0",
-      code: "BAD_REQUEST",
-    };
-  }
-
-  let transferSkipped = false;
-  let plotsSeededCount = 0;
-  let plotRange: { from: string; to: string } | null = null;
 
   switch (requestedStep) {
     case "all": {
-      await executeAdamStep({
+      const adamResult = await executeAdamStep({
         deps,
       });
-      executedSteps.push("adam");
+      if (isFailureResult(adamResult)) {
+        return adamResult;
+      }
 
       const bot1Result = await executeBot1Step({
         deps,
       });
-      transferSkipped = bot1Result.transferSkipped;
-      executedSteps.push("bot1");
+      if (isFailureResult(bot1Result)) {
+        return bot1Result;
+      }
 
       const plotResult = await executePlotStep({
         deps,
@@ -103,25 +93,61 @@ export async function executeInitializeSystemUseCase(
       if (isFailureResult(plotResult)) {
         return plotResult;
       }
-      plotsSeededCount = plotResult.plotsSeededCount;
-      plotRange = plotResult.plotRange;
-      executedSteps.push("plot");
-      break;
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["adam", "bot1", "plot"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_PERSONA_CONFIG.username,
+          transferredAmount: BOT1_PERSONA_CONFIG.transferAmount,
+          transferSkipped: bot1Result.transferSkipped,
+          plotsSeededCount: plotResult.plotsSeededCount,
+          plotRange: plotResult.plotRange,
+        },
+      };
     }
     case "adam": {
-      await executeAdamStep({
+      const adamResult = await executeAdamStep({
         deps,
       });
-      executedSteps.push("adam");
-      break;
+      if (isFailureResult(adamResult)) {
+        return adamResult;
+      }
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["adam"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_PERSONA_CONFIG.username,
+          transferredAmount: 0,
+          transferSkipped: true,
+          plotsSeededCount: 0,
+          plotRange: null,
+        },
+      };
     }
     case "bot1": {
       const bot1Result = await executeBot1Step({
         deps,
       });
-      transferSkipped = bot1Result.transferSkipped;
-      executedSteps.push("bot1");
-      break;
+      if (isFailureResult(bot1Result)) {
+        return bot1Result;
+      }
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["bot1"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_PERSONA_CONFIG.username,
+          transferredAmount: BOT1_PERSONA_CONFIG.transferAmount,
+          transferSkipped: bot1Result.transferSkipped,
+          plotsSeededCount: 0,
+          plotRange: null,
+        },
+      };
     }
     case "plot": {
       const plotResult = await executePlotStep({
@@ -130,27 +156,19 @@ export async function executeInitializeSystemUseCase(
       if (isFailureResult(plotResult)) {
         return plotResult;
       }
-      plotsSeededCount = plotResult.plotsSeededCount;
-      plotRange = plotResult.plotRange;
-      executedSteps.push("plot");
-      break;
+
+      return {
+        ok: true,
+        summary: {
+          executedSteps: ["plot"],
+          adamUsername: ADAM_PERSONA_CONFIG.username,
+          botUsername: BOT1_PERSONA_CONFIG.username,
+          transferredAmount: 0,
+          transferSkipped: true,
+          plotsSeededCount: plotResult.plotsSeededCount,
+          plotRange: plotResult.plotRange,
+        },
+      };
     }
   }
-
-  if (!executedSteps.includes("bot1")) {
-    transferSkipped = true;
-  }
-
-  return {
-    ok: true,
-    summary: {
-      executedSteps,
-      adamUsername: ADAM_PERSONA_CONFIG.username,
-      botUsername: BOT1_PERSONA_CONFIG.username,
-      transferredAmount: executedSteps.includes("bot1") ? BOT1_PERSONA_CONFIG.transferAmount : 0,
-      transferSkipped,
-      plotsSeededCount,
-      plotRange,
-    },
-  };
 }

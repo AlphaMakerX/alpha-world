@@ -6,6 +6,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { ADAM_PERSONA_CONFIG, BOT1_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
+import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 type ExecuteBot1StepDeps = {
   userRepository: UserRepository;
@@ -21,20 +22,51 @@ type ExecuteBot1StepDeps = {
   };
 };
 
-function getBot1InitialPasswordFromEnv(): string {
+type Bot1StepSuccessResult = {
+  transferSkipped: boolean;
+};
+
+type Bot1StepFailureResult = {
+  ok: false;
+  error: string;
+  code: UseCaseErrorCode;
+};
+
+export type ExecuteBot1StepResult = Bot1StepSuccessResult | Bot1StepFailureResult;
+
+function getBot1InitialPasswordFromEnv():
+  | { ok: true; value: string }
+  | { ok: false; error: string; code: UseCaseErrorCode } {
   const envKey = BOT1_PERSONA_CONFIG.initialPasswordEnvKey;
   const value = process.env[envKey];
   if (!value || value.trim().length === 0) {
-    throw new Error(`${envKey} is not set. Please configure it in your environment.`);
+    return {
+      ok: false,
+      error: `${envKey} is not set. Please configure it in your environment.`,
+      code: "BAD_REQUEST",
+    };
   }
-  return value;
+  return { ok: true, value };
 }
 
 export async function executeBot1Step(input: {
   deps: ExecuteBot1StepDeps;
-}): Promise<{ transferSkipped: boolean }> {
+}): Promise<ExecuteBot1StepResult> {
+  if (BOT1_PERSONA_CONFIG.transferAmount <= 0) {
+    return {
+      ok: false,
+      error: "转账金额必须大于 0",
+      code: "BAD_REQUEST",
+    };
+  }
+
+  const initialPasswordResult = getBot1InitialPasswordFromEnv();
+  if (!initialPasswordResult.ok) {
+    return initialPasswordResult;
+  }
+
   let transferSkipped = false;
-  const botPasswordHash = await input.deps.passwordHasher.hash(getBot1InitialPasswordFromEnv());
+  const botPasswordHash = await input.deps.passwordHasher.hash(initialPasswordResult.value);
   const botUsername = Username.create(BOT1_PERSONA_CONFIG.username).getValue();
 
   let bot = await input.deps.userRepository.findByUsername(Username.create(botUsername));
