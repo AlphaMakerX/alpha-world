@@ -2,7 +2,7 @@ import type { PersonQueryRepository } from "@/server/features/person/domain/repo
 import {
   ADAM_INITIAL_MONEY,
   ADAM_USERNAME,
-} from "@/server/features/shared-kernel/domain/adam";
+} from "@/server/features/person/domain/constants/adam";
 
 export type LeaderboardEntry = {
   rank: number;

@@ -1,5 +1,5 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
+import { ADAM_USER_ID } from "@/server/features/person/domain/constants/adam";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
 

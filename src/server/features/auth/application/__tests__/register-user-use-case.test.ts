@@ -9,7 +9,7 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
+import { ADAM_USER_ID } from "@/server/features/person/domain/constants/adam";
 
 /**
  * 构造 RegisterUserUseCase 的 mock 依赖。

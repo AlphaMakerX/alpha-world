@@ -6,7 +6,7 @@ import type {
   WealthLeaderboardItem,
 } from "@/server/features/person/domain/repositories/person-query-repository";
 import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
-import { ADAM_USER_ID } from "@/server/features/shared-kernel/domain/adam";
+import { ADAM_USER_ID } from "@/server/features/person/domain/constants/adam";
 
 class DrizzlePersonQueryRepository implements PersonQueryRepository {
   async listWealthLeaderboard(limit: number): Promise<WealthLeaderboardItem[]> {

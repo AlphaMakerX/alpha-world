@@ -1,24 +1,39 @@
-import { randomUUID } from "crypto";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
-import { User } from "@/server/features/person/domain/entities/user";
+import { executeAdamStep } from "./execute-adam-step";
+import { executeBot1Step } from "./execute-bot1-step";
+import { executePlotStep } from "./execute-plot-step";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import { Username } from "@/server/features/person/domain/value-objects/username";
-import { ADAM_INITIAL_MONEY, ADAM_INITIAL_PASSWORD, ADAM_USER_ID, ADAM_USERNAME } from "@/server/features/shared-kernel/domain/adam";
+import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import { ADAM_USERNAME } from "@/server/features/person/domain/constants/adam";
+import {
+  BOT1_TRANSFER_AMOUNT,
+  BOT1_USERNAME,
+} from "@/server/features/person/domain/constants/bot";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
-const DEFAULT_BOT_USERNAME = "bot1";
-const DEFAULT_BOT_PASSWORD = "bot123456";
-const DEFAULT_BOT_TRANSFER_AMOUNT = 10_000_000;
-const DEFAULT_BOT_TRANSFER_REFERENCE_ID = "system_init_bot1_transfer_v1";
+const DEFAULT_STEP: InitializeSystemRequestedStep = "all";
+
+export type InitializeSystemRequestedStep = "all" | "adam" | "bot1" | "plot";
+export type InitializeSystemStep = Exclude<InitializeSystemRequestedStep, "all">;
+
+export type InitializeSystemCommand = {
+  step?: InitializeSystemRequestedStep;
+};
 
 type InitializeSystemSuccessResult = {
   ok: true;
   summary: {
+    executedSteps: InitializeSystemStep[];
     adamUsername: string;
     botUsername: string;
     transferredAmount: number;
     transferSkipped: boolean;
+    plotsSeededCount: number;
+    plotRange: {
+      from: string;
+      to: string;
+    } | null;
   };
 };
 
@@ -34,20 +49,34 @@ export type InitializeSystemUseCaseDeps = {
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
   passwordHasher: PasswordHasher;
+  systemAccountService: SystemAccountService;
   systemInitializationRepository: {
     hasMoneyTransfer(input: {
       fromUserId: string;
       toUserId: string;
       referenceId: string;
     }): Promise<boolean>;
+    upsertPlotsPriceIfUnowned(input: {
+      totalRows: number;
+      colsPerRow: number;
+      minPrice: number;
+      maxPrice: number;
+    }): Promise<void>;
   };
-  transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+function isFailureResult(result: unknown): result is InitializeSystemFailureResult {
+  return typeof result === "object" && result !== null && "ok" in result && result.ok === false;
+}
+
 export async function executeInitializeSystemUseCase(
+  command: InitializeSystemCommand = {},
   deps: InitializeSystemUseCaseDeps,
 ): Promise<InitializeSystemResult> {
-  if (DEFAULT_BOT_TRANSFER_AMOUNT <= 0) {
+  const requestedStep = command.step ?? DEFAULT_STEP;
+  const executedSteps: InitializeSystemStep[] = [];
+
+  if (BOT1_TRANSFER_AMOUNT <= 0) {
     return {
       ok: false,
       error: "转账金额必须大于 0",
@@ -55,80 +84,77 @@ export async function executeInitializeSystemUseCase(
     };
   }
 
-  const botUsername = Username.create(DEFAULT_BOT_USERNAME).getValue();
-  const adamPasswordHash = await deps.passwordHasher.hash(ADAM_INITIAL_PASSWORD);
-  const botPasswordHash = await deps.passwordHasher.hash(DEFAULT_BOT_PASSWORD);
   let transferSkipped = false;
+  let plotsSeededCount = 0;
+  let plotRange: { from: string; to: string } | null = null;
 
-  await deps.transact(async () => {
-    const adam = User.register({
-      id: ADAM_USER_ID,
-      username: ADAM_USERNAME,
-      passwordHash: adamPasswordHash,
-      initialMoney: ADAM_INITIAL_MONEY,
-    });
-    await deps.userRepository.save(adam);
-
-    let bot = await deps.userRepository.findByUsername(Username.create(botUsername));
-    if (!bot) {
-      bot = User.register({
-        id: randomUUID(),
-        username: botUsername,
-        passwordHash: botPasswordHash,
-        initialMoney: 0,
+  switch (requestedStep) {
+    case "all": {
+      await executeAdamStep({
+        deps,
       });
-    } else {
-      bot.changePasswordHash(botPasswordHash);
+      executedSteps.push("adam");
+
+      const bot1Result = await executeBot1Step({
+        deps,
+      });
+      transferSkipped = bot1Result.transferSkipped;
+      executedSteps.push("bot1");
+
+      const plotResult = await executePlotStep({
+        deps,
+      });
+      if (isFailureResult(plotResult)) {
+        return plotResult;
+      }
+      plotsSeededCount = plotResult.plotsSeededCount;
+      plotRange = plotResult.plotRange;
+      executedSteps.push("plot");
+      break;
     }
-    await deps.userRepository.save(bot);
-
-    const transferExists = await deps.systemInitializationRepository.hasMoneyTransfer({
-      fromUserId: ADAM_USER_ID,
-      toUserId: bot.id,
-      referenceId: DEFAULT_BOT_TRANSFER_REFERENCE_ID,
-    });
-    if (transferExists) {
-      transferSkipped = true;
-      return;
+    case "adam": {
+      await executeAdamStep({
+        deps,
+      });
+      executedSteps.push("adam");
+      break;
     }
-
-    const latestAdam = await deps.userRepository.findById(ADAM_USER_ID);
-    const latestBot = await deps.userRepository.findById(bot.id);
-    if (!latestAdam || !latestBot) {
-      throw new Error("系统初始化失败：用户状态异常");
+    case "bot1": {
+      const bot1Result = await executeBot1Step({
+        deps,
+      });
+      transferSkipped = bot1Result.transferSkipped;
+      executedSteps.push("bot1");
+      break;
     }
+    case "plot": {
+      const plotResult = await executePlotStep({
+        deps,
+      });
+      if (isFailureResult(plotResult)) {
+        return plotResult;
+      }
+      plotsSeededCount = plotResult.plotsSeededCount;
+      plotRange = plotResult.plotRange;
+      executedSteps.push("plot");
+      break;
+    }
+  }
 
-    latestAdam.spendMoney(DEFAULT_BOT_TRANSFER_AMOUNT);
-    latestBot.receiveMoney(DEFAULT_BOT_TRANSFER_AMOUNT);
-    await deps.userRepository.save(latestAdam);
-    await deps.userRepository.save(latestBot);
-
-    await deps.transactionLedgerRepository.record({
-      fromUserId: latestAdam.id,
-      toUserId: latestBot.id,
-      amount: DEFAULT_BOT_TRANSFER_AMOUNT,
-      type: "system_init_transfer",
-      referenceId: DEFAULT_BOT_TRANSFER_REFERENCE_ID,
-      description: `系统初始化转账 -> ${latestBot.username.getValue()}`,
-    });
-  });
-
-  const bot = await deps.userRepository.findByUsername(Username.create(botUsername));
-  if (!bot) {
-    return {
-      ok: false,
-      error: "系统初始化失败：未找到 bot 账户",
-      code: "NOT_FOUND",
-    };
+  if (!executedSteps.includes("bot1")) {
+    transferSkipped = true;
   }
 
   return {
     ok: true,
     summary: {
+      executedSteps,
       adamUsername: ADAM_USERNAME,
-      botUsername,
-      transferredAmount: DEFAULT_BOT_TRANSFER_AMOUNT,
+      botUsername: BOT1_USERNAME,
+      transferredAmount: executedSteps.includes("bot1") ? BOT1_TRANSFER_AMOUNT : 0,
       transferSkipped,
+      plotsSeededCount,
+      plotRange,
     },
   };
 }

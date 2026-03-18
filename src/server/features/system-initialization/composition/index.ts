@@ -3,34 +3,16 @@ import {
   executeInitializeSystemUseCase as executeInitializeSystemUseCaseImpl,
   type InitializeSystemResult,
 } from "@/server/features/system-initialization/application/initialize-system-use-case";
-import {
-  executeSeedPlotsP1UseCase as executeSeedPlotsP1UseCaseImpl,
-  type SeedPlotsP1Result,
-} from "@/server/features/system-initialization/application/seed-plots-p1-use-case";
 import { passwordHasher } from "@/server/features/auth/infrastructure";
-import { transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
+import { systemAccountService, transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
 import { systemInitializationRepository } from "@/server/features/system-initialization/infrastructure";
-import { transact } from "@/server/lib/db";
 
-export const seedPlotsP1Schema = z.object({
-  totalRows: z.number().int().positive(),
-  colsPerRow: z.number().int().positive(),
-  minPrice: z.number().positive(),
-  maxPrice: z.number().positive(),
+const initializeSystemSchema = z.object({
+  step: z.enum(["all", "adam", "bot1", "plot"]).optional(),
 });
 
-export async function executeInitializeSystemUseCase(): Promise<InitializeSystemResult> {
-  return executeInitializeSystemUseCaseImpl({
-    userRepository,
-    transactionLedgerRepository,
-    passwordHasher,
-    systemInitializationRepository,
-    transact,
-  });
-}
-
-export async function executeSeedPlotsP1UseCase(input: unknown): Promise<SeedPlotsP1Result> {
-  const parsed = seedPlotsP1Schema.safeParse(input);
+export async function executeInitializeSystemUseCase(input?: unknown): Promise<InitializeSystemResult> {
+  const parsed = initializeSystemSchema.safeParse(input ?? {});
   if (!parsed.success) {
     return {
       ok: false,
@@ -39,7 +21,11 @@ export async function executeSeedPlotsP1UseCase(input: unknown): Promise<SeedPlo
     };
   }
 
-  return executeSeedPlotsP1UseCaseImpl(parsed.data, {
+  return executeInitializeSystemUseCaseImpl(parsed.data, {
+    userRepository,
+    transactionLedgerRepository,
+    passwordHasher,
+    systemAccountService,
     systemInitializationRepository,
   });
 }

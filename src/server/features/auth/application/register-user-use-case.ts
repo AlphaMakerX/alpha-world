@@ -5,7 +5,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
-import { ADAM_USERNAME } from "@/server/features/shared-kernel/domain/adam";
+import { ADAM_USERNAME } from "@/server/features/person/domain/constants/adam";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 export type RegisterUserCommand = {

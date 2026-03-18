@@ -302,9 +302,8 @@ Adam ──────────→ 新玩家
 
 1. 配置 `.env.local`（数据库连接、Auth 密钥）
 2. `npm run drizzle:push` — 推送数据库 Schema
-3. `npm run init:system` — 创建 Adam 和 Bot 用户
-4. `npm run seed:plots:p1` — 生成种子地块
-5. `npm run dev` — 启动开发服务器（端口 8080）
+3. `npm run init:system` — 创建 Adam / Bot 用户并初始化地图种子地块
+4. `npm run dev` — 启动开发服务器（端口 8080）
 
 ### 9.2 环境变量
 
