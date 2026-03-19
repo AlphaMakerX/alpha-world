@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal, message } from "antd";
+import { Modal, Spin, message } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createWorldMapScene, WORLD_MAP_SYNC_EVENT } from "./world-map-scene";
 import type { PlayerStaminaPayload } from "./world-map-scene";
@@ -33,6 +33,16 @@ function getDistance(from: { x: number; y: number }, to: { x: number; y: number 
   return Math.hypot(to.x - from.x, to.y - from.y);
 }
 
+function isInitialQueryLoading(options: {
+  enabled: boolean;
+  hasData: boolean;
+  isLoading: boolean;
+  isFetching: boolean;
+}): boolean {
+  const { enabled, hasData, isLoading, isFetching } = options;
+  return enabled && !hasData && (isLoading || isFetching);
+}
+
 export function WorldMap() {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
@@ -40,11 +50,18 @@ export function WorldMap() {
   const trpcUtils = trpc.useUtils();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<import("phaser").Game | null>(null);
+  const hasInitializedSceneRef = useRef(false);
   const [isGameReady, setIsGameReady] = useState(false);
-  const { data } = trpc.plot.list.useQuery();
-  const { data: meData } = trpc.person.me.useQuery(undefined, {
-    enabled: authStatus === "authenticated",
-  });
+  const {
+    data: plotData,
+    isLoading: isPlotLoading,
+    isFetching: isPlotFetching,
+  } = trpc.plot.list.useQuery();
+  const {
+    data: meData,
+    isLoading: isMeLoading,
+    isFetching: isMeFetching,
+  } = trpc.person.me.useQuery(undefined, { enabled: authStatus === "authenticated" });
   const purchaseMutation = trpc.plot.purchase.useMutation();
   const updatePositionMutation = trpc.person.updatePosition.useMutation();
   const buildMutation = trpc.building.build.useMutation();
@@ -70,12 +87,12 @@ export function WorldMap() {
   const serverPlayerStamina = authStatus === "authenticated" ? meData?.user.stamina : undefined;
   const worldMapPlots = useMemo<WorldMapRenderablePlot[]>(
     () =>
-      (data?.plots ?? []).map((plot) => ({
+      (plotData?.plots ?? []).map((plot) => ({
         id: `P${plot.x}-${String(plot.y).padStart(2, "0")}`,
         ownerUserId: plot.ownerUserId,
         buildingType: plot.building?.type,
       })),
-    [data?.plots],
+    [plotData?.plots],
   );
   const worldMapPlotsKey = useMemo(
     () =>
@@ -87,11 +104,11 @@ export function WorldMap() {
   );
   const plotById = useMemo(() => {
     const map = new Map<string, Plot>();
-    for (const plot of data?.plots ?? []) {
+    for (const plot of plotData?.plots ?? []) {
       map.set(`P${plot.x}-${String(plot.y).padStart(2, "0")}`, plot);
     }
     return map;
-  }, [data?.plots]);
+  }, [plotData?.plots]);
   const selectedPlot = selectedPlotId ? plotById.get(selectedPlotId) : undefined;
   const selectedPlotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
   const selectedBuildingCapabilities = getBuildingCapabilities(
@@ -154,14 +171,29 @@ export function WorldMap() {
     if (!currentUserId) {
       return 0;
     }
-    return (data?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId).length;
-  }, [currentUserId, data?.plots]);
+    return (plotData?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId).length;
+  }, [currentUserId, plotData?.plots]);
   const myBuildingCount = useMemo(() => {
     if (!currentUserId) {
       return 0;
     }
-    return (data?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId && Boolean(plot.building)).length;
-  }, [currentUserId, data?.plots]);
+    return (plotData?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId && Boolean(plot.building)).length;
+  }, [currentUserId, plotData?.plots]);
+  const isAuthStatusResolving = authStatus === "loading";
+  const isInitialPlotDataLoading = isInitialQueryLoading({
+    enabled: true,
+    hasData: Boolean(plotData),
+    isLoading: isPlotLoading,
+    isFetching: isPlotFetching,
+  });
+  const isInitialMeDataLoading = isInitialQueryLoading({
+    enabled: authStatus === "authenticated",
+    hasData: Boolean(meData),
+    isLoading: isMeLoading,
+    isFetching: isMeFetching,
+  });
+  const isInitialWorldDataLoading =
+    isAuthStatusResolving || isInitialPlotDataLoading || isInitialMeDataLoading;
 
   const handlePurchase = async () => {
     if (!selectedPlot) {
@@ -447,6 +479,10 @@ export function WorldMap() {
 
   useEffect(() => {
     let cancelled = false;
+    if (isInitialWorldDataLoading || hasInitializedSceneRef.current) {
+      return;
+    }
+    hasInitializedSceneRef.current = true;
 
     async function bootstrapPhaser() {
       if (!containerRef.current) {
@@ -534,11 +570,12 @@ export function WorldMap() {
 
     return () => {
       cancelled = true;
+      hasInitializedSceneRef.current = false;
       gameRef.current?.destroy(true);
       gameRef.current = null;
       setIsGameReady(false);
     };
-  }, []);
+  }, [isInitialWorldDataLoading]);
 
   useEffect(() => {
     if (!isGameReady || !gameRef.current) {
@@ -589,8 +626,14 @@ export function WorldMap() {
       />
       <div
         ref={containerRef}
-        className="min-h-0 w-full flex-1 overflow-hidden bg-slate-100"
-      />
+        className="relative min-h-0 w-full flex-1 overflow-hidden bg-slate-100"
+      >
+        {isInitialWorldDataLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-100/90">
+            <Spin size="large" description="地图数据加载中..." />
+          </div>
+        ) : null}
+      </div>
       <PlotDetailModal
         selectedPlotId={selectedPlotId}
         currentUserId={currentUserId}
