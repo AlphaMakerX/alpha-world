@@ -24,7 +24,7 @@ export const startFactoryProductionSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
   recipeId: z.string().trim().min(1, "配方 ID 不能为空"),
-  quantity: z.number().int().min(1).max(99).default(1),
+  quantity: z.number().int().min(1).max(100, "制造数量不能超过 100").default(1),
 });
 
 export async function executeListFactoryRecipesUseCase() {

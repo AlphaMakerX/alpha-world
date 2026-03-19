@@ -68,14 +68,21 @@ export function RecipeDetail({ recipe, inventoryItems, productionLoading, onStar
         <span className="text-xs font-medium text-slate-600">制造数量</span>
         <InputNumber
           min={1}
-          max={99}
+          max={100}
           value={quantity}
-          onChange={(v) => setQuantity(v ?? 1)}
+          onChange={(v) => {
+            if (typeof v !== "number" || Number.isNaN(v)) {
+              setQuantity(1);
+              return;
+            }
+            setQuantity(Math.max(1, Math.min(100, Math.floor(v))));
+          }}
           size="small"
           className="w-20"
           disabled={productionLoading}
         />
       </div>
+      <p className="text-xs text-slate-500">制造数量不能超过 100</p>
       <div className="space-y-3">
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-amber-700">所需材料{quantity > 1 && ` (×${quantity})`}</p>
