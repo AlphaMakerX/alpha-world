@@ -1,3 +1,4 @@
+import { Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { FactoryOrders, FactoryRecipe } from "@/client/features/factory/types/factory-ui";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
@@ -10,6 +11,7 @@ type RecipeFilter = "all" | RecipeCategory;
 
 type FactorySectionProps = {
   factoryRecipes: FactoryRecipe[];
+  recipesLoading: boolean;
   factoryOrders?: FactoryOrders;
   inventoryItems: InventoryItem[];
   productionLoading: boolean;
@@ -18,6 +20,7 @@ type FactorySectionProps = {
 
 export function FactorySection({
   factoryRecipes,
+  recipesLoading,
   factoryOrders,
   inventoryItems,
   productionLoading,
@@ -68,7 +71,14 @@ export function FactorySection({
   return (
     <div className="space-y-2">
       <p className="font-medium text-slate-800">工厂制造清单</p>
-      {factoryRecipes.length ? (
+      {recipesLoading ? (
+        <div className="rounded-md border border-slate-200 bg-white p-4">
+          <div className="flex items-center gap-2 text-slate-500">
+            <Spin size="small" />
+            <span className="text-sm">配方加载中...</span>
+          </div>
+        </div>
+      ) : factoryRecipes.length ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <RecipeList
             allRecipes={factoryRecipes}

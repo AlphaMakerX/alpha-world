@@ -118,7 +118,11 @@ export function WorldMap() {
   const shouldFetchFactoryRecipes = selectedBuildingCapabilities.canManageFactory;
   const selectedFactoryBuildingId =
     selectedPlot?.building?.type === "factory" ? selectedPlot.building.id : undefined;
-  const { data: factoryRecipesData } = trpc.factory.recipes.useQuery(undefined, {
+  const {
+    data: factoryRecipesData,
+    isLoading: isFactoryRecipesLoading,
+    isFetching: isFactoryRecipesFetching,
+  } = trpc.factory.recipes.useQuery(undefined, {
     enabled: shouldFetchFactoryRecipes,
   });
   const { data: factoryOrdersData } = trpc.factory.orders.useQuery(
@@ -191,6 +195,12 @@ export function WorldMap() {
     hasData: Boolean(meData),
     isLoading: isMeLoading,
     isFetching: isMeFetching,
+  });
+  const isInitialFactoryRecipesLoading = isInitialQueryLoading({
+    enabled: shouldFetchFactoryRecipes,
+    hasData: Boolean(factoryRecipesData),
+    isLoading: isFactoryRecipesLoading,
+    isFetching: isFactoryRecipesFetching,
   });
   const isInitialWorldDataLoading =
     isAuthStatusResolving || isInitialPlotDataLoading || isInitialMeDataLoading;
@@ -645,6 +655,7 @@ export function WorldMap() {
         onBuild={(buildingType) => void handleBuild(buildingType)}
         factory={{
           recipes: factoryRecipesData?.recipes ?? [],
+          recipesLoading: isInitialFactoryRecipesLoading,
           orders: factoryOrdersData,
           inventoryItems: inventoryData?.items ?? [],
           productionLoading: startProductionMutation.isPending,
