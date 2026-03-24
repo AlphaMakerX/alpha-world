@@ -1,188 +1,138 @@
 "use client";
 
 import { Modal, Spin, message } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createWorldMapScene, WORLD_MAP_SYNC_EVENT } from "./world-map-scene";
+import { useRef, useState } from "react";
 import type { PlayerStaminaPayload } from "./world-map-scene";
 import { WorldMapHeader } from "./world-map-header";
-import { trpc } from "@/client/lib/trpc";
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { AuthPanel } from "@/client/features/auth/components/auth-panel";
-import { PlotDetailModal } from "@/client/features/plot/components/plot-detail-modal";
-import { PersonDetailModal } from "@/client/features/person/components/person-detail-modal";
-import { InventoryModal } from "@/client/features/inventory/components/inventory-modal";
 import { GameInfoModal } from "@/client/features/game-info/components/game-info-modal";
-import { getBuildingCapabilities } from "@/client/features/building/model/building-capabilities";
-import type { BuildingType } from "@/client/features/building/types/building-ui";
-import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilities";
-import type { Plot } from "@/client/features/plot/types/plot-ui";
-import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
-import { PLAYER_MAX_STAMINA } from "@/shared/gameplay/player-stamina";
-
-const MAP_MAX_X = 3200;
-const MAP_MAX_Y = 1200;
-const POSITION_SYNC_INTERVAL_MS = 2000;
-const POSITION_MIN_DISTANCE_TO_SYNC = 20;
-const DEFAULT_PLAYER_STAMINA: PlayerStaminaPayload = {
-  current: PLAYER_MAX_STAMINA,
-  max: PLAYER_MAX_STAMINA,
-};
-
-function getDistance(from: { x: number; y: number }, to: { x: number; y: number }): number {
-  return Math.hypot(to.x - from.x, to.y - from.y);
-}
-
-function isInitialQueryLoading(options: {
-  enabled: boolean;
-  hasData: boolean;
-  isLoading: boolean;
-  isFetching: boolean;
-}): boolean {
-  const { enabled, hasData, isLoading, isFetching } = options;
-  return enabled && !hasData && (isLoading || isFetching);
-}
+import { InventoryModal } from "@/client/features/inventory/components/inventory-modal";
+import { PersonDetailModal } from "@/client/features/person/components/person-detail-modal";
+import { PlotDetailModal } from "@/client/features/plot/components/plot-detail-modal";
+import { usePhaserWorldMap } from "../hooks/use-phaser-world-map";
+import { usePlayerMapSync } from "../hooks/use-player-map-sync";
+import { useWorldMapFactory } from "../hooks/use-world-map-factory";
+import { useWorldMapPlots } from "../hooks/use-world-map-plots";
+import { useWorldMapPurchasingStation } from "../hooks/use-world-map-purchasing-station";
+import { useWorldMapSession } from "../hooks/use-world-map-session";
+import { useWorldMapShop } from "../hooks/use-world-map-shop";
+import { DEFAULT_PLAYER_STAMINA } from "../world-map-constants";
+import { isInitialQueryLoading } from "../world-map-utils";
 
 export function WorldMap() {
-  const router = useRouter();
-  const { data: session, status: authStatus } = useSession();
   const [messageApi, contextHolder] = message.useMessage();
-  const trpcUtils = trpc.useUtils();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<import("phaser").Game | null>(null);
-  const hasInitializedSceneRef = useRef(false);
-  const [isGameReady, setIsGameReady] = useState(false);
-  const {
-    data: plotData,
-    isLoading: isPlotLoading,
-    isFetching: isPlotFetching,
-  } = trpc.plot.list.useQuery();
-  const {
-    data: meData,
-    isLoading: isMeLoading,
-    isFetching: isMeFetching,
-  } = trpc.person.me.useQuery(undefined, { enabled: authStatus === "authenticated" });
-  const purchaseMutation = trpc.plot.purchase.useMutation();
-  const updatePositionMutation = trpc.person.updatePosition.useMutation();
-  const buildMutation = trpc.building.build.useMutation();
-  const startProductionMutation = trpc.factory.startProduction.useMutation();
-  const createShopListingMutation = trpc.shop.createListing.useMutation();
-  const purchaseShopListingMutation = trpc.shop.purchase.useMutation();
-  const cancelShopListingMutation = trpc.shop.cancelListing.useMutation();
-  const createBuyOrderMutation = trpc.purchasingStation.createBuyOrder.useMutation();
-  const fulfillBuyOrderMutation = trpc.purchasingStation.fulfillBuyOrder.useMutation();
-  const cancelBuyOrderMutation = trpc.purchasingStation.cancelBuyOrder.useMutation();
-  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
+  const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const isAuthenticatedRef = useRef(false);
+  const [playerStamina, setPlayerStamina] = useState<PlayerStaminaPayload>(DEFAULT_PLAYER_STAMINA);
+
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
   const [personModalOpen, setPersonModalOpen] = useState(false);
   const [gameInfoModalOpen, setGameInfoModalOpen] = useState(false);
-  const [logoutLoading, setLogoutLoading] = useState(false);
-  const [playerStamina, setPlayerStamina] = useState<PlayerStaminaPayload>(DEFAULT_PLAYER_STAMINA);
-  const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const isAuthenticatedRef = useRef(false);
-  const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
-  const playerPosition = authStatus === "authenticated" ? meData?.user.position : undefined;
-  const serverPlayerStamina = authStatus === "authenticated" ? meData?.user.stamina : undefined;
-  const worldMapPlots = useMemo<WorldMapRenderablePlot[]>(
-    () =>
-      (plotData?.plots ?? []).map((plot) => ({
-        id: `P${plot.x}-${String(plot.y).padStart(2, "0")}`,
-        ownerUserId: plot.ownerUserId,
-        buildingType: plot.building?.type,
-      })),
-    [plotData?.plots],
-  );
-  const worldMapPlotsKey = useMemo(
-    () =>
-      worldMapPlots
-        .map((plot) => `${plot.id}:${plot.ownerUserId ?? ""}:${plot.buildingType ?? ""}`)
-        .sort()
-        .join("|"),
-    [worldMapPlots],
-  );
-  const plotById = useMemo(() => {
-    const map = new Map<string, Plot>();
-    for (const plot of plotData?.plots ?? []) {
-      map.set(`P${plot.x}-${String(plot.y).padStart(2, "0")}`, plot);
-    }
-    return map;
-  }, [plotData?.plots]);
-  const selectedPlot = selectedPlotId ? plotById.get(selectedPlotId) : undefined;
-  const selectedPlotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
-  const selectedBuildingCapabilities = getBuildingCapabilities(
-    selectedPlot?.building,
-    selectedPlotCapabilities.isOwner,
-  );
-  const shouldFetchFactoryRecipes = selectedBuildingCapabilities.canManageFactory;
-  const selectedFactoryBuildingId =
-    selectedPlot?.building?.type === "factory" ? selectedPlot.building.id : undefined;
+
   const {
-    data: factoryRecipesData,
-    isLoading: isFactoryRecipesLoading,
-    isFetching: isFactoryRecipesFetching,
-  } = trpc.factory.recipes.useQuery(undefined, {
-    enabled: shouldFetchFactoryRecipes,
-  });
-  const { data: factoryOrdersData } = trpc.factory.orders.useQuery(
-    { buildingId: selectedFactoryBuildingId ?? 0 },
-    {
-      enabled: Boolean(selectedFactoryBuildingId && selectedBuildingCapabilities.canManageFactory),
-      refetchInterval: (query) => (query.state.data?.focusOrder ? 3000 : false),
-    },
-  );
-  const selectedShopBuildingId =
-    selectedPlot?.building?.type === "shop" ? selectedPlot.building.id : undefined;
-  const { data: shopListingsData } = trpc.shop.listings.useQuery(
-    { buildingId: selectedShopBuildingId ?? 0 },
-    {
-      enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
-    },
-  );
-  const { data: shopTransactionHistoryData } = trpc.shop.transactionHistory.useQuery(
-    { buildingId: selectedShopBuildingId ?? 0 },
-    {
-      enabled: Boolean(selectedShopBuildingId && selectedBuildingCapabilities.isShop),
-    },
-  );
-  const selectedPurchasingStationBuildingId =
-    selectedPlot?.building?.type === "purchasing_station" ? selectedPlot.building.id : undefined;
-  const { data: buyOrdersData } = trpc.purchasingStation.buyOrders.useQuery(
-    { buildingId: selectedPurchasingStationBuildingId ?? 0 },
-    {
-      enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
-    },
-  );
-  const { data: purchasingStationTransactionHistoryData } = trpc.purchasingStation.transactionHistory.useQuery(
-    { buildingId: selectedPurchasingStationBuildingId ?? 0 },
-    {
-      enabled: Boolean(selectedPurchasingStationBuildingId && selectedBuildingCapabilities.isPurchasingStation),
-    },
-  );
-  const {
-    data: inventoryData,
-    isFetching: inventoryLoading,
-    refetch: refetchInventory,
-  } = trpc.inventory.mine.useQuery(undefined, {
-    enabled: authStatus === "authenticated",
+    authStatus,
+    meData,
+    isMeLoading,
+    isMeFetching,
+    updatePositionMutation,
+    inventoryData,
+    inventoryLoading,
+    refetchInventory,
+    currentUserId,
+    playerPosition,
+    serverPlayerStamina,
+    headerUsername,
+    headerMoney,
+    logoutLoading,
+    handleLogout,
+    trpcUtils,
+  } = useWorldMapSession({
+    messageApi,
+    pendingPlayerPositionRef,
+    lastSyncedPlayerPositionRef,
+    setPlayerStamina,
   });
 
-  const headerUsername =
-    authStatus === "authenticated" ? (meData?.user.username ?? session?.user?.name ?? undefined) : undefined;
-  const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
-  const myPlotCount = useMemo(() => {
-    if (!currentUserId) {
-      return 0;
-    }
-    return (plotData?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId).length;
-  }, [currentUserId, plotData?.plots]);
-  const myBuildingCount = useMemo(() => {
-    if (!currentUserId) {
-      return 0;
-    }
-    return (plotData?.plots ?? []).filter((plot) => plot.ownerUserId === currentUserId && Boolean(plot.building)).length;
-  }, [currentUserId, plotData?.plots]);
+  const {
+    isPlotLoading,
+    isPlotFetching,
+    plotData,
+    selectedPlotId,
+    setSelectedPlotId,
+    worldMapPlots,
+    worldMapPlotsKey,
+    selectedPlot,
+    selectedPlotCapabilities,
+    selectedBuildingCapabilities,
+    myPlotCount,
+    myBuildingCount,
+    purchaseMutation,
+    buildMutation,
+    handlePurchase,
+    handleBuild,
+  } = useWorldMapPlots({
+    authStatus,
+    currentUserId,
+    messageApi,
+    trpcUtils,
+    setLoginModalOpen,
+  });
+
+  const {
+    factoryRecipesData,
+    factoryOrdersData,
+    isInitialFactoryRecipesLoading,
+    startProductionMutation,
+    handleStartProduction,
+  } = useWorldMapFactory({
+    authStatus,
+    selectedPlot,
+    selectedPlotCapabilities,
+    selectedBuildingCapabilities,
+    messageApi,
+    trpcUtils,
+    setLoginModalOpen,
+  });
+
+  const {
+    shopListingsData,
+    shopTransactionHistoryData,
+    createShopListingMutation,
+    purchaseShopListingMutation,
+    cancelShopListingMutation,
+    handleCreateListing,
+    handlePurchaseListing,
+    handleCancelListing,
+  } = useWorldMapShop({
+    authStatus,
+    selectedPlot,
+    selectedBuildingCapabilities,
+    messageApi,
+    trpcUtils,
+    setLoginModalOpen,
+  });
+
+  const {
+    buyOrdersData,
+    purchasingStationTransactionHistoryData,
+    createBuyOrderMutation,
+    fulfillBuyOrderMutation,
+    cancelBuyOrderMutation,
+    handleCreateBuyOrder,
+    handleFulfillBuyOrder,
+    handleCancelBuyOrder,
+  } = useWorldMapPurchasingStation({
+    authStatus,
+    selectedPlot,
+    selectedBuildingCapabilities,
+    messageApi,
+    trpcUtils,
+    setLoginModalOpen,
+  });
+
   const isAuthStatusResolving = authStatus === "loading";
   const isInitialPlotDataLoading = isInitialQueryLoading({
     enabled: true,
@@ -196,418 +146,38 @@ export function WorldMap() {
     isLoading: isMeLoading,
     isFetching: isMeFetching,
   });
-  const isInitialFactoryRecipesLoading = isInitialQueryLoading({
-    enabled: shouldFetchFactoryRecipes,
-    hasData: Boolean(factoryRecipesData),
-    isLoading: isFactoryRecipesLoading,
-    isFetching: isFactoryRecipesFetching,
-  });
   const isInitialWorldDataLoading =
     isAuthStatusResolving || isInitialPlotDataLoading || isInitialMeDataLoading;
 
-  const handlePurchase = async () => {
-    if (!selectedPlot) {
-      return;
-    }
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
+  const { gameRef, isGameReady } = usePhaserWorldMap({
+    containerRef,
+    isInitialWorldDataLoading,
+    worldMapPlots,
+    currentUserId,
+    playerPosition,
+    serverPlayerStamina,
+    setPlayerStamina,
+    setSelectedPlotId,
+    pendingPlayerPositionRef,
+    lastSyncedPlayerPositionRef,
+    isAuthenticatedRef,
+  });
 
-    try {
-      await purchaseMutation.mutateAsync({ plotId: selectedPlot.id });
-      await Promise.all([trpcUtils.plot.list.invalidate(), trpcUtils.person.me.invalidate()]);
-      messageApi.success("购买成功");
-      setSelectedPlotId(null);
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "购买失败，请稍后重试");
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setLogoutLoading(true);
-      const latestPosition = pendingPlayerPositionRef.current;
-      if (latestPosition && authStatus === "authenticated") {
-        try {
-          const result = await updatePositionMutation.mutateAsync({ position: latestPosition });
-          lastSyncedPlayerPositionRef.current = result.user.position;
-          setPlayerStamina(result.user.stamina);
-          pendingPlayerPositionRef.current = null;
-        } catch {
-          // 下线前保存位置失败时不阻塞登出流程。
-        }
-      }
-      await signOut({ redirect: false });
-      await Promise.all([trpcUtils.person.me.invalidate(), trpcUtils.plot.list.invalidate()]);
-      router.refresh();
-      messageApi.success("已登出");
-    } finally {
-      setLogoutLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    isAuthenticatedRef.current = authStatus === "authenticated";
-  }, [authStatus]);
-
-  useEffect(() => {
-    if (serverPlayerStamina) {
-      setPlayerStamina(serverPlayerStamina);
-      return;
-    }
-    if (authStatus !== "authenticated") {
-      setPlayerStamina(DEFAULT_PLAYER_STAMINA);
-    }
-  }, [authStatus, serverPlayerStamina?.current, serverPlayerStamina?.max]);
-
-  useEffect(() => {
-    if (authStatus !== "authenticated" || !currentUserId) {
-      pendingPlayerPositionRef.current = null;
-      lastSyncedPlayerPositionRef.current = null;
-      return;
-    }
-    if (playerPosition) {
-      lastSyncedPlayerPositionRef.current = playerPosition;
-    }
-  }, [authStatus, currentUserId, playerPosition?.x, playerPosition?.y]);
-
-  useEffect(() => {
-    if (authStatus !== "authenticated" || !currentUserId) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      const pendingPosition = pendingPlayerPositionRef.current;
-      if (!pendingPosition || updatePositionMutation.isPending) {
-        return;
-      }
-      void updatePositionMutation
-        .mutateAsync({ position: pendingPosition })
-        .then((result) => {
-          lastSyncedPlayerPositionRef.current = result.user.position;
-          setPlayerStamina(result.user.stamina);
-          pendingPlayerPositionRef.current = null;
-          if (isGameReady && gameRef.current) {
-            gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
-              plots: worldMapPlots,
-              currentUserId,
-              playerPosition: result.user.position,
-              playerStamina: result.user.stamina,
-            });
-          }
-        })
-        .catch(() => {
-          // 定时同步失败时保留待同步坐标，等待下一轮重试。
-        });
-    }, POSITION_SYNC_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [authStatus, currentUserId, isGameReady, updatePositionMutation, worldMapPlots]);
-
-  const handleBuild = async (buildingType: BuildingType) => {
-    if (!selectedPlot) {
-      return;
-    }
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await buildMutation.mutateAsync({
-        plotId: selectedPlot.id,
-        buildingType,
-      });
-      await trpcUtils.plot.list.invalidate();
-      messageApi.success("建造成功");
-      setSelectedPlotId(null);
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "建造失败，请稍后重试");
-    }
-  };
-
-  const handleStartProduction = async (recipeId: string, quantity: number = 1) => {
-    if (!selectedPlot?.building) {
-      return;
-    }
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-    if (!selectedPlotCapabilities.isOwner) {
-      messageApi.error("只能操作自己地块上的工厂");
-      return;
-    }
-    if (!selectedBuildingCapabilities.isFactory) {
-      messageApi.error("当前建筑不是工厂");
-      return;
-    }
-
-    try {
-      await startProductionMutation.mutateAsync({
-        buildingId: selectedPlot.building.id,
-        recipeId,
-        quantity,
-      });
-      await Promise.all([
-        trpcUtils.inventory.mine.invalidate(),
-        trpcUtils.factory.orders.invalidate(),
-        trpcUtils.person.me.invalidate(),
-      ]);
-      messageApi.success("已开始制造");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "开始制造失败，请稍后重试");
-    }
-  };
-
-  const handleCreateListing = async (itemKey: string, quantity: number, unitPrice: number) => {
-    if (!selectedPlot?.building) return;
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await createShopListingMutation.mutateAsync({
-        buildingId: selectedPlot.building.id,
-        itemKey,
-        quantity,
-        unitPrice,
-      });
-      await Promise.all([
-        trpcUtils.shop.listings.invalidate(),
-        trpcUtils.inventory.mine.invalidate(),
-      ]);
-      messageApi.success("商品上架成功");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "上架失败，请稍后重试");
-    }
-  };
-
-  const handlePurchaseListing = async (listingId: number, quantity: number) => {
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await purchaseShopListingMutation.mutateAsync({ listingId, quantity });
-      await Promise.all([
-        trpcUtils.shop.listings.invalidate(),
-        trpcUtils.shop.transactionHistory.invalidate(),
-        trpcUtils.inventory.mine.invalidate(),
-        trpcUtils.person.me.invalidate(),
-      ]);
-      messageApi.success("购买成功");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "购买失败，请稍后重试");
-    }
-  };
-
-  const handleCancelListing = async (listingId: number) => {
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await cancelShopListingMutation.mutateAsync({ listingId });
-      await Promise.all([
-        trpcUtils.shop.listings.invalidate(),
-        trpcUtils.inventory.mine.invalidate(),
-      ]);
-      messageApi.success("商品已下架");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "下架失败，请稍后重试");
-    }
-  };
-
-  const handleCreateBuyOrder = async (itemKey: string, quantity: number, unitPrice: number) => {
-    if (!selectedPlot?.building) return;
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await createBuyOrderMutation.mutateAsync({
-        buildingId: selectedPlot.building.id,
-        itemKey,
-        quantity,
-        unitPrice,
-      });
-      await Promise.all([
-        trpcUtils.purchasingStation.buyOrders.invalidate(),
-        trpcUtils.person.me.invalidate(),
-      ]);
-      messageApi.success("收购订单已发布");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "发布失败，请稍后重试");
-    }
-  };
-
-  const handleFulfillBuyOrder = async (orderId: number, quantity: number) => {
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await fulfillBuyOrderMutation.mutateAsync({ orderId, quantity });
-      await Promise.all([
-        trpcUtils.purchasingStation.buyOrders.invalidate(),
-        trpcUtils.purchasingStation.transactionHistory.invalidate(),
-        trpcUtils.inventory.mine.invalidate(),
-        trpcUtils.person.me.invalidate(),
-      ]);
-      messageApi.success("出售成功");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "出售失败，请稍后重试");
-    }
-  };
-
-  const handleCancelBuyOrder = async (orderId: number) => {
-    if (authStatus !== "authenticated") {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    try {
-      await cancelBuyOrderMutation.mutateAsync({ orderId });
-      await Promise.all([
-        trpcUtils.purchasingStation.buyOrders.invalidate(),
-        trpcUtils.person.me.invalidate(),
-      ]);
-      messageApi.success("收购订单已取消");
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "取消失败，请稍后重试");
-    }
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    if (isInitialWorldDataLoading || hasInitializedSceneRef.current) {
-      return;
-    }
-    hasInitializedSceneRef.current = true;
-
-    async function bootstrapPhaser() {
-      if (!containerRef.current) {
-        return;
-      }
-
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
-
-      const Phaser = (await import("phaser")).default;
-
-      const WorldMapScene = createWorldMapScene(Phaser, {
-        plots: worldMapPlots,
-        currentUserId,
-        playerPosition,
-        playerStamina: serverPlayerStamina,
-        onPlayerPositionChange: (position) => {
-          if (!isAuthenticatedRef.current) {
-            return;
-          }
-          const clampedPosition = {
-            x: Number(Math.max(0, Math.min(MAP_MAX_X, position.x)).toFixed(2)),
-            y: Number(Math.max(0, Math.min(MAP_MAX_Y, position.y)).toFixed(2)),
-          };
-          const lastSynced = lastSyncedPlayerPositionRef.current;
-          if (lastSynced && lastSynced.x === clampedPosition.x && lastSynced.y === clampedPosition.y) {
-            return;
-          }
-          const baselinePosition = pendingPlayerPositionRef.current ?? lastSynced;
-          if (
-            baselinePosition &&
-            getDistance(baselinePosition, clampedPosition) < POSITION_MIN_DISTANCE_TO_SYNC
-          ) {
-            return;
-          }
-          pendingPlayerPositionRef.current = clampedPosition;
-        },
-        onPlayerStaminaChange: (stamina) => {
-          setPlayerStamina((previous) => {
-            if (previous.current === stamina.current && previous.max === stamina.max) {
-              return previous;
-            }
-            return stamina;
-          });
-        },
-        onOpenExistingPlot: (plotId) => {
-          setSelectedPlotId((prev) => (prev === plotId ? null : plotId));
-        },
-        onSceneReady: () => {
-          if (!cancelled) {
-            setIsGameReady(true);
-          }
-        },
-      });
-
-      const game = new Phaser.Game({
-        type: Phaser.AUTO,
-        parent: containerRef.current,
-        backgroundColor: "#d9f99d",
-        scale: {
-          mode: Phaser.Scale.RESIZE,
-          autoCenter: Phaser.Scale.NO_CENTER,
-          width: "100%",
-          height: "100%",
-        },
-        physics: {
-          default: 'arcade',
-          arcade: {
-            // gravity: { x: 0, y: 300 },
-            debug: false
-          }
-        },
-        scene: [WorldMapScene],
-      });
-
-      if (cancelled) {
-        game.destroy(true);
-        return;
-      }
-
-      gameRef.current = game;
-    }
-
-    void bootstrapPhaser();
-
-    return () => {
-      cancelled = true;
-      hasInitializedSceneRef.current = false;
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
-      setIsGameReady(false);
-    };
-  }, [isInitialWorldDataLoading]);
-
-  useEffect(() => {
-    if (!isGameReady || !gameRef.current) {
-      return;
-    }
-
-    gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
-      plots: worldMapPlots,
-      currentUserId,
-      playerPosition,
-      playerStamina: serverPlayerStamina,
-    });
-  }, [
-    isGameReady,
+  usePlayerMapSync({
+    authStatus,
+    currentUserId,
+    playerPosition,
+    serverPlayerStamina,
     worldMapPlots,
     worldMapPlotsKey,
-    currentUserId,
-    playerPosition?.x,
-    playerPosition?.y,
-    serverPlayerStamina?.current,
-    serverPlayerStamina?.max,
-  ]);
+    isGameReady,
+    gameRef,
+    setPlayerStamina,
+    updatePositionMutation,
+    pendingPlayerPositionRef,
+    lastSyncedPlayerPositionRef,
+    isAuthenticatedRef,
+  });
 
   return (
     <section className="flex h-dvh w-screen flex-col">
