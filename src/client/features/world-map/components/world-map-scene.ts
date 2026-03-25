@@ -61,6 +61,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     private currentUserId: string | undefined = options.currentUserId
     private playerPosition: PlayerPosition | undefined = options.playerPosition
     private hasAppliedPersistedPlayerPosition = false
+    private lastLocalMoveAt = 0
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -155,6 +156,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
 
       updatePlayerAnimation(this.player, this.cursors, movedDistance > 0)
       if (prevX !== this.player.x || prevY !== this.player.y) {
+        this.lastLocalMoveAt = this.time.now
         options.onPlayerPositionChange?.({
           x: this.player.x,
           y: this.player.y,
@@ -225,7 +227,11 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         payload.playerPosition &&
         (
           !this.hasAppliedPersistedPlayerPosition ||
-          shouldSnapToServerPosition(this.player, payload.playerPosition)
+          shouldSnapToServerPosition(
+            this.player,
+            payload.playerPosition,
+            this.time.now - this.lastLocalMoveAt
+          )
         )
       ) {
         this.player.setPosition(payload.playerPosition.x, payload.playerPosition.y)
@@ -291,7 +297,15 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, max))
 }
 
-function shouldSnapToServerPosition(current: PlayerPosition, next: PlayerPosition): boolean {
-  const maxDriftDistance = 8
+function shouldSnapToServerPosition(
+  current: PlayerPosition,
+  next: PlayerPosition,
+  elapsedSinceLocalMoveMs: number
+): boolean {
+  // 本地刚发生连续移动时，忽略服务端纠偏，避免“前进-回拉”的卡顿感。
+  if (elapsedSinceLocalMoveMs < 1200) {
+    return false
+  }
+  const maxDriftDistance = 24
   return Math.hypot(current.x - next.x, current.y - next.y) > maxDriftDistance
 }

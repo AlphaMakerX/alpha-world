@@ -69,13 +69,7 @@ export function usePlayerMapSync(options: {
         .then((result) => {
           lastSyncedPlayerPositionRef.current = result.user.position;
           pendingPlayerPositionRef.current = null;
-          if (isGameReady && gameRef.current) {
-            gameRef.current.events.emit(WORLD_MAP_SYNC_EVENT, {
-              plots: worldMapPlots,
-              currentUserId,
-              playerPosition: result.user.position,
-            });
-          }
+          // 位置回包用于确认已落库，不在这里反向驱动本地角色，避免连续移动时被旧坐标回拉。
         })
         .catch(() => {
           // 定时同步失败时保留待同步坐标，等待下一轮重试。
@@ -88,10 +82,7 @@ export function usePlayerMapSync(options: {
   }, [
     authStatus,
     currentUserId,
-    isGameReady,
     updatePositionMutation,
-    worldMapPlots,
-    gameRef,
     pendingPlayerPositionRef,
     lastSyncedPlayerPositionRef,
   ]);
