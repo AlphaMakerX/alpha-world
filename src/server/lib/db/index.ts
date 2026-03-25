@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
@@ -24,6 +25,19 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const db = drizzle(pool, { schema });
+
+type TransactionClient = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+const txStorage = new AsyncLocalStorage<TransactionClient>();
+
+export function getDbClient(): typeof db | TransactionClient {
+  return txStorage.getStore() ?? db;
+}
+
+export async function transact<T>(fn: () => Promise<T>): Promise<T> {
+  return db.transaction((tx) => txStorage.run(tx, fn));
+}
+
 export { schema };
 
 

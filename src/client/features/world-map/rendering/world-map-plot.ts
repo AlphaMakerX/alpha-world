@@ -6,7 +6,12 @@ export type WorldMapPlot = {
   id: string
   rect: Phaser.Geom.Rectangle
   isExistingPlot: boolean
-  isHighlighted: boolean
+  buildingType?: BuildingType
+}
+
+export type WorldMapRenderablePlot = {
+  id: string
+  ownerUserId?: string | null
   buildingType?: BuildingType
 }
 
@@ -15,18 +20,20 @@ export type PlotRenderResult = {
   renderObjects: Phaser.GameObjects.GameObject[]
 }
 
+type PlotVisualState = 'owned_by_me' | 'owned_by_other' | 'can_buy' | 'not_can_buy'
+
 // 在道路两侧生成地块，绘制地块与地块 id（P{row}-{col}）。
 export function createPlotsAndRender(
   scene: Phaser.Scene,
   roads: Phaser.Geom.Rectangle[],
   horizontalRoadCenters: number[],
   verticalRoadCenters: number[],
-  existingPlotIds: ReadonlySet<string>,
-  highlightedPlotIds: ReadonlySet<string>,
-  buildingTypeByPlotId: ReadonlyMap<string, BuildingType>
+  plotList: ReadonlyArray<WorldMapRenderablePlot>,
+  currentUserId?: string
 ): PlotRenderResult {
   const plotGraphics = scene.add.graphics()
   const renderObjects: Phaser.GameObjects.GameObject[] = [plotGraphics]
+  const plotDataById = new Map<string, WorldMapRenderablePlot>(plotList.map((plot) => [plot.id, plot]))
   const sideMargin = 28
   const plotGap = 12
   const plotOffsetY = 18
@@ -93,29 +100,23 @@ export function createPlotsAndRender(
     // 使用固定格式的地块 id，方便后续定位与交互。
     const plotId = `P${row}-${String(col).padStart(2, '0')}`
     occupiedPlotRects.push(plotRect)
-    const isExistingPlot = existingPlotIds.has(plotId)
-    const isHighlighted = highlightedPlotIds.has(plotId)
-    const buildingType = buildingTypeByPlotId.get(plotId)
+    const plotData = plotDataById.get(plotId)
+    const isExistingPlot = Boolean(plotData)
+    const ownerUserId = plotData?.ownerUserId ?? null
+    const visualState = getPlotVisualState({
+      isExistingPlot,
+      ownerUserId,
+      currentUserId,
+    })
+    const buildingType = plotData?.buildingType
     plots.push({
       id: plotId,
       rect: plotRect,
       isExistingPlot,
-      isHighlighted,
       buildingType,
     })
     const buildingVisual = buildingType ? getBuildingVisualConfig(buildingType) : null
-    const fillColor = isHighlighted
-      ? 0xfde047
-      : buildingVisual
-        ? buildingVisual.plotFillColor
-        : isExistingPlot
-          ? 0xffffff
-          : 0xe5e7eb
-    const borderColor = isHighlighted
-      ? 0xf59e0b
-      : buildingVisual
-        ? buildingVisual.plotBorderColor
-        : 0xd1d5db
+    const { fillColor, borderColor } = getPlotColors(visualState)
     plotGraphics.fillStyle(fillColor, 0.96)
     plotGraphics.fillRect(plotX, plotY, PLOT_WIDTH, PLOT_HEIGHT)
     plotGraphics.lineStyle(2, borderColor, 0.98)
@@ -189,6 +190,43 @@ export function createPlotsAndRender(
   }
 
   return { plots, renderObjects }
+}
+
+function getPlotVisualState(params: {
+  isExistingPlot: boolean
+  ownerUserId: string | null
+  currentUserId?: string
+}): PlotVisualState {
+  const { isExistingPlot, ownerUserId, currentUserId } = params
+
+  // 状态优先级：本人拥有 > 他人拥有 > 可购买 > 不可购买
+  if (currentUserId && ownerUserId === currentUserId) {
+    return 'owned_by_me'
+  }
+  if (ownerUserId) {
+    return 'owned_by_other'
+  }
+  if (isExistingPlot) {
+    return 'can_buy'
+  }
+  return 'not_can_buy'
+}
+
+function getPlotColors(state: PlotVisualState): { fillColor: number; borderColor: number } {
+  switch (state) {
+    case 'owned_by_me':
+      return { fillColor: 0xfef08a, borderColor: 0xf59e0b } // 淡黄色
+    case 'owned_by_other':
+      return { fillColor: 0xbfdbfe, borderColor: 0x60a5fa } // 淡蓝色
+    case 'can_buy':
+      return { fillColor: 0xd1d5db, borderColor: 0x9ca3af } // 淡灰色
+    case 'not_can_buy':
+      return { fillColor: 0x6b7280, borderColor: 0x4b5563 } // 深灰色
+    default: {
+      const exhaustiveCheck: never = state
+      throw new Error(`Unknown plot visual state: ${exhaustiveCheck}`)
+    }
+  }
 }
 
 // 边界数组按“起点-终点”两两配对为区间。

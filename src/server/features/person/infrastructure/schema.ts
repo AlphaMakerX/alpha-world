@@ -2,11 +2,9 @@ import {
   bigint,
   check,
   index,
-  integer,
   numeric,
   pgTable,
   timestamp,
-  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -19,12 +17,22 @@ export const users = pgTable(
     username: varchar("username", { length: 32 }).notNull().unique(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
     money: numeric("money", { precision: 12, scale: 2 }).notNull().default("10000"),
+    positionX: numeric("position_x", { precision: 10, scale: 2 }).notNull().default("140"),
+    positionY: numeric("position_y", { precision: 10, scale: 2 }).notNull().default("600"),
+    staminaCurrent: numeric("stamina_current", { precision: 10, scale: 2 }).notNull().default("100"),
+    staminaMax: numeric("stamina_max", { precision: 10, scale: 2 }).notNull().default("100"),
+    staminaUpdatedAt: timestamp("stamina_updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check("users_username_length_chk", sql`char_length(${table.username}) between 3 and 32`),
     check("users_money_chk", sql`${table.money} >= 0`),
+    check("users_position_x_chk", sql`${table.positionX} >= 0`),
+    check("users_position_y_chk", sql`${table.positionY} >= 0`),
+    check("users_stamina_current_chk", sql`${table.staminaCurrent} >= 0`),
+    check("users_stamina_max_chk", sql`${table.staminaMax} > 0`),
+    check("users_stamina_within_max_chk", sql`${table.staminaCurrent} <= ${table.staminaMax}`),
   ],
 );
 
@@ -52,26 +60,5 @@ export const moneyTransactions = pgTable(
     index("idx_money_transactions_from_user_id").on(table.fromUserId),
     index("idx_money_transactions_to_user_id").on(table.toUserId),
     index("idx_money_transactions_type").on(table.type),
-  ],
-);
-
-export const plots = pgTable(
-  "plots",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
-    x: integer("x").notNull(),
-    y: integer("y").notNull(),
-    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
-    status: varchar("status", { length: 20 }).notNull().default("available"),
-    price: numeric("price", { precision: 12, scale: 2 }).notNull().default("0"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    unique("plots_coordinates_unique").on(table.x, table.y),
-    check("plots_status_chk", sql`${table.status} in ('available', 'owned', 'locked')`),
-    check("plots_price_chk", sql`${table.price} >= 0`),
-    index("idx_plots_owner_user_id").on(table.ownerUserId),
-    index("idx_plots_status").on(table.status),
   ],
 );

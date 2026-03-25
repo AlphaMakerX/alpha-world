@@ -1,34 +1,21 @@
-import type { BuildingType, BuyOrder, FactoryOrders, FactoryRecipe, InventoryItem, PurchasingStationTransaction, ShopListing, ShopTransaction } from "@/client/features/building/types/building-ui";
+import type { BuildingType } from "@/client/features/building/types/building-ui";
+import type {
+  FactoryActionProps,
+  ShopActionProps,
+  PurchasingStationActionProps,
+} from "@/client/features/building/components/building-action-section";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
 export type PlotDetailModalProps = {
   selectedPlotId: string | null;
   selectedPlot?: Plot;
   currentUserId?: string;
-  factoryRecipes: FactoryRecipe[];
-  factoryOrders?: FactoryOrders;
-  shopListings: ShopListing[];
-  shopTransactions: ShopTransaction[];
-  purchasingStationTransactions: PurchasingStationTransaction[];
-  buyOrders: BuyOrder[];
-  inventoryItems: InventoryItem[];
-  productionLoading: boolean;
   purchaseLoading: boolean;
   buildLoading: boolean;
-  createListingLoading: boolean;
-  purchaseListingLoading: boolean;
-  cancelListingLoading: boolean;
-  createBuyOrderLoading: boolean;
-  fulfillBuyOrderLoading: boolean;
-  cancelBuyOrderLoading: boolean;
   onClose: () => void;
   onPurchase: () => void;
   onBuild: (buildingType: BuildingType) => void;
-  onStartProduction: (recipeId: string, quantity: number) => void;
-  onCreateListing: (itemKey: string, quantity: number, unitPrice: number) => void;
-  onPurchaseListing: (listingId: number, quantity: number) => void;
-  onCancelListing: (listingId: number) => void;
-  onCreateBuyOrder: (itemKey: string, quantity: number, unitPrice: number) => void;
-  onFulfillBuyOrder: (orderId: number, quantity: number) => void;
-  onCancelBuyOrder: (orderId: number) => void;
+  factory: FactoryActionProps;
+  shop: ShopActionProps;
+  purchasingStation: PurchasingStationActionProps;
 };

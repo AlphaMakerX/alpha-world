@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import { Username } from "@/server/features/person/domain/value-objects/username";
@@ -11,6 +11,11 @@ function toDomainUser(record: typeof users.$inferSelect) {
     username: Username.create(record.username),
     passwordHash: record.passwordHash,
     money: Number(record.money),
+    positionX: Number(record.positionX),
+    positionY: Number(record.positionY),
+    staminaCurrent: Number(record.staminaCurrent),
+    staminaMax: Number(record.staminaMax),
+    staminaUpdatedAt: record.staminaUpdatedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
@@ -18,7 +23,7 @@ function toDomainUser(record: typeof users.$inferSelect) {
 
 export class DrizzleUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
-    const record = await db.query.users.findFirst({
+    const record = await getDbClient().query.users.findFirst({
       where: eq(users.id, id),
     });
 
@@ -29,9 +34,9 @@ export class DrizzleUserRepository implements UserRepository {
     return toDomainUser(record);
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    const normalizedUsername = Username.create(username).getValue();
-    const record = await db.query.users.findFirst({
+  async findByUsername(username: Username): Promise<User | null> {
+    const normalizedUsername = username.getValue();
+    const record = await getDbClient().query.users.findFirst({
       where: eq(users.username, normalizedUsername),
     });
 
@@ -43,13 +48,18 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async save(user: User): Promise<void> {
-    await db
+    await getDbClient()
       .insert(users)
       .values({
         id: user.id,
         username: user.username.getValue(),
         passwordHash: user.passwordHash,
         money: user.money.toString(),
+        positionX: user.positionX.toString(),
+        positionY: user.positionY.toString(),
+        staminaCurrent: user.staminaCurrent.toString(),
+        staminaMax: user.staminaMax.toString(),
+        staminaUpdatedAt: user.staminaUpdatedAt,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -59,6 +69,11 @@ export class DrizzleUserRepository implements UserRepository {
           username: user.username.getValue(),
           passwordHash: user.passwordHash,
           money: user.money.toString(),
+          positionX: user.positionX.toString(),
+          positionY: user.positionY.toString(),
+          staminaCurrent: user.staminaCurrent.toString(),
+          staminaMax: user.staminaMax.toString(),
+          staminaUpdatedAt: user.staminaUpdatedAt,
           updatedAt: new Date(),
         },
       });

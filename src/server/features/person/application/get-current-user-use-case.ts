@@ -1,4 +1,4 @@
-import { userRepository } from "@/server/features/person/infrastructure";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 
 type GetCurrentUserSuccessResult = {
   ok: true;
@@ -6,23 +6,35 @@ type GetCurrentUserSuccessResult = {
     id: string;
     username: string;
     money: number;
+    position: {
+      x: number;
+      y: number;
+    };
+    stamina: {
+      current: number;
+      max: number;
+    };
   };
 };
 
 type GetCurrentUserFailureResult = {
   ok: false;
   error: string;
-  status: 404;
+  status: 400 | 404;
 };
 
 export type GetCurrentUserResult =
   | GetCurrentUserSuccessResult
   | GetCurrentUserFailureResult;
 
+export type GetCurrentUserUseCaseDeps = {
+  userRepository: UserRepository;
+};
+
 export async function executeGetCurrentUserUseCase(input: {
   userId: string;
-}): Promise<GetCurrentUserResult> {
-  const user = await userRepository.findById(input.userId);
+}, deps: GetCurrentUserUseCaseDeps): Promise<GetCurrentUserResult> {
+  const user = await deps.userRepository.findById(input.userId);
   if (!user) {
     return {
       ok: false,
@@ -37,6 +49,14 @@ export async function executeGetCurrentUserUseCase(input: {
       id: user.id,
       username: user.username.getValue(),
       money: user.money,
+      position: {
+        x: user.positionX,
+        y: user.positionY,
+      },
+      stamina: {
+        current: user.staminaCurrent,
+        max: user.staminaMax,
+      },
     },
   };
 }

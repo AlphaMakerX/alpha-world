@@ -1,4 +1,0 @@
-export const ADAM_USER_ID = "00000000-0000-0000-0000-000000000001";
-export const ADAM_USERNAME = "adam";
-export const ADAM_INITIAL_MONEY = 1_000_000_000;
-export const ADAM_INITIAL_PASSWORD = "adam123456";

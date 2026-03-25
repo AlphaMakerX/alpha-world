@@ -1,8 +1,8 @@
-import { db } from "@/server/lib/db";
+import { getDbClient } from "@/server/lib/db";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import { moneyTransactions } from "@/server/features/person/infrastructure/schema";
 
-class DrizzleTransactionLedgerRepository implements TransactionLedgerRepository {
+export class DrizzleTransactionLedgerRepository implements TransactionLedgerRepository {
   async record(entry: {
     fromUserId: string;
     toUserId: string;
@@ -11,7 +11,7 @@ class DrizzleTransactionLedgerRepository implements TransactionLedgerRepository 
     referenceId?: string;
     description?: string;
   }): Promise<void> {
-    await db.insert(moneyTransactions).values({
+    await getDbClient().insert(moneyTransactions).values({
       fromUserId: entry.fromUserId,
       toUserId: entry.toUserId,
       amount: entry.amount.toString(),

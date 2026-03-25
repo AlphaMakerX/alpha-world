@@ -7,6 +7,8 @@ type WorldMapHeaderProps = {
   authStatus: AuthStatus;
   username?: string;
   money?: number;
+  staminaCurrent?: number;
+  staminaMax?: number;
   onOpenProfileClick: () => void;
   onOpenInventoryClick: () => void;
   onOpenGameInfoClick: () => void;
@@ -19,6 +21,8 @@ export function WorldMapHeader({
   authStatus,
   username,
   money,
+  staminaCurrent,
+  staminaMax,
   onOpenProfileClick,
   onOpenInventoryClick,
   onOpenGameInfoClick,
@@ -27,6 +31,10 @@ export function WorldMapHeader({
   logoutLoading = false,
 }: WorldMapHeaderProps) {
   const displayMoney = Number(money ?? 0).toLocaleString("zh-CN");
+  const safeMaxStamina = Math.max(1, Number(staminaMax ?? 100));
+  const safeCurrentStamina = Math.max(0, Math.min(safeMaxStamina, Number(staminaCurrent ?? safeMaxStamina)));
+  const staminaPercent = (safeCurrentStamina / safeMaxStamina) * 100;
+  const staminaLabel = `${Math.round(safeCurrentStamina)} / ${Math.round(safeMaxStamina)}`;
   const isAuthenticated = authStatus === "authenticated";
   const displayStatus =
     isAuthenticated
@@ -39,6 +47,12 @@ export function WorldMapHeader({
     : authStatus === "loading"
       ? "border-amber-300 bg-amber-100 text-amber-800"
       : "border-slate-300 bg-slate-100 text-slate-700";
+  const staminaToneClass =
+    staminaPercent <= 20
+      ? "border-rose-300 bg-rose-50 text-rose-700"
+      : staminaPercent <= 45
+        ? "border-amber-300 bg-amber-50 text-amber-700"
+        : "border-emerald-300 bg-emerald-50 text-emerald-700";
 
   return (
     <div className="z-50 w-full">
@@ -68,6 +82,19 @@ export function WorldMapHeader({
           </div>
         ) : null}
         <div className="relative z-[1] flex h-full items-center gap-2">
+          <div
+            className={`inline-flex h-7 items-center gap-2 rounded-full border px-2 text-xs font-semibold tabular-nums ${staminaToneClass}`}
+            title="移动会消耗体力，停止一段时间后恢复"
+          >
+            <span className="tracking-[0.06em]">体力</span>
+            <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200/90">
+              <div
+                className="h-full rounded-full bg-current transition-[width] duration-100"
+                style={{ width: `${staminaPercent}%` }}
+              />
+            </div>
+            <span>{staminaLabel}</span>
+          </div>
           <Button
             size="small"
             className="!h-7 !cursor-pointer !rounded-full !border-sky-300 !bg-sky-50 !px-3 !font-medium !text-sky-700 !transition-colors !duration-200 motion-reduce:!transition-none hover:!border-sky-400 hover:!bg-sky-100 hover:!text-sky-800 focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-sky-400/70 focus-visible:!ring-offset-1"

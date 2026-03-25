@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { ShopListing } from "@/client/features/building/types/building-ui";
-import { getItemDisplay } from "@/client/features/inventory/utils/item-display";
+import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
 type ShopListingCardProps = {
   listing: ShopListing;

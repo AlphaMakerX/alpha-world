@@ -1,4 +1,4 @@
-import type { FactoryOrder } from "@/client/features/building/types/building-ui";
+import type { FactoryOrder } from "@/client/features/factory/types/factory-ui";
 import { FactoryOrderCard } from "./factory-order-card";
 
 type FactoryOrderDetailProps = {

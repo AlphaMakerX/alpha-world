@@ -9,9 +9,15 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username VARCHAR(32) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  money NUMERIC(12, 2) NOT NULL DEFAULT 10000,
+  player_x NUMERIC(10, 2) NOT NULL DEFAULT 140,
+  player_y NUMERIC(10, 2) NOT NULL DEFAULT 600,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT users_username_length_chk CHECK (char_length(username) BETWEEN 3 AND 32)
+  CONSTRAINT users_username_length_chk CHECK (char_length(username) BETWEEN 3 AND 32),
+  CONSTRAINT users_money_chk CHECK (money >= 0),
+  CONSTRAINT users_player_x_chk CHECK (player_x >= 0),
+  CONSTRAINT users_player_y_chk CHECK (player_y >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS plots (

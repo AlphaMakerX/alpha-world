@@ -1,11 +1,11 @@
-import { z } from "zod";
-import { compare } from "bcryptjs";
-import { userRepository } from "@/server/features/person/infrastructure";
+import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
+import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import { Username } from "@/server/features/person/domain/value-objects/username";
 
-const loginUserSchema = z.object({
-  username: z.string().trim().min(3).max(32),
-  password: z.string().min(6).max(128),
-});
+export type LoginUserCommand = {
+  username: string;
+  password: string;
+};
 
 type LoginUserSuccessResult = {
   ok: true;
@@ -22,16 +22,17 @@ type LoginUserFailureResult = {
 
 export type LoginUserResult = LoginUserSuccessResult | LoginUserFailureResult;
 
-export async function executeLoginUserUseCase(input: unknown): Promise<LoginUserResult> {
-  const parsed = loginUserSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: "参数校验失败",
-    };
-  }
+export type LoginUserUseCaseDeps = {
+  userRepository: UserRepository;
+  passwordHasher: PasswordHasher;
+};
 
-  const user = await userRepository.findByUsername(parsed.data.username);
+export async function executeLoginUserUseCase(
+  command: LoginUserCommand,
+  deps: LoginUserUseCaseDeps,
+): Promise<LoginUserResult> {
+  const username = Username.create(command.username);
+  const user = await deps.userRepository.findByUsername(username);
   if (!user) {
     return {
       ok: false,
@@ -39,7 +40,7 @@ export async function executeLoginUserUseCase(input: unknown): Promise<LoginUser
     };
   }
 
-  const matched = await compare(parsed.data.password, user.passwordHash);
+  const matched = await deps.passwordHasher.verify(command.password, user.passwordHash);
   if (!matched) {
     return {
       ok: false,

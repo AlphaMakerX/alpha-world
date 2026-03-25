@@ -1,5 +1,6 @@
 export type MoneyTransactionType =
   | "registration_grant"
+  | "system_init_transfer"
   | "plot_purchase"
   | "building_construction"
   | "factory_production"

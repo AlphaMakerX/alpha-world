@@ -1,10 +1,5 @@
-import { desc } from "drizzle-orm";
-import { db } from "@/server/lib/db";
-import { users } from "@/server/features/person/infrastructure/schema";
-import {
-  ADAM_INITIAL_MONEY,
-  ADAM_USERNAME,
-} from "@/server/features/shared-kernel/domain/adam";
+import type { PersonQueryRepository } from "@/server/features/person/domain/repositories/person-query-repository";
+import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 export type LeaderboardEntry = {
   rank: number;
@@ -19,22 +14,21 @@ export type GetWealthLeaderboardResult = {
   totalMoneySupply: number;
 };
 
-export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLeaderboardResult> {
-  const rows = await db
-    .select({
-      username: users.username,
-      money: users.money,
-    })
-    .from(users)
-    .orderBy(desc(users.money))
-    .limit(50);
+export type GetWealthLeaderboardUseCaseDeps = {
+  personQueryRepository: PersonQueryRepository;
+};
+
+export async function executeGetWealthLeaderboardUseCase(
+  deps: GetWealthLeaderboardUseCaseDeps,
+): Promise<GetWealthLeaderboardResult> {
+  const rows = await deps.personQueryRepository.listWealthLeaderboard(50);
 
   const entries: LeaderboardEntry[] = rows.map((row, index) => ({
     rank: index + 1,
     username: row.username,
-    money: Number(row.money),
-    isAdam: row.username === ADAM_USERNAME,
+    money: row.money,
+    isAdam: row.username === ADAM_PERSONA_CONFIG.username,
   }));
 
-  return { ok: true, entries, totalMoneySupply: ADAM_INITIAL_MONEY };
+  return { ok: true, entries, totalMoneySupply: ADAM_PERSONA_CONFIG.initialMoney };
 }

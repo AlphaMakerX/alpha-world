@@ -1,8 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Plot, PlotCoordinate } from "@/server/features/plot/domain";
 import type { PlotRepository } from "@/server/features/plot/domain";
-import { db } from "@/server/lib/db";
-import { plots } from "@/server/features/person/infrastructure/schema";
+import { getDbClient } from "@/server/lib/db";
+import { plots } from "@/server/features/plot/infrastructure/schema";
 
 function toDomainPlot(record: typeof plots.$inferSelect): Plot {
   return Plot.rehydrate({
@@ -18,14 +18,14 @@ function toDomainPlot(record: typeof plots.$inferSelect): Plot {
 
 export class DrizzlePlotRepository implements PlotRepository {
   async findAll(): Promise<Plot[]> {
-    const records = await db.query.plots.findMany({
+    const records = await getDbClient().query.plots.findMany({
       orderBy: asc(plots.id),
     });
     return records.map(toDomainPlot);
   }
 
   async findById(id: number): Promise<Plot | null> {
-    const record = await db.query.plots.findFirst({
+    const record = await getDbClient().query.plots.findFirst({
       where: eq(plots.id, id),
     });
 
@@ -37,7 +37,7 @@ export class DrizzlePlotRepository implements PlotRepository {
   }
 
   async findByCoordinate(coordinate: PlotCoordinate): Promise<Plot | null> {
-    const record = await db.query.plots.findFirst({
+    const record = await getDbClient().query.plots.findFirst({
       where: and(eq(plots.x, coordinate.getX()), eq(plots.y, coordinate.getY())),
     });
 
@@ -49,7 +49,7 @@ export class DrizzlePlotRepository implements PlotRepository {
   }
 
   async save(plot: Plot): Promise<void> {
-    await db
+    await getDbClient()
       .insert(plots)
       .values({
         id: plot.id,

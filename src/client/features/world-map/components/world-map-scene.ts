@@ -4,7 +4,11 @@ import {
   MAP_HEIGHT,
   MAP_WIDTH,
   PLAYER_FOOT_OFFSET_Y,
+  PLAYER_MAX_STAMINA,
   PLAYER_RADIUS,
+  PLAYER_STAMINA_COST_PER_PIXEL,
+  PLAYER_STAMINA_RECOVERY_DELAY_MS,
+  PLAYER_STAMINA_RECOVERY_PER_SECOND,
   ROAD_WIDTH,
   SCENE_KEY,
   VERTICAL_ROAD_CENTERS,
@@ -15,28 +19,38 @@ import {
   createPlayer,
   createPlayerAnimations,
   preloadPlayerAssets,
+  type PlayerPosition,
   type PlayerSprite,
   updatePlayerAnimation,
 } from '../gameplay/world-map-player'
 import type { BuildingType } from '@/client/features/building/types/building-ui'
-import type { PlotRenderResult, WorldMapPlot } from '../rendering/world-map-plot'
+import type { PlotRenderResult, WorldMapPlot, WorldMapRenderablePlot } from '../rendering/world-map-plot'
 
 type PhaserModule = typeof import('phaser')
 
 type WorldMapSceneOptions = {
-  existingPlotIds?: ReadonlySet<string>
-  highlightedPlotIds?: ReadonlySet<string>
-  buildingTypeByPlotId?: ReadonlyMap<string, BuildingType>
+  plots?: ReadonlyArray<WorldMapRenderablePlot>
+  currentUserId?: string
+  playerPosition?: PlayerPosition
+  playerStamina?: PlayerStaminaPayload
+  onPlayerPositionChange?: (position: PlayerPosition) => void
+  onPlayerStaminaChange?: (payload: PlayerStaminaPayload) => void
   onOpenExistingPlot?: (plotId: string) => void
   onSceneReady?: () => void
+}
+
+export type PlayerStaminaPayload = {
+  current: number
+  max: number
 }
 
 export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
 
 type SyncMapDataPayload = {
-  existingPlotIds: ReadonlySet<string>
-  highlightedPlotIds: ReadonlySet<string>
-  buildingTypeByPlotId: ReadonlyMap<string, BuildingType>
+  plots: ReadonlyArray<WorldMapRenderablePlot>
+  currentUserId?: string
+  playerPosition?: PlayerPosition
+  playerStamina?: PlayerStaminaPayload
 }
 
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
@@ -55,10 +69,14 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     private nearbyPlotText!: Phaser.GameObjects.Text
     private interactHintText!: Phaser.GameObjects.Text
     private interactKey!: Phaser.Input.Keyboard.Key
-    private existingPlotIds: ReadonlySet<string> = options.existingPlotIds ?? new Set<string>()
-    private highlightedPlotIds: ReadonlySet<string> = options.highlightedPlotIds ?? new Set<string>()
-    private buildingTypeByPlotId: ReadonlyMap<string, BuildingType> =
-      options.buildingTypeByPlotId ?? new Map<string, BuildingType>()
+    private plotsData: ReadonlyArray<WorldMapRenderablePlot> = options.plots ?? []
+    private currentUserId: string | undefined = options.currentUserId
+    private playerPosition: PlayerPosition | undefined = options.playerPosition
+    private hasAppliedPersistedPlayerPosition = false
+    private stamina = options.playerStamina?.current ?? PLAYER_MAX_STAMINA
+    private staminaMax = options.playerStamina?.max ?? PLAYER_MAX_STAMINA
+    private staminaRecoveryElapsedMs = PLAYER_STAMINA_RECOVERY_DELAY_MS
+    private lastEmittedStamina = Number.NaN
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -75,7 +93,8 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.createRoadNetwork()
       this.renderPlots()
       createPlayerAnimations(this)
-      this.player = createPlayer(this)
+      this.player = createPlayer(this, this.playerPosition)
+      this.emitStaminaChange(true)
 
       // 相机跟随玩家，地图尺寸由常量统一控制，便于后续扩展更大场景。
       this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
@@ -136,18 +155,35 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
 
     update(): void {
       if (this.isDOMInputFocused()) return
+      const prevX = this.player.x
+      const prevY = this.player.y
 
-      movePlayerByCursorsOnRoads({
-        player: this.player,
-        cursors: this.cursors,
-        roads: this.roads,
-        moveSpeed: this.moveSpeed,
-        deltaMs: this.game.loop.delta,
-        playerRadius: PLAYER_RADIUS,
-        playerFootOffsetY: PLAYER_FOOT_OFFSET_Y,
-      })
+      if (this.stamina > 0) {
+        movePlayerByCursorsOnRoads({
+          player: this.player,
+          cursors: this.cursors,
+          roads: this.roads,
+          moveSpeed: this.moveSpeed,
+          deltaMs: this.game.loop.delta,
+          playerRadius: PLAYER_RADIUS,
+          playerFootOffsetY: PLAYER_FOOT_OFFSET_Y,
+        })
+      }
 
-      updatePlayerAnimation(this.player, this.cursors)
+      const movedDistance = Math.hypot(this.player.x - prevX, this.player.y - prevY)
+      if (movedDistance > 0) {
+        this.consumeStaminaByDistance(movedDistance)
+      } else {
+        this.tryRecoverStamina(this.game.loop.delta)
+      }
+
+      updatePlayerAnimation(this.player, this.cursors, movedDistance > 0)
+      if (prevX !== this.player.x || prevY !== this.player.y) {
+        options.onPlayerPositionChange?.({
+          x: this.player.x,
+          y: this.player.y,
+        })
+      }
       this.updateNearbyPlotUI()
     }
 
@@ -191,19 +227,105 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         this.roads,
         HORIZONTAL_ROAD_CENTERS,
         VERTICAL_ROAD_CENTERS_IN_MAP,
-        this.existingPlotIds,
-        this.highlightedPlotIds,
-        this.buildingTypeByPlotId
+        this.plotsData,
+        this.currentUserId
       )
       this.plots = renderResult.plots
       this.plotRenderObjects = renderResult.renderObjects
     }
 
     private syncMapData(payload: SyncMapDataPayload): void {
-      this.existingPlotIds = payload.existingPlotIds
-      this.highlightedPlotIds = payload.highlightedPlotIds
-      this.buildingTypeByPlotId = payload.buildingTypeByPlotId
+      this.plotsData = payload.plots
+      this.playerPosition = payload.playerPosition
+      const switchedAccount =
+        payload.currentUserId !== this.currentUserId ||
+        (payload.currentUserId === undefined && this.currentUserId !== undefined)
+      this.currentUserId = payload.currentUserId
+      if (switchedAccount) {
+        this.hasAppliedPersistedPlayerPosition = false
+        this.resetStamina()
+      }
+      if (payload.playerStamina) {
+        this.syncStaminaFromServer(payload.playerStamina)
+      }
+      if (
+        payload.currentUserId &&
+        payload.playerPosition &&
+        (
+          !this.hasAppliedPersistedPlayerPosition ||
+          shouldSnapToServerPosition(this.player, payload.playerPosition)
+        )
+      ) {
+        this.player.setPosition(payload.playerPosition.x, payload.playerPosition.y)
+        this.hasAppliedPersistedPlayerPosition = true
+      }
       this.renderPlots()
+    }
+
+    private resetStamina(): void {
+      this.stamina = this.staminaMax
+      this.staminaRecoveryElapsedMs = PLAYER_STAMINA_RECOVERY_DELAY_MS
+      this.emitStaminaChange(true)
+    }
+
+    private syncStaminaFromServer(stamina: PlayerStaminaPayload): void {
+      if (stamina.max <= 0) {
+        return
+      }
+      this.staminaMax = stamina.max
+      this.stamina = Math.max(0, Math.min(stamina.max, stamina.current))
+      this.staminaRecoveryElapsedMs = PLAYER_STAMINA_RECOVERY_DELAY_MS
+      this.emitStaminaChange(true)
+    }
+
+    private consumeStaminaByDistance(distance: number): void {
+      if (distance <= 0) {
+        return
+      }
+      const cost = distance * PLAYER_STAMINA_COST_PER_PIXEL
+      if (cost <= 0) {
+        return
+      }
+
+      const nextStamina = Math.max(0, this.stamina - cost)
+      if (nextStamina === this.stamina) {
+        return
+      }
+      this.stamina = nextStamina
+      this.staminaRecoveryElapsedMs = 0
+      this.emitStaminaChange()
+    }
+
+    private tryRecoverStamina(deltaMs: number): void {
+      if (this.stamina >= this.staminaMax) {
+        return
+      }
+      this.staminaRecoveryElapsedMs += deltaMs
+      if (this.staminaRecoveryElapsedMs < PLAYER_STAMINA_RECOVERY_DELAY_MS) {
+        return
+      }
+      const recovered = PLAYER_STAMINA_RECOVERY_PER_SECOND * (deltaMs / 1000)
+      if (recovered <= 0) {
+        return
+      }
+      const nextStamina = Math.min(this.staminaMax, this.stamina + recovered)
+      if (nextStamina === this.stamina) {
+        return
+      }
+      this.stamina = nextStamina
+      this.emitStaminaChange()
+    }
+
+    private emitStaminaChange(force = false): void {
+      const roundedCurrent = Number(this.stamina.toFixed(2))
+      if (!force && roundedCurrent === this.lastEmittedStamina) {
+        return
+      }
+      this.lastEmittedStamina = roundedCurrent
+      options.onPlayerStaminaChange?.({
+        current: roundedCurrent,
+        max: this.staminaMax,
+      })
     }
 
     private updateNearbyPlotUI(): void {
@@ -261,4 +383,9 @@ function distancePointToRect(px: number, py: number, rect: Phaser.Geom.Rectangle
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, max))
+}
+
+function shouldSnapToServerPosition(current: PlayerPosition, next: PlayerPosition): boolean {
+  const maxDriftDistance = 8
+  return Math.hypot(current.x - next.x, current.y - next.y) > maxDriftDistance
 }
