@@ -4,11 +4,7 @@ import {
   MAP_HEIGHT,
   MAP_WIDTH,
   PLAYER_FOOT_OFFSET_Y,
-  PLAYER_MAX_STAMINA,
   PLAYER_RADIUS,
-  PLAYER_STAMINA_COST_PER_PIXEL,
-  PLAYER_STAMINA_RECOVERY_DELAY_MS,
-  PLAYER_STAMINA_RECOVERY_PER_SECOND,
   ROAD_WIDTH,
   SCENE_KEY,
   VERTICAL_ROAD_CENTERS,
@@ -32,16 +28,9 @@ type WorldMapSceneOptions = {
   plots?: ReadonlyArray<WorldMapRenderablePlot>
   currentUserId?: string
   playerPosition?: PlayerPosition
-  playerStamina?: PlayerStaminaPayload
   onPlayerPositionChange?: (position: PlayerPosition) => void
-  onPlayerStaminaChange?: (payload: PlayerStaminaPayload) => void
   onOpenExistingPlot?: (plotId: string) => void
   onSceneReady?: () => void
-}
-
-export type PlayerStaminaPayload = {
-  current: number
-  max: number
 }
 
 export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
@@ -50,7 +39,6 @@ type SyncMapDataPayload = {
   plots: ReadonlyArray<WorldMapRenderablePlot>
   currentUserId?: string
   playerPosition?: PlayerPosition
-  playerStamina?: PlayerStaminaPayload
 }
 
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
@@ -73,10 +61,6 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     private currentUserId: string | undefined = options.currentUserId
     private playerPosition: PlayerPosition | undefined = options.playerPosition
     private hasAppliedPersistedPlayerPosition = false
-    private stamina = options.playerStamina?.current ?? PLAYER_MAX_STAMINA
-    private staminaMax = options.playerStamina?.max ?? PLAYER_MAX_STAMINA
-    private staminaRecoveryElapsedMs = PLAYER_STAMINA_RECOVERY_DELAY_MS
-    private lastEmittedStamina = Number.NaN
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     moveSpeed = 220
@@ -94,7 +78,6 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.renderPlots()
       createPlayerAnimations(this)
       this.player = createPlayer(this, this.playerPosition)
-      this.emitStaminaChange(true)
 
       // 相机跟随玩家，地图尺寸由常量统一控制，便于后续扩展更大场景。
       this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
@@ -158,24 +141,17 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       const prevX = this.player.x
       const prevY = this.player.y
 
-      if (this.stamina > 0) {
-        movePlayerByCursorsOnRoads({
-          player: this.player,
-          cursors: this.cursors,
-          roads: this.roads,
-          moveSpeed: this.moveSpeed,
-          deltaMs: this.game.loop.delta,
-          playerRadius: PLAYER_RADIUS,
-          playerFootOffsetY: PLAYER_FOOT_OFFSET_Y,
-        })
-      }
+      movePlayerByCursorsOnRoads({
+        player: this.player,
+        cursors: this.cursors,
+        roads: this.roads,
+        moveSpeed: this.moveSpeed,
+        deltaMs: this.game.loop.delta,
+        playerRadius: PLAYER_RADIUS,
+        playerFootOffsetY: PLAYER_FOOT_OFFSET_Y,
+      })
 
       const movedDistance = Math.hypot(this.player.x - prevX, this.player.y - prevY)
-      if (movedDistance > 0) {
-        this.consumeStaminaByDistance(movedDistance)
-      } else {
-        this.tryRecoverStamina(this.game.loop.delta)
-      }
 
       updatePlayerAnimation(this.player, this.cursors, movedDistance > 0)
       if (prevX !== this.player.x || prevY !== this.player.y) {
@@ -243,10 +219,6 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.currentUserId = payload.currentUserId
       if (switchedAccount) {
         this.hasAppliedPersistedPlayerPosition = false
-        this.resetStamina()
-      }
-      if (payload.playerStamina) {
-        this.syncStaminaFromServer(payload.playerStamina)
       }
       if (
         payload.currentUserId &&
@@ -260,72 +232,6 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
         this.hasAppliedPersistedPlayerPosition = true
       }
       this.renderPlots()
-    }
-
-    private resetStamina(): void {
-      this.stamina = this.staminaMax
-      this.staminaRecoveryElapsedMs = PLAYER_STAMINA_RECOVERY_DELAY_MS
-      this.emitStaminaChange(true)
-    }
-
-    private syncStaminaFromServer(stamina: PlayerStaminaPayload): void {
-      if (stamina.max <= 0) {
-        return
-      }
-      this.staminaMax = stamina.max
-      this.stamina = Math.max(0, Math.min(stamina.max, stamina.current))
-      this.staminaRecoveryElapsedMs = PLAYER_STAMINA_RECOVERY_DELAY_MS
-      this.emitStaminaChange(true)
-    }
-
-    private consumeStaminaByDistance(distance: number): void {
-      if (distance <= 0) {
-        return
-      }
-      const cost = distance * PLAYER_STAMINA_COST_PER_PIXEL
-      if (cost <= 0) {
-        return
-      }
-
-      const nextStamina = Math.max(0, this.stamina - cost)
-      if (nextStamina === this.stamina) {
-        return
-      }
-      this.stamina = nextStamina
-      this.staminaRecoveryElapsedMs = 0
-      this.emitStaminaChange()
-    }
-
-    private tryRecoverStamina(deltaMs: number): void {
-      if (this.stamina >= this.staminaMax) {
-        return
-      }
-      this.staminaRecoveryElapsedMs += deltaMs
-      if (this.staminaRecoveryElapsedMs < PLAYER_STAMINA_RECOVERY_DELAY_MS) {
-        return
-      }
-      const recovered = PLAYER_STAMINA_RECOVERY_PER_SECOND * (deltaMs / 1000)
-      if (recovered <= 0) {
-        return
-      }
-      const nextStamina = Math.min(this.staminaMax, this.stamina + recovered)
-      if (nextStamina === this.stamina) {
-        return
-      }
-      this.stamina = nextStamina
-      this.emitStaminaChange()
-    }
-
-    private emitStaminaChange(force = false): void {
-      const roundedCurrent = Number(this.stamina.toFixed(2))
-      if (!force && roundedCurrent === this.lastEmittedStamina) {
-        return
-      }
-      this.lastEmittedStamina = roundedCurrent
-      options.onPlayerStaminaChange?.({
-        current: roundedCurrent,
-        max: this.staminaMax,
-      })
     }
 
     private updateNearbyPlotUI(): void {

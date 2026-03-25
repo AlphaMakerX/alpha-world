@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
 import { createWorldMapScene } from "../components/world-map-scene";
-import type { PlayerStaminaPayload } from "../components/world-map-scene";
 import { MAP_MAX_X, MAP_MAX_Y, POSITION_MIN_DISTANCE_TO_SYNC } from "../world-map-constants";
 import { getDistance } from "../world-map-utils";
 import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
@@ -13,8 +12,6 @@ export function usePhaserWorldMap(options: {
   worldMapPlots: WorldMapRenderablePlot[];
   currentUserId: string | undefined;
   playerPosition: { x: number; y: number } | undefined;
-  serverPlayerStamina: PlayerStaminaPayload | undefined;
-  setPlayerStamina: Dispatch<SetStateAction<PlayerStaminaPayload>>;
   setSelectedPlotId: Dispatch<SetStateAction<string | null>>;
   pendingPlayerPositionRef: MutableRefObject<{ x: number; y: number } | null>;
   lastSyncedPlayerPositionRef: MutableRefObject<{ x: number; y: number } | null>;
@@ -26,8 +23,6 @@ export function usePhaserWorldMap(options: {
     worldMapPlots,
     currentUserId,
     playerPosition,
-    serverPlayerStamina,
-    setPlayerStamina,
     setSelectedPlotId,
     pendingPlayerPositionRef,
     lastSyncedPlayerPositionRef,
@@ -59,7 +54,6 @@ export function usePhaserWorldMap(options: {
         plots: worldMapPlots,
         currentUserId,
         playerPosition,
-        playerStamina: serverPlayerStamina,
         onPlayerPositionChange: (position) => {
           if (!isAuthenticatedRef.current) {
             return;
@@ -80,14 +74,6 @@ export function usePhaserWorldMap(options: {
             return;
           }
           pendingPlayerPositionRef.current = clampedPosition;
-        },
-        onPlayerStaminaChange: (stamina) => {
-          setPlayerStamina((previous) => {
-            if (previous.current === stamina.current && previous.max === stamina.max) {
-              return previous;
-            }
-            return stamina;
-          });
         },
         onOpenExistingPlot: (plotId) => {
           setSelectedPlotId((prev) => (prev === plotId ? null : plotId));

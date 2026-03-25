@@ -43,6 +43,16 @@ export async function executeGetCurrentUserUseCase(input: {
     };
   }
 
+  const staminaCurrentBefore = user.staminaCurrent;
+  const staminaUpdatedAtBefore = user.staminaUpdatedAt.getTime();
+  user.recoverStamina(new Date());
+  if (
+    user.staminaCurrent !== staminaCurrentBefore ||
+    user.staminaUpdatedAt.getTime() !== staminaUpdatedAtBefore
+  ) {
+    await deps.userRepository.save(user);
+  }
+
   return {
     ok: true,
     user: {

@@ -2,7 +2,6 @@ import { DomainError } from "@/server/features/shared-kernel/domain/domain-error
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import {
   PLAYER_MAX_STAMINA,
-  PLAYER_STAMINA_RECOVERY_DELAY_MS,
   PLAYER_STAMINA_RECOVERY_PER_SECOND,
 } from "@/shared/gameplay/player-stamina";
 
@@ -123,33 +122,16 @@ export class User {
       return;
     }
     const elapsedMs = at.getTime() - this.props.staminaUpdatedAt.getTime();
-    if (elapsedMs <= PLAYER_STAMINA_RECOVERY_DELAY_MS) {
+    if (elapsedMs <= 0) {
       return;
     }
-    const recoveryWindowMs = elapsedMs - PLAYER_STAMINA_RECOVERY_DELAY_MS;
-    const recoverAmount = (recoveryWindowMs / 1000) * PLAYER_STAMINA_RECOVERY_PER_SECOND;
+    const recoverAmount = (elapsedMs / 1000) * PLAYER_STAMINA_RECOVERY_PER_SECOND;
     if (recoverAmount <= 0) {
       return;
     }
     this.props.staminaCurrent = Math.min(this.props.staminaMax, this.props.staminaCurrent + recoverAmount);
     this.props.staminaUpdatedAt = at;
     this.props.updatedAt = at;
-  }
-
-  consumeStamina(amount: number, at: Date = new Date()): boolean {
-    if (amount < 0 || !Number.isFinite(amount)) {
-      throw new DomainError("消耗体力值必须是非负有效数字");
-    }
-    if (amount === 0) {
-      return true;
-    }
-    if (this.props.staminaCurrent < amount) {
-      return false;
-    }
-    this.props.staminaCurrent -= amount;
-    this.props.staminaUpdatedAt = at;
-    this.props.updatedAt = at;
-    return true;
   }
 
   changePasswordHash(passwordHash: string): void {

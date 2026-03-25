@@ -10,11 +10,8 @@ export function useWorldMapSession(options: {
   messageApi: MessageInstance;
   pendingPlayerPositionRef: MutableRefObject<{ x: number; y: number } | null>;
   lastSyncedPlayerPositionRef: MutableRefObject<{ x: number; y: number } | null>;
-  setPlayerStamina: React.Dispatch<
-    React.SetStateAction<{ current: number; max: number }>
-  >;
 }) {
-  const { messageApi, pendingPlayerPositionRef, lastSyncedPlayerPositionRef, setPlayerStamina } = options;
+  const { messageApi, pendingPlayerPositionRef, lastSyncedPlayerPositionRef } = options;
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
   const trpcUtils = trpc.useUtils();
@@ -38,7 +35,6 @@ export function useWorldMapSession(options: {
 
   const currentUserId = authStatus === "authenticated" ? meData?.user.id : undefined;
   const playerPosition = authStatus === "authenticated" ? meData?.user.position : undefined;
-  const serverPlayerStamina = authStatus === "authenticated" ? meData?.user.stamina : undefined;
 
   const headerUsername =
     authStatus === "authenticated"
@@ -54,7 +50,6 @@ export function useWorldMapSession(options: {
         try {
           const result = await updatePositionMutation.mutateAsync({ position: latestPosition });
           lastSyncedPlayerPositionRef.current = result.user.position;
-          setPlayerStamina(result.user.stamina);
           pendingPlayerPositionRef.current = null;
         } catch {
           // 下线前保存位置失败时不阻塞登出流程。
@@ -80,7 +75,6 @@ export function useWorldMapSession(options: {
     refetchInventory,
     currentUserId,
     playerPosition,
-    serverPlayerStamina,
     headerUsername,
     headerMoney,
     logoutLoading,

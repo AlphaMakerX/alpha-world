@@ -1,5 +1,4 @@
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import { calculateStaminaCostByDistance } from "@/shared/gameplay/player-stamina";
 
 type UpdateUserPositionSuccessResult = {
   ok: true;
@@ -45,13 +44,7 @@ export async function executeUpdateUserPositionUseCase(
     };
   }
 
-  const now = new Date();
-  user.recoverStamina(now);
-  const distance = Math.hypot(input.position.x - user.positionX, input.position.y - user.positionY);
-  const staminaCost = calculateStaminaCostByDistance(distance);
-  if (user.consumeStamina(staminaCost, now)) {
-    user.updatePosition(input.position);
-  }
+  user.updatePosition(input.position);
   await deps.userRepository.save(user);
 
   return {

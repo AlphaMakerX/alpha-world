@@ -2,7 +2,6 @@
 
 import { Modal, Spin, message } from "antd";
 import { useRef, useState } from "react";
-import type { PlayerStaminaPayload } from "./world-map-scene";
 import { WorldMapHeader } from "./world-map-header";
 import { AuthPanel } from "@/client/features/auth/components/auth-panel";
 import { GameInfoModal } from "@/client/features/game-info/components/game-info-modal";
@@ -16,7 +15,6 @@ import { useWorldMapPlots } from "../hooks/use-world-map-plots";
 import { useWorldMapPurchasingStation } from "../hooks/use-world-map-purchasing-station";
 import { useWorldMapSession } from "../hooks/use-world-map-session";
 import { useWorldMapShop } from "../hooks/use-world-map-shop";
-import { DEFAULT_PLAYER_STAMINA } from "../world-map-constants";
 import { isInitialQueryLoading } from "../world-map-utils";
 
 export function WorldMap() {
@@ -25,7 +23,6 @@ export function WorldMap() {
   const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const isAuthenticatedRef = useRef(false);
-  const [playerStamina, setPlayerStamina] = useState<PlayerStaminaPayload>(DEFAULT_PLAYER_STAMINA);
 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -43,7 +40,6 @@ export function WorldMap() {
     refetchInventory,
     currentUserId,
     playerPosition,
-    serverPlayerStamina,
     headerUsername,
     headerMoney,
     logoutLoading,
@@ -53,7 +49,6 @@ export function WorldMap() {
     messageApi,
     pendingPlayerPositionRef,
     lastSyncedPlayerPositionRef,
-    setPlayerStamina,
   });
 
   const {
@@ -155,8 +150,6 @@ export function WorldMap() {
     worldMapPlots,
     currentUserId,
     playerPosition,
-    serverPlayerStamina,
-    setPlayerStamina,
     setSelectedPlotId,
     pendingPlayerPositionRef,
     lastSyncedPlayerPositionRef,
@@ -167,12 +160,10 @@ export function WorldMap() {
     authStatus,
     currentUserId,
     playerPosition,
-    serverPlayerStamina,
     worldMapPlots,
     worldMapPlotsKey,
     isGameReady,
     gameRef,
-    setPlayerStamina,
     updatePositionMutation,
     pendingPlayerPositionRef,
     lastSyncedPlayerPositionRef,
@@ -186,8 +177,6 @@ export function WorldMap() {
         authStatus={authStatus}
         username={headerUsername}
         money={headerMoney}
-        staminaCurrent={playerStamina.current}
-        staminaMax={playerStamina.max}
         onOpenProfileClick={() => {
           if (authStatus !== "authenticated") {
             setLoginModalOpen(true);
