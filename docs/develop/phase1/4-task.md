@@ -113,10 +113,11 @@
 
 ## 任务 5：全量验证与文档
 
-- [ ] `npm test` 全量通过。
-- [ ] `npx tsc --noEmit` 零错误。
-- [ ] 在 `docs/develop/` 或 phase1 README 加一节 "如何携带 Bearer 调用 tRPC"，给出：
+- [x] `npm test` 全量通过（8 个测试文件、58 个用例全绿）。
+- [x] `npx tsc --noEmit` 零错误。
+- [x] 在 phase1 [README.md](./README.md) 加 "如何携带 Bearer 调用 tRPC" 一节，给出：
   - 生成令牌的 tRPC 调用示例（`POST /api/trpc/apiAccessToken.generate`）；
   - 业务请求示例（`Authorization: Bearer awt_xxx`）；
   - 令牌遗失处理（再次调用生成接口即覆盖，无找回）。
-- [ ] 回到 [`PLAN.md`](../PLAN.md)，确认 Phase 1 描述与已完成内容一致，为 Phase 2 留好入口。
+- [x] 回到 [`PLAN.md`](../PLAN.md)，确认 Phase 1 描述与已完成内容一致，为 Phase 2 留好入口。
+- [x] 总结整个模块：见 [5-conclusion.md](./5-conclusion.md)。
