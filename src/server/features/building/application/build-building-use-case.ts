@@ -1,3 +1,11 @@
+/**
+ * 建造建筑用例
+ *
+ * 处理用户在自己地块上建造建筑的业务流程，包括：
+ * 1. 校验地块归属和可用性
+ * 2. 查询建造费用并扣款
+ * 3. 创建建筑实体并记录交易流水
+ */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { Building } from "@/server/features/building/domain";
 import { getBuildingCost } from "@/server/features/building/application/building-cost-catalog";
@@ -8,6 +16,7 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
+/** 建造成功的返回结果 */
 type BuildBuildingSuccessResult = {
   ok: true;
   building: {
@@ -20,19 +29,24 @@ type BuildBuildingSuccessResult = {
   };
 };
 
+/** 建造失败的返回结果 */
 type BuildBuildingFailureResult = {
   ok: false;
   error: string;
   code: UseCaseErrorCode;
 };
 
+/** 建造建筑用例的返回类型（成功 | 失败） */
 export type BuildBuildingResult = BuildBuildingSuccessResult | BuildBuildingFailureResult;
+
+/** 建造建筑的命令参数 */
 export type BuildBuildingCommand = {
   ownerUserId: string;
   plotId: number;
   buildingType: "residential" | "factory" | "shop" | "purchasing_station";
 };
 
+/** 建造建筑用例所需的外部依赖 */
 export type BuildBuildingUseCaseDeps = {
   buildingRepository: BuildingRepository;
   plotRepository: PlotRepository;
@@ -42,6 +56,11 @@ export type BuildBuildingUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/**
+ * 执行建造建筑用例
+ *
+ * 流程：校验地块 -> 检查是否已有建筑 -> 计算费用 -> 事务内扣款、建造、记录流水
+ */
 export async function executeBuildBuildingUseCase(
   command: BuildBuildingCommand,
   deps: BuildBuildingUseCaseDeps,
@@ -71,6 +90,7 @@ export async function executeBuildBuildingUseCase(
     };
   }
 
+  // 根据建筑类型查询建造费用
   const cost = getBuildingCost(command.buildingType);
 
   const owner = await deps.userRepository.findById(command.ownerUserId);
@@ -78,10 +98,13 @@ export async function executeBuildBuildingUseCase(
     return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
+  // 获取系统账户（用于接收建造费用）
   const adam = await deps.systemAccountService.getSystemAccount();
 
   try {
+    // 在事务中完成扣款、建造和交易记录
     const savedBuilding = await deps.transact(async () => {
+      // 从用户扣款并转入系统账户
       if (cost > 0) {
         owner.spendMoney(cost);
         adam.receiveMoney(cost);

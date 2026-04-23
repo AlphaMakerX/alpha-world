@@ -1,12 +1,19 @@
+/**
+ * 工厂订单区组件
+ * 包含"制造中订单"和"历史订单"两个 Tab 页，支持切换查看。
+ */
+
 import type { FactoryOrders } from "@/client/features/factory/types/factory-ui";
 import { useState } from "react";
 import { FactoryOrderDetail } from "./factory-order-detail";
 import { FactoryOrderList } from "./factory-order-list";
 
+/** 工厂订单区组件的 Props */
 type FactoryOrdersSectionProps = {
   factoryOrders?: FactoryOrders;
 };
 
+/** 工厂订单区组件，包含"制造中订单"和"历史订单"两个 Tab */
 export function FactoryOrdersSection({ factoryOrders }: FactoryOrdersSectionProps) {
   const [activeTab, setActiveTab] = useState<"focus" | "history">("focus");
 

@@ -1,20 +1,28 @@
+/**
+ * 工厂订单卡片组件
+ * 展示单个工厂订单的详细信息，包括状态徽章、生产进度条、输入/输出物品可视化、时间戳等。
+ */
+
 import type { FactoryOrder, FactoryOrderStatus } from "@/client/features/factory/types/factory-ui";
 import { ItemTile } from "@/client/features/item/components/item-tile";
 import { getRecipeById } from "@/server/features/recipe/application/recipe-catalog";
 import { useEffect, useState } from "react";
 
+/** 工厂订单卡片组件的 Props */
 type FactoryOrderCardProps = {
   order: FactoryOrder;
   className?: string;
   showCollectedAt?: boolean;
 };
 
+/** 订单状态枚举值到中文标签的映射 */
 const factoryOrderStatusLabelByValue: Record<FactoryOrderStatus, string> = {
   in_progress: "进行中",
   collected: "已收取",
   cancelled: "已取消",
 };
 
+/** 格式化日期时间为中文格式，无效值返回"无" */
 function formatDateTime(value: Date | string | null) {
   if (!value) return "无";
   const date = value instanceof Date ? value : new Date(value);
@@ -22,12 +30,17 @@ function formatDateTime(value: Date | string | null) {
   return date.toLocaleString("zh-CN");
 }
 
+/** 订单状态对应的样式配置：徽章颜色和状态圆点颜色 */
 const statusConfig = {
   in_progress: { badge: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-400" },
   collected: { badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-400" },
   cancelled: { badge: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-400" },
 } as const;
 
+/**
+ * 订单进度 Hook
+ * 根据订单的开始时间和结束时间，每秒计算当前生产进度百分比。
+ */
 function useOrderProgress(order: FactoryOrder) {
   const [progress, setProgress] = useState(0);
 
@@ -55,6 +68,7 @@ function useOrderProgress(order: FactoryOrder) {
   return progress;
 }
 
+/** 格式化剩余时间为人类可读的中文格式（如"5分30秒"） */
 function formatRemaining(finishAt: Date | string) {
   const remaining = Math.max(0, new Date(finishAt).getTime() - Date.now());
   if (remaining <= 0) return "即将完成";
@@ -67,6 +81,7 @@ function formatRemaining(finishAt: Date | string) {
   return `${s}秒`;
 }
 
+/** 工厂订单卡片组件，展示订单状态、进度、物品流转和时间信息 */
 export function FactoryOrderCard({ order, className, showCollectedAt = false }: FactoryOrderCardProps) {
   const progress = useOrderProgress(order);
   const status = statusConfig[order.status];

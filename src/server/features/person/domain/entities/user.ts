@@ -1,3 +1,9 @@
+/**
+ * 用户领域实体
+ *
+ * 定义用户的核心属性与行为，包括注册、资金操作、位置更新、体力恢复等。
+ * 遵循 DDD 聚合根模式，通过工厂方法创建实例并封装所有业务规则校验。
+ */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import {
@@ -5,6 +11,7 @@ import {
   PLAYER_STAMINA_RECOVERY_PER_SECOND,
 } from "@/shared/gameplay/player-stamina";
 
+/** 用户实体内部属性 */
 type UserProps = {
   id: string;
   username: Username;
@@ -19,9 +26,14 @@ type UserProps = {
   updatedAt: Date;
 };
 
+/** 用户聚合根实体 */
 export class User {
   private constructor(private readonly props: UserProps) {}
 
+  /**
+   * 注册新用户的工厂方法
+   * 校验必填字段并设置默认值（初始金额、坐标、体力）
+   */
   static register(input: {
     id: string;
     username: string;
@@ -69,6 +81,7 @@ export class User {
     });
   }
 
+  /** 从持久化数据重建用户实体（反序列化），校验数据完整性 */
   static rehydrate(props: UserProps): User {
     if (props.money < 0) {
       throw new DomainError("用户余额不能小于 0");
@@ -89,6 +102,7 @@ export class User {
     return new User(props);
   }
 
+  /** 扣减用户金额，余额不足时抛出领域错误 */
   spendMoney(amount: number): void {
     if (amount < 0) {
       throw new DomainError("扣款金额不能小于 0");
@@ -100,6 +114,7 @@ export class User {
     this.props.updatedAt = new Date();
   }
 
+  /** 增加用户金额 */
   receiveMoney(amount: number): void {
     if (amount < 0) {
       throw new DomainError("收款金额不能小于 0");
@@ -108,6 +123,7 @@ export class User {
     this.props.updatedAt = new Date();
   }
 
+  /** 更新用户在地图中的坐标位置 */
   updatePosition(position: { x: number; y: number }): void {
     if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) {
       throw new DomainError("用户坐标必须是有效数字");
@@ -117,6 +133,10 @@ export class User {
     this.props.updatedAt = new Date();
   }
 
+  /**
+   * 根据时间流逝恢复体力
+   * 按照每秒恢复速率计算，体力不超过上限
+   */
   recoverStamina(at: Date = new Date()): void {
     if (this.props.staminaCurrent >= this.props.staminaMax) {
       return;
@@ -134,6 +154,7 @@ export class User {
     this.props.updatedAt = at;
   }
 
+  /** 修改密码哈希 */
   changePasswordHash(passwordHash: string): void {
     if (!passwordHash) {
       throw new DomainError("密码哈希不能为空");

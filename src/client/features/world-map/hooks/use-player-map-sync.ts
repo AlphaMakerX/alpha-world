@@ -1,3 +1,10 @@
+/**
+ * 玩家位置与地图数据同步 Hook
+ *
+ * 承担两个职责：
+ * 1. 定时将本地玩家位置上传到服务端（节流式同步）
+ * 2. 当地图数据或玩家位置发生变化时，通过事件推送给 Phaser 场景
+ */
 "use client";
 
 import { useEffect, type MutableRefObject, type RefObject } from "react";
@@ -5,6 +12,7 @@ import { WORLD_MAP_SYNC_EVENT } from "../components/world-map-scene";
 import { POSITION_SYNC_INTERVAL_MS } from "../world-map-constants";
 import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
 
+/** 位置更新 mutation 的类型约束 */
 type UpdatePositionMutation = {
   isPending: boolean;
   mutateAsync: (input: { position: { x: number; y: number } }) => Promise<{
@@ -12,6 +20,7 @@ type UpdatePositionMutation = {
   }>;
 };
 
+/** 管理玩家位置的定时上传和地图数据向 Phaser 场景的同步 */
 export function usePlayerMapSync(options: {
   authStatus: "loading" | "authenticated" | "unauthenticated";
   currentUserId: string | undefined;
@@ -39,10 +48,12 @@ export function usePlayerMapSync(options: {
     isAuthenticatedRef,
   } = options;
 
+  // 将认证状态同步到 ref，供 Phaser 回调中读取
   useEffect(() => {
     isAuthenticatedRef.current = authStatus === "authenticated";
   }, [authStatus, isAuthenticatedRef]);
 
+  // 登出时清空待同步和已同步的位置记录
   useEffect(() => {
     if (authStatus !== "authenticated" || !currentUserId) {
       pendingPlayerPositionRef.current = null;
@@ -59,6 +70,7 @@ export function usePlayerMapSync(options: {
       return;
     }
 
+    // 定时轮询将待同步位置上传到服务端
     const timer = window.setInterval(() => {
       const pendingPosition = pendingPlayerPositionRef.current;
       if (!pendingPosition || updatePositionMutation.isPending) {
@@ -87,6 +99,7 @@ export function usePlayerMapSync(options: {
     lastSyncedPlayerPositionRef,
   ]);
 
+  // 当地块数据、用户 ID 或玩家位置变化时，通过事件推送给 Phaser 场景
   useEffect(() => {
     if (!isGameReady || !gameRef.current) {
       return;

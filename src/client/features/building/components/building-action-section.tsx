@@ -1,3 +1,8 @@
+/**
+ * 建筑操作区组件
+ * 根据建筑类型和用户权限，渲染不同的建筑操作面板（工厂制造、商店交易、收购站）以及交易历史。
+ */
+
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 import type { BuildingCapabilities } from "@/client/features/building/model/building-capabilities";
 import type { FactoryOrders, FactoryRecipe } from "@/client/features/factory/types/factory-ui";
@@ -14,6 +19,7 @@ import { ShopTransactionHistory } from "@/client/features/shop/components/shop-t
 import { PurchasingStationSection } from "@/client/features/purchasing-station/components/purchasing-station-section";
 import { PurchasingStationTransactionHistory } from "@/client/features/purchasing-station/components/purchasing-station-transaction-history";
 
+/** 工厂操作相关的 Props */
 export type FactoryActionProps = {
   recipes: FactoryRecipe[];
   recipesLoading: boolean;
@@ -23,6 +29,7 @@ export type FactoryActionProps = {
   onStartProduction: (recipeId: string, quantity: number) => void;
 };
 
+/** 商店操作相关的 Props */
 export type ShopActionProps = {
   listings: ShopListing[];
   inventoryItems: InventoryItem[];
@@ -35,6 +42,7 @@ export type ShopActionProps = {
   onCancel: (listingId: number) => void;
 };
 
+/** 收购站操作相关的 Props */
 export type PurchasingStationActionProps = {
   orders: BuyOrder[];
   transactions: PurchasingStationTransaction[];
@@ -46,6 +54,7 @@ export type PurchasingStationActionProps = {
   onCancel: (orderId: number) => void;
 };
 
+/** 建筑操作区组件的 Props */
 type BuildingActionSectionProps = {
   building: Plot["building"];
   capabilities: BuildingCapabilities;
@@ -54,6 +63,10 @@ type BuildingActionSectionProps = {
   purchasingStation: PurchasingStationActionProps;
 };
 
+/**
+ * 建筑操作区组件
+ * 根据建筑能力（capabilities）决定渲染工厂/商店/收购站的操作面板和交易历史。
+ */
 export function BuildingActionSection({
   building,
   capabilities,
@@ -61,6 +74,7 @@ export function BuildingActionSection({
   shop,
   purchasingStation,
 }: BuildingActionSectionProps) {
+  // 根据建筑能力选择对应的操作面板：工厂 > 商店 > 收购站
   const actionContent = capabilities.canManageFactory ? (
     <FactorySection
       factoryRecipes={factory.recipes}
@@ -95,6 +109,7 @@ export function BuildingActionSection({
     />
   ) : null;
 
+  // 商店或收购站显示对应的交易历史
   const transactionHistory = capabilities.isShop ? (
     <ShopTransactionHistory transactions={shop.transactions} />
   ) : capabilities.isPurchasingStation ? (

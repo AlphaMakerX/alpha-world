@@ -1,6 +1,13 @@
+/**
+ * 建筑物渲染模块
+ *
+ * 定义每种建筑类型（住宅、工厂、商店、收购站）的视觉配置和绘制函数。
+ * 所有绘制操作使用 Phaser Graphics API，在地块矩形范围内绘制建筑图标。
+ */
 import { PLOT_HEIGHT, PLOT_WIDTH } from '../constants'
 import type { BuildingType } from '@/client/features/building/types/building-ui'
 
+/** 建筑视觉配置：标签文字、地块填充/描边颜色、徽章样式 */
 export type BuildingVisualConfig = {
   label: string
   plotFillColor: number
@@ -10,6 +17,7 @@ export type BuildingVisualConfig = {
   badgeTextColor: string
 }
 
+/** 各建筑类型的视觉配置映射 */
 const BUILDING_VISUAL_CONFIG: Record<BuildingType, BuildingVisualConfig> = {
   residential: {
     label: '住宅',
@@ -45,10 +53,12 @@ const BUILDING_VISUAL_CONFIG: Record<BuildingType, BuildingVisualConfig> = {
   },
 }
 
+/** 获取指定建筑类型的视觉配置 */
 export function getBuildingVisualConfig(buildingType: BuildingType): BuildingVisualConfig {
   return BUILDING_VISUAL_CONFIG[buildingType]
 }
 
+/** 根据建筑类型在地块位置绘制对应的建筑图标 */
 export function drawBuildingByType(
   graphics: Phaser.GameObjects.Graphics,
   plotX: number,
@@ -70,6 +80,7 @@ export function drawBuildingByType(
   drawShopBuilding(graphics, plotX, plotY)
 }
 
+/** 绘制住宅建筑：白色房体 + 红色三角屋顶 + 蓝色门 + 窗户 */
 function drawResidentialBuilding(
   graphics: Phaser.GameObjects.Graphics,
   plotX: number,
@@ -107,6 +118,7 @@ function drawResidentialBuilding(
   )
 }
 
+/** 绘制工厂建筑：灰色厂房 + 烟囱 + 锯齿状屋顶 + 烟雾 */
 function drawFactoryBuilding(
   graphics: Phaser.GameObjects.Graphics,
   plotX: number,
@@ -144,6 +156,7 @@ function drawFactoryBuilding(
   graphics.fillCircle(chimneyX + chimneyWidth + 10, chimneyY - 1, 2.6)
 }
 
+/** 绘制商店建筑：橙色店面 + 红白条纹遮阳棚 + 招牌 */
 function drawShopBuilding(
   graphics: Phaser.GameObjects.Graphics,
   plotX: number,
@@ -180,6 +193,7 @@ function drawShopBuilding(
   graphics.strokeRect(signX, signY, signWidth, signHeight)
 }
 
+/** 绘制收购站建筑：紫色主体 + 平顶屋檐 + 向上箭头标识 */
 function drawPurchasingStationBuilding(
   graphics: Phaser.GameObjects.Graphics,
   plotX: number,

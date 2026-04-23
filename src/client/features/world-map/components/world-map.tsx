@@ -1,3 +1,16 @@
+/**
+ * 世界地图主组件
+ *
+ * 作为世界地图功能的顶层容器，整合了以下子系统：
+ * - 用户会话与认证（useWorldMapSession）
+ * - Phaser 游戏引擎初始化（usePhaserWorldMap）
+ * - 玩家位置同步（usePlayerMapSync）
+ * - 地块管理（useWorldMapPlots）
+ * - 工厂系统（useWorldMapFactory）
+ * - 商店系统（useWorldMapShop）
+ * - 收购站系统（useWorldMapPurchasingStation）
+ * 同时管理登录、背包、个人信息、游戏信息等弹窗。
+ */
 "use client";
 
 import { Modal, Spin, message } from "antd";
@@ -17,13 +30,15 @@ import { useWorldMapSession } from "../hooks/use-world-map-session";
 import { useWorldMapShop } from "../hooks/use-world-map-shop";
 import { isInitialQueryLoading } from "../world-map-utils";
 
+/** 世界地图主组件，负责组装所有子系统并渲染地图界面 */
 export function WorldMap() {
   const [messageApi, contextHolder] = message.useMessage();
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const isAuthenticatedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);       // Phaser 游戏容器 DOM 引用
+  const pendingPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);       // 待同步到服务端的玩家位置
+  const lastSyncedPlayerPositionRef = useRef<{ x: number; y: number } | null>(null);    // 上次成功同步到服务端的位置
+  const isAuthenticatedRef = useRef(false);                       // 当前是否已认证（供 Phaser 回调读取）
 
+  // 各弹窗的开关状态
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
   const [personModalOpen, setPersonModalOpen] = useState(false);
@@ -128,6 +143,7 @@ export function WorldMap() {
     setLoginModalOpen,
   });
 
+  // 判断世界数据首屏是否仍在加载，用于控制 loading 遮罩和 Phaser 初始化时机
   const isAuthStatusResolving = authStatus === "loading";
   const isInitialPlotDataLoading = isInitialQueryLoading({
     enabled: true,

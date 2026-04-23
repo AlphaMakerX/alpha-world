@@ -1,3 +1,13 @@
+/**
+ * 世界地图 Phaser 场景定义
+ *
+ * 负责创建和管理 Phaser 游戏场景，包括：
+ * - 道路网络的绘制与碰撞区域
+ * - 地块的渲染与交互（靠近地块时显示信息、按空格查看详情）
+ * - 玩家角色的创建、动画与移动
+ * - 相机跟随玩家
+ * - 通过事件机制与 React 层同步地图数据和玩家位置
+ */
 import {
   CAMERA_LERP,
   INSPECT_DISTANCE,
@@ -22,8 +32,10 @@ import {
 import type { BuildingType } from '@/client/features/building/types/building-ui'
 import type { PlotRenderResult, WorldMapPlot, WorldMapRenderablePlot } from '../rendering/world-map-plot'
 
+/** Phaser 模块类型，用于动态导入后传入 */
 type PhaserModule = typeof import('phaser')
 
+/** 创建世界地图场景时的配置选项 */
 type WorldMapSceneOptions = {
   plots?: ReadonlyArray<WorldMapRenderablePlot>
   currentUserId?: string
@@ -33,14 +45,22 @@ type WorldMapSceneOptions = {
   onSceneReady?: () => void
 }
 
+/** React 层向 Phaser 场景同步数据时使用的事件名称 */
 export const WORLD_MAP_SYNC_EVENT = 'world-map:sync-data'
 
+/** 同步地图数据的事件载荷类型 */
 type SyncMapDataPayload = {
   plots: ReadonlyArray<WorldMapRenderablePlot>
   currentUserId?: string
   playerPosition?: PlayerPosition
 }
 
+/**
+ * 工厂函数：创建世界地图 Phaser 场景类
+ *
+ * 采用闭包方式注入 Phaser 模块和外部回调选项，
+ * 返回一个可直接传入 Phaser.Game 配置的 Scene 子类。
+ */
 export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapSceneOptions = {}) {
   const { Scene, Geom } = Phaser
   const BACKGROUND_COLOR = '#71b35f'
@@ -49,22 +69,23 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
   const HORIZONTAL_ROAD_CENTERS = [MAP_HEIGHT / 2, MAP_HEIGHT / 4]
   const VERTICAL_ROAD_CENTERS_IN_MAP = VERTICAL_ROAD_CENTERS
 
+  /** 世界地图场景主类，管理道路、地块、玩家和交互逻辑 */
   class WorldMapScene extends Scene {
-    private roads: Phaser.Geom.Rectangle[] = []
-    private plots: WorldMapPlot[] = []
-    private plotRenderObjects: Phaser.GameObjects.GameObject[] = []
-    private nearbyPlot: WorldMapPlot | null = null
-    private nearbyPlotText!: Phaser.GameObjects.Text
-    private interactHintText!: Phaser.GameObjects.Text
-    private interactKey!: Phaser.Input.Keyboard.Key
+    private roads: Phaser.Geom.Rectangle[] = []           // 道路碰撞矩形集合
+    private plots: WorldMapPlot[] = []                     // 所有地块数据
+    private plotRenderObjects: Phaser.GameObjects.GameObject[] = [] // 地块渲染对象，场景重建时需销毁
+    private nearbyPlot: WorldMapPlot | null = null         // 当前玩家附近的地块
+    private nearbyPlotText!: Phaser.GameObjects.Text       // 附近地块信息文本（HUD）
+    private interactHintText!: Phaser.GameObjects.Text     // 交互提示文本（HUD）
+    private interactKey!: Phaser.Input.Keyboard.Key        // 空格键（交互按键）
     private plotsData: ReadonlyArray<WorldMapRenderablePlot> = options.plots ?? []
     private currentUserId: string | undefined = options.currentUserId
     private playerPosition: PlayerPosition | undefined = options.playerPosition
-    private hasAppliedPersistedPlayerPosition = false
-    private lastLocalMoveAt = 0
+    private hasAppliedPersistedPlayerPosition = false      // 是否已应用过服务端持久化的玩家位置
+    private lastLocalMoveAt = 0                            // 上次本地移动的时间戳（用于防抖服务端纠偏）
     player!: PlayerSprite
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys
-    moveSpeed = 220
+    moveSpeed = 220                                        // 玩家移动速度（像素/秒）
 
     constructor() {
       super(SCENE_KEY)
@@ -132,12 +153,15 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
     }
 
 
+    /** 检测当前是否有 DOM 输入框获得焦点，用于避免键盘事件冲突 */
     private isDOMInputFocused(): boolean {
       const tag = document.activeElement?.tagName
       return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
     }
 
+    /** 每帧更新：处理玩家移动、动画和附近地块 UI */
     update(): void {
+      // DOM 输入框聚焦时跳过键盘处理，避免与表单输入冲突
       if (this.isDOMInputFocused()) return
       const prevX = this.player.x
       const prevY = this.player.y
@@ -165,6 +189,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.updateNearbyPlotUI()
     }
 
+    /** 创建道路网络：横向与纵向道路的绘制和碰撞区域 */
     private createRoadNetwork(): void {
       const graphics = this.add.graphics()
 
@@ -194,6 +219,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       })
     }
 
+    /** 渲染所有地块，销毁旧渲染对象后重新生成 */
     private renderPlots(): void {
       this.plotRenderObjects.forEach((object) => {
         object.destroy()
@@ -212,6 +238,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.plotRenderObjects = renderResult.renderObjects
     }
 
+    /** 接收 React 层推送的最新地图数据，更新地块与玩家位置 */
     private syncMapData(payload: SyncMapDataPayload): void {
       this.plotsData = payload.plots
       this.playerPosition = payload.playerPosition
@@ -240,6 +267,7 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
       this.renderPlots()
     }
 
+    /** 更新附近地块的 HUD 提示文字，并监听空格键打开地块详情 */
     private updateNearbyPlotUI(): void {
       const playerX = this.player.x
       const playerY = this.player.y
@@ -287,16 +315,24 @@ export function createWorldMapScene(Phaser: PhaserModule, options: WorldMapScene
   return WorldMapScene
 }
 
+/** 计算点到矩形的最短距离（点在矩形内则返回 0） */
 function distancePointToRect(px: number, py: number, rect: Phaser.Geom.Rectangle): number {
   const closestX = clamp(px, rect.left, rect.right)
   const closestY = clamp(py, rect.top, rect.bottom)
   return Math.hypot(px - closestX, py - closestY)
 }
 
+/** 将数值限制在 [min, max] 范围内 */
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, max))
 }
 
+/**
+ * 判断是否应将玩家位置强制校正到服务端坐标
+ *
+ * 当本地最近有移动操作时不纠偏（避免卡顿），
+ * 只有闲置一段时间后且偏移超过阈值才执行纠偏。
+ */
 function shouldSnapToServerPosition(
   current: PlayerPosition,
   next: PlayerPosition,

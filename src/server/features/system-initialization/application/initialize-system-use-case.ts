@@ -1,3 +1,11 @@
+/**
+ * 系统初始化用例
+ *
+ * 编排所有系统初始化步骤，支持按步骤单独执行或全部执行。
+ * 步骤执行顺序：adam -> bot1-manager -> plot -> bot1-manager-plot-purchase
+ * -> bot1-manager-purchasing-station-build -> bot1-manager-buy-orders
+ */
+
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { executeAdamStep } from "./execute-adam-step";
 import { executeBot1ManagerStep } from "./execute-bot1-manager-step";
@@ -17,8 +25,10 @@ import {
 } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
+/** 默认执行所有步骤 */
 const DEFAULT_STEP: InitializeSystemRequestedStep = "all";
 
+/** 支持请求的步骤枚举（含 "all" 表示全部执行） */
 export type InitializeSystemRequestedStep =
   | "all"
   | "adam"
@@ -27,12 +37,15 @@ export type InitializeSystemRequestedStep =
   | "bot1-manager-plot-purchase"
   | "bot1-manager-purchasing-station-build"
   | "bot1-manager-buy-orders";
+/** 实际可执行的单个步骤（排除 "all"） */
 export type InitializeSystemStep = Exclude<InitializeSystemRequestedStep, "all">;
 
+/** 系统初始化命令 */
 export type InitializeSystemCommand = {
   step?: InitializeSystemRequestedStep;
 };
 
+/** 初始化成功结果，包含执行摘要 */
 type InitializeSystemSuccessResult = {
   ok: true;
   summary: {
@@ -58,6 +71,7 @@ type InitializeSystemFailureResult = {
 
 export type InitializeSystemResult = InitializeSystemSuccessResult | InitializeSystemFailureResult;
 
+/** 用例所需的全部外部依赖 */
 export type InitializeSystemUseCaseDeps = {
   userRepository: UserRepository;
   buildingRepository: BuildingRepository;
@@ -82,10 +96,17 @@ export type InitializeSystemUseCaseDeps = {
   };
 };
 
+/** 类型守卫：判断步骤结果是否为失败 */
 function isFailureResult(result: unknown): result is InitializeSystemFailureResult {
   return typeof result === "object" && result !== null && "ok" in result && result.ok === false;
 }
 
+/**
+ * 执行系统初始化用例
+ *
+ * 根据 command.step 决定执行单个步骤还是全部步骤。
+ * 每个步骤失败时立即中断并返回错误。
+ */
 export async function executeInitializeSystemUseCase(
   command: InitializeSystemCommand = {},
   deps: InitializeSystemUseCaseDeps,

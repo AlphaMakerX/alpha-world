@@ -1,8 +1,15 @@
+/**
+ * 交易流水仓储的 Drizzle ORM 实现
+ *
+ * 将资金交易记录写入 money_transactions 表。
+ */
 import { getDbClient } from "@/server/lib/db";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import { moneyTransactions } from "@/server/features/person/infrastructure/schema";
 
+/** 基于 Drizzle ORM 的交易流水仓储实现 */
 export class DrizzleTransactionLedgerRepository implements TransactionLedgerRepository {
+  /** 记录一笔交易流水到数据库 */
   async record(entry: {
     fromUserId: string;
     toUserId: string;

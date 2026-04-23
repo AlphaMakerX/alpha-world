@@ -1,8 +1,14 @@
+/**
+ * 人物详情模态框组件
+ * 展示当前玩家的基本信息，包括用户名、余额、地块数量和建筑数量。
+ */
+
 "use client";
 
 import { Modal } from "antd";
 import type { AuthStatus } from "@/client/types/auth-ui";
 
+/** 人物详情模态框组件的 Props */
 type PersonDetailModalProps = {
   open: boolean;
   authStatus: AuthStatus;
@@ -13,6 +19,7 @@ type PersonDetailModalProps = {
   onClose: () => void;
 };
 
+/** 人物详情模态框组件，展示玩家信息卡片 */
 export function PersonDetailModal({
   open,
   authStatus,

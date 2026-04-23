@@ -1,7 +1,15 @@
+/**
+ * 世界地图地块生成与渲染模块
+ *
+ * 根据道路网络自动在道路两侧生成地块，并渲染地块矩形、建筑图标和标签。
+ * 地块 id 格式为 P{行号}-{列号}，用于与服务端数据关联。
+ * 支持四种视觉状态：本人拥有、他人拥有、可购买、不可购买。
+ */
 import { MAP_HEIGHT, MAP_WIDTH, PLOT_HEIGHT, PLOT_WIDTH, ROAD_WIDTH } from '../constants'
 import type { BuildingType } from '@/client/features/building/types/building-ui'
 import { drawBuildingByType, getBuildingVisualConfig } from './world-map-building'
 
+/** 场景中的地块数据（含碰撞矩形和交互状态） */
 export type WorldMapPlot = {
   id: string
   rect: Phaser.Geom.Rectangle
@@ -9,17 +17,20 @@ export type WorldMapPlot = {
   buildingType?: BuildingType
 }
 
+/** 可渲染地块的数据（从服务端数据转换而来，传入 Phaser 场景） */
 export type WorldMapRenderablePlot = {
   id: string
   ownerUserId?: string | null
   buildingType?: BuildingType
 }
 
+/** 地块渲染结果：地块数据列表和渲染对象列表 */
 export type PlotRenderResult = {
   plots: WorldMapPlot[]
   renderObjects: Phaser.GameObjects.GameObject[]
 }
 
+/** 地块视觉状态枚举 */
 type PlotVisualState = 'owned_by_me' | 'owned_by_other' | 'can_buy' | 'not_can_buy'
 
 // 在道路两侧生成地块，绘制地块与地块 id（P{row}-{col}）。
@@ -192,6 +203,7 @@ export function createPlotsAndRender(
   return { plots, renderObjects }
 }
 
+/** 根据地块归属判断视觉状态 */
 function getPlotVisualState(params: {
   isExistingPlot: boolean
   ownerUserId: string | null
@@ -212,6 +224,7 @@ function getPlotVisualState(params: {
   return 'not_can_buy'
 }
 
+/** 根据地块视觉状态返回填充色和描边色 */
 function getPlotColors(state: PlotVisualState): { fillColor: number; borderColor: number } {
   switch (state) {
     case 'owned_by_me':

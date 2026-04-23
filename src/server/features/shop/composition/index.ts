@@ -1,3 +1,11 @@
+/**
+ * 商店模块组合根（Composition Root）
+ *
+ * 负责将商店相关的所有用例与具体的基础设施实现进行组装，
+ * 对外暴露带有参数校验（Zod schema）的用例入口函数。
+ * 调用方只需传入原始输入，组合根负责校验、依赖注入和执行。
+ */
+
 import { z } from "zod";
 import {
   executeCreateShopListingUseCase as executeCreateShopListingUseCaseImpl,
@@ -26,6 +34,7 @@ import { transactionLedgerRepository, userRepository } from "@/server/features/p
 import { shopListingRepository, shopTransactionQueryRepository } from "@/server/features/shop/infrastructure";
 import { transact } from "@/server/lib/db";
 
+/** 创建商店上架商品的参数校验 schema */
 export const createShopListingSchema = z.object({
   sellerUserId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
@@ -34,25 +43,30 @@ export const createShopListingSchema = z.object({
   unitPrice: z.number().nonnegative("单价不能小于 0"),
 });
 
+/** 查询在售商品列表的参数校验 schema */
 export const listShopListingsSchema = z.object({
   buildingId: z.number().int().positive(),
 });
 
+/** 购买商品的参数校验 schema */
 export const purchaseShopListingSchema = z.object({
   buyerUserId: z.string().uuid("用户 ID 不合法"),
   listingId: z.number().int().positive(),
   quantity: z.number().int().positive("购买数量必须为正整数"),
 });
 
+/** 取消上架商品的参数校验 schema */
 export const cancelShopListingSchema = z.object({
   sellerUserId: z.string().uuid("用户 ID 不合法"),
   listingId: z.number().int().positive(),
 });
 
+/** 查询交易历史的参数校验 schema */
 export const getShopTransactionHistorySchema = z.object({
   buildingId: z.number().int().positive(),
 });
 
+/** 创建商店上架商品入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeCreateShopListingUseCase(input: unknown): Promise<CreateShopListingResult> {
   const parsed = createShopListingSchema.safeParse(input);
   if (!parsed.success) {
@@ -72,6 +86,7 @@ export async function executeCreateShopListingUseCase(input: unknown): Promise<C
   });
 }
 
+/** 查询在售商品列表入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeListShopListingsUseCase(input: unknown): Promise<ListShopListingsResult> {
   const parsed = listShopListingsSchema.safeParse(input);
   if (!parsed.success) {
@@ -88,6 +103,7 @@ export async function executeListShopListingsUseCase(input: unknown): Promise<Li
   });
 }
 
+/** 购买商品入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executePurchaseShopListingUseCase(input: unknown): Promise<PurchaseShopListingResult> {
   const parsed = purchaseShopListingSchema.safeParse(input);
   if (!parsed.success) {
@@ -107,6 +123,7 @@ export async function executePurchaseShopListingUseCase(input: unknown): Promise
   });
 }
 
+/** 取消上架商品入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeCancelShopListingUseCase(input: unknown): Promise<CancelShopListingResult> {
   const parsed = cancelShopListingSchema.safeParse(input);
   if (!parsed.success) {
@@ -124,6 +141,7 @@ export async function executeCancelShopListingUseCase(input: unknown): Promise<C
   });
 }
 
+/** 查询交易历史入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeGetShopTransactionHistoryUseCase(input: unknown): Promise<GetShopTransactionHistoryResult> {
   const parsed = getShopTransactionHistorySchema.safeParse(input);
   if (!parsed.success) {

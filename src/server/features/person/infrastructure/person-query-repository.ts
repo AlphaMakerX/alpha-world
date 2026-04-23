@@ -1,3 +1,8 @@
+/**
+ * 人员查询仓储的 Drizzle ORM 实现
+ *
+ * 提供财富排行榜查询和 Adam 账户概况查询的具体数据库实现。
+ */
 import { desc, eq, or } from "drizzle-orm";
 import { db } from "@/server/lib/db";
 import type {
@@ -8,7 +13,9 @@ import type {
 import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
+/** 基于 Drizzle ORM 的人员查询仓储实现 */
 class DrizzlePersonQueryRepository implements PersonQueryRepository {
+  /** 查询财富排行榜：按金额降序取前 limit 名 */
   async listWealthLeaderboard(limit: number): Promise<WealthLeaderboardItem[]> {
     const rows = await db
       .select({
@@ -25,6 +32,7 @@ class DrizzlePersonQueryRepository implements PersonQueryRepository {
     }));
   }
 
+  /** 获取 Adam 账户概况：余额 + 最近 limit 条关联交易 */
   async getAdamProfile(limit: number): Promise<{
     money: number;
     transactions: AdamTransactionRecord[];
@@ -53,12 +61,14 @@ class DrizzlePersonQueryRepository implements PersonQueryRepository {
       .orderBy(desc(moneyTransactions.createdAt))
       .limit(limit);
 
+    // 收集交易对手方的用户 ID，用于批量查询用户名
     const userIds = new Set<string>();
     for (const row of rows) {
       if (row.fromUserId !== ADAM_PERSONA_CONFIG.userId) userIds.add(row.fromUserId);
       if (row.toUserId !== ADAM_PERSONA_CONFIG.userId) userIds.add(row.toUserId);
     }
 
+    // 批量查询对手方用户名，构建 userId -> username 映射
     const usernameMap = new Map<string, string>();
     if (userIds.size > 0) {
       const userRows = await db

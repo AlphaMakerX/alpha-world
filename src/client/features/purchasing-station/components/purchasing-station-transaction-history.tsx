@@ -1,17 +1,26 @@
+/**
+ * 收购站交易记录组件
+ *
+ * 以可折叠面板的形式展示收购站的交易历史，
+ * 每条记录显示卖家用户名、交易描述、金额和时间。
+ */
 "use client";
 
 import { useState } from "react";
 import type { PurchasingStationTransaction } from "@/client/features/building/types/building-ui";
 import { getItemName } from "@/server/features/item/item-catalog";
 
+/** PurchasingStationTransactionHistory 组件的 props 类型 */
 type PurchasingStationTransactionHistoryProps = {
   transactions: PurchasingStationTransaction[];
 };
 
+/** 将交易描述中的物品 key 替换为可读的物品名称 */
 function translateDescription(desc: string): string {
   return desc.replace(/: (\w+) x/, (_, key) => `: ${getItemName(key)} x`);
 }
 
+/** 格式化时间为 MM-DD HH:mm 格式 */
 function formatTime(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date;
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -21,6 +30,7 @@ function formatTime(date: Date | string) {
   return `${month}-${day} ${hours}:${minutes}`;
 }
 
+/** 收购站交易记录折叠面板 */
 export function PurchasingStationTransactionHistory({ transactions }: PurchasingStationTransactionHistoryProps) {
   const [expanded, setExpanded] = useState(false);
 

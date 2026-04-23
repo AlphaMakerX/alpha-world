@@ -1,3 +1,10 @@
+/**
+ * API 访问令牌模块的组合根（Composition Root）
+ *
+ * 负责组装基础设施依赖并对外暴露可直接调用的用例函数和工具函数。
+ * 包含输入校验逻辑（使用 Zod）。
+ */
+
 import { z } from "zod";
 import {
   executeGenerateApiAccessTokenUseCase as executeGenerateApiAccessTokenUseCaseImpl,
@@ -12,16 +19,23 @@ import { passwordHasher } from "@/server/features/auth/infrastructure";
 import { userRepository } from "@/server/features/person/infrastructure";
 import { createResolveUserIdFromBearer } from "./resolve-user-id-from-bearer";
 
+/** 从 Bearer 请求头解析用户 ID 的工具函数（已注入依赖） */
 export const resolveUserIdFromBearer = createResolveUserIdFromBearer({
   apiAccessTokenRepository,
   tokenHasher,
 });
 
+/** 生成令牌接口的输入校验 schema */
 export const generateApiAccessTokenSchema = z.object({
   username: z.string().trim().min(3).max(32),
   password: z.string().min(6).max(128),
 });
 
+/**
+ * 生成 API 访问令牌（含输入校验）
+ *
+ * 对外暴露的入口函数，先校验输入参数，再委托给领域用例执行。
+ */
 export async function executeGenerateApiAccessTokenUseCase(
   input: unknown,
 ): Promise<GenerateApiAccessTokenResult> {

@@ -1,3 +1,9 @@
+/**
+ * Plot 模块数据库表结构定义
+ *
+ * 使用 Drizzle ORM 定义 plots 表的 Schema，
+ * 包含坐标唯一约束、状态检查约束和索引。
+ */
 import {
   bigint,
   check,
@@ -13,6 +19,7 @@ import {
 import { sql } from "drizzle-orm";
 import { users } from "@/server/features/person/infrastructure/schema";
 
+/** 地块表：存储地块坐标、归属、状态和价格 */
 export const plots = pgTable(
   "plots",
   {

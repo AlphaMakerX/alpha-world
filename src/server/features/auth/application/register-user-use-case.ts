@@ -1,3 +1,13 @@
+/**
+ * 用户注册用例
+ *
+ * 处理新用户注册的核心业务逻辑：
+ * 1. 校验用户名是否为系统保留名称
+ * 2. 校验用户名唯一性
+ * 3. 创建新用户并发放初始资金（由系统账户转出）
+ * 4. 上述操作在同一事务中完成，保证数据一致性
+ */
+
 import { randomUUID } from "crypto";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
@@ -8,11 +18,13 @@ import { Username } from "@/server/features/person/domain/value-objects/username
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
+/** 注册命令：包含用户提交的用户名和密码 */
 export type RegisterUserCommand = {
   username: string;
   password: string;
 };
 
+/** 注册成功结果 */
 type RegisterUserSuccessResult = {
   ok: true;
   user: {
@@ -21,26 +33,37 @@ type RegisterUserSuccessResult = {
   };
 };
 
+/** 注册失败结果，附带错误码供上层映射 */
 type RegisterUserFailureResult = {
   ok: false;
   error: string;
   code: UseCaseErrorCode;
 };
 
+/** 注册用例返回的联合类型 */
 export type RegisterUserResult = RegisterUserSuccessResult | RegisterUserFailureResult;
 
+/** 注册用例所需的外部依赖 */
 export type RegisterUserUseCaseDeps = {
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
   systemAccountService: SystemAccountService;
   passwordHasher: PasswordHasher;
+  /** 事务执行器，确保多步数据库操作的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/**
+ * 执行用户注册用例
+ * @param command 注册命令（用户名 + 密码）
+ * @param deps   外部依赖
+ * @returns 注册结果，成功时返回用户信息，失败时返回错误提示和错误码
+ */
 export async function executeRegisterUserUseCase(
   command: RegisterUserCommand,
   deps: RegisterUserUseCaseDeps,
 ): Promise<RegisterUserResult> {
+  // 检查是否使用了系统保留用户名（如 Adam）
   if (command.username.trim().toLowerCase() === ADAM_PERSONA_CONFIG.username) {
     return {
       ok: false,
@@ -49,6 +72,7 @@ export async function executeRegisterUserUseCase(
     };
   }
 
+  // 用户名唯一性校验
   const username = Username.create(command.username);
   const existingUser = await deps.userRepository.findByUsername(username);
   if (existingUser) {
@@ -59,8 +83,10 @@ export async function executeRegisterUserUseCase(
     };
   }
 
+  // 获取系统账户（Adam），作为初始资金的来源
   const adam = await deps.systemAccountService.getSystemAccount();
 
+  // 新用户初始资金金额
   const initialMoney = 10000;
   const passwordHash = await deps.passwordHasher.hash(command.password);
   const user = User.register({
@@ -70,6 +96,7 @@ export async function executeRegisterUserUseCase(
     initialMoney,
   });
 
+  // 在事务中完成：系统账户扣款 → 保存用户 → 记录转账流水
   await deps.transact(async () => {
     adam.spendMoney(initialMoney);
     await deps.userRepository.save(adam);

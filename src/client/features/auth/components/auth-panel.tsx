@@ -1,3 +1,9 @@
+/**
+ * 认证面板组件
+ * 提供用户登录和注册功能，包含登录/注册表单切换的 Tab 页。
+ * 已登录时显示当前用户信息。
+ */
+
 "use client";
 
 import { Button, Form, Input, Space, Tabs, Typography, message } from "antd";
@@ -6,15 +12,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { trpc } from "@/client/lib/trpc";
 
+/** 登录/注册表单的数据结构 */
 type AuthForm = {
   username: string;
   password: string;
 };
 
+/** 认证面板组件的 Props */
 type AuthPanelProps = {
+  /** 认证成功后的回调函数 */
   onAuthSuccess?: () => void;
 };
 
+/** 认证面板组件，支持登录和注册两种模式 */
 export function AuthPanel({ onAuthSuccess }: AuthPanelProps = {}) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -22,6 +32,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps = {}) {
   const [loginLoading, setLoginLoading] = useState(false);
   const registerMutation = trpc.auth.register.useMutation();
 
+  /** 登录处理：使用 NextAuth credentials 方式登录，成功后刷新路由 */
   const onLogin = async (values: AuthForm) => {
     setLoginLoading(true);
     try {
@@ -44,6 +55,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps = {}) {
     }
   };
 
+  /** 注册处理：调用注册接口后自动登录 */
   const onRegister = async (values: AuthForm) => {
     try {
       await registerMutation.mutateAsync(values);

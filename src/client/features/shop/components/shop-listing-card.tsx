@@ -1,8 +1,17 @@
+/**
+ * 商店商品卡片组件
+ *
+ * 展示单个在售商品的信息（图标、名称、库存、单价）。
+ * 根据当前用户是否为商店所有者显示不同操作：
+ * - 所有者：显示总价和下架按钮
+ * - 买家：显示购买数量选择和购买按钮
+ */
 import { useState } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { ShopListing } from "@/client/features/building/types/building-ui";
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
+/** ShopListingCard 组件的 props 类型 */
 type ShopListingCardProps = {
   listing: ShopListing;
   isOwner: boolean;
@@ -12,6 +21,7 @@ type ShopListingCardProps = {
   onCancel: (listingId: number) => void;
 };
 
+/** 商店在售商品卡片，所有者可下架，买家可选择数量购买 */
 export function ShopListingCard({
   listing,
   isOwner,

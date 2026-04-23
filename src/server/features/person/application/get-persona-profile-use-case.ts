@@ -1,6 +1,12 @@
+/**
+ * 获取角色（Persona）档案用例
+ *
+ * 根据角色 ID 查询角色的展示信息，包括名称、标签、技能和灵魂描述。
+ */
 import type { PersonaId, PersonaSkillKey } from "@/server/features/person/domain/personas";
 import { getPersonaDefinition } from "@/server/features/person/domain/personas";
 
+/** 查询成功的返回结构 */
 type GetPersonaProfileSuccessResult = {
   ok: true;
   profile: {
@@ -14,6 +20,7 @@ type GetPersonaProfileSuccessResult = {
 
 export type GetPersonaProfileResult = GetPersonaProfileSuccessResult;
 
+/** 执行获取角色档案用例 */
 export async function executeGetPersonaProfileUseCase(input: {
   personaId: PersonaId;
 }): Promise<GetPersonaProfileResult> {

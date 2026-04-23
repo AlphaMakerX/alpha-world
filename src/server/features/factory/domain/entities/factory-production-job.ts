@@ -1,9 +1,17 @@
+/**
+ * 工厂生产任务领域实体
+ *
+ * 定义工厂生产任务的核心领域模型。一个生产任务代表在某个工厂建筑中，
+ * 按照指定配方将输入材料转化为输出产物的过程，具有开始时间和完成时间。
+ */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
 import { createItemStack } from "@/server/features/item/domain/value-objects/item-stack";
 
+/** 生产任务状态：进行中 | 已收取 | 已取消 */
 export type FactoryProductionJobStatus = "in_progress" | "collected" | "cancelled";
 
+/** 生产任务实体的内部属性 */
 type FactoryProductionJobProps = {
   id: number;
   buildingId: number;
@@ -19,9 +27,17 @@ type FactoryProductionJobProps = {
   updatedAt: Date;
 };
 
+/**
+ * 工厂生产任务领域实体类
+ *
+ * 采用私有构造函数模式：
+ * - start: 开启新生产任务时使用
+ * - rehydrate: 从持久化数据重建实体时使用
+ */
 export class FactoryProductionJob {
   private constructor(private props: FactoryProductionJobProps) {}
 
+  /** 开启新的生产任务，自动计算完成时间 */
   static start(input: {
     id: number;
     buildingId: number;
@@ -35,6 +51,7 @@ export class FactoryProductionJob {
       throw new DomainError("生产时长必须大于 0");
     }
     const now = new Date();
+    // 根据生产时长计算完成时间
     return new FactoryProductionJob({
       id: input.id,
       buildingId: input.buildingId,
@@ -51,6 +68,7 @@ export class FactoryProductionJob {
     });
   }
 
+  /** 从持久化数据恢复生产任务实体 */
   static rehydrate(props: FactoryProductionJobProps): FactoryProductionJob {
     return new FactoryProductionJob({
       ...props,
@@ -59,16 +77,19 @@ export class FactoryProductionJob {
     });
   }
 
+  /** 断言当前用户是任务所有者，否则抛出领域错误 */
   ensureOwner(userId: string): void {
     if (this.props.ownerUserId !== userId) {
       throw new DomainError("只能操作自己的生产任务");
     }
   }
 
+  /** 判断在指定时间点是否可以收取产物（状态为进行中且已到完成时间） */
   canCollectAt(now: Date = new Date()): boolean {
     return this.props.status === "in_progress" && now.getTime() >= this.props.finishAt.getTime();
   }
 
+  /** 收取生产产物，将任务状态标记为已收取并返回产出物品列表 */
   collect(now: Date = new Date()): ItemStack[] {
     if (this.props.status !== "in_progress") {
       throw new DomainError("当前生产任务不可收取");

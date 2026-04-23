@@ -1,3 +1,11 @@
+/**
+ * Phaser 游戏引擎初始化与生命周期管理 Hook
+ *
+ * 在世界数据首屏加载完成后动态导入 Phaser，创建游戏实例和场景。
+ * 组件卸载时自动销毁游戏实例，避免内存泄漏。
+ * 场景运行后通过事件（WORLD_MAP_SYNC_EVENT）接收数据更新，
+ * 不会因为数据变化而重建 Phaser 实例。
+ */
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
@@ -6,6 +14,7 @@ import { MAP_MAX_X, MAP_MAX_Y, POSITION_MIN_DISTANCE_TO_SYNC } from "../world-ma
 import { getDistance } from "../world-map-utils";
 import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
 
+/** 初始化并管理 Phaser 游戏引擎实例 */
 export function usePhaserWorldMap(options: {
   containerRef: RefObject<HTMLDivElement | null>;
   isInitialWorldDataLoading: boolean;
@@ -40,6 +49,7 @@ export function usePhaserWorldMap(options: {
     }
     hasInitializedSceneRef.current = true;
 
+    /** 动态导入 Phaser 并创建游戏实例 */
     async function bootstrapPhaser() {
       if (!containerRef.current) {
         return;
@@ -55,17 +65,21 @@ export function usePhaserWorldMap(options: {
         currentUserId,
         playerPosition,
         onPlayerPositionChange: (position) => {
+          // 未登录时不同步位置
           if (!isAuthenticatedRef.current) {
             return;
           }
+          // 将位置限制在地图边界内并保留两位小数
           const clampedPosition = {
             x: Number(Math.max(0, Math.min(MAP_MAX_X, position.x)).toFixed(2)),
             y: Number(Math.max(0, Math.min(MAP_MAX_Y, position.y)).toFixed(2)),
           };
+          // 与上次同步位置相同则跳过
           const lastSynced = lastSyncedPlayerPositionRef.current;
           if (lastSynced && lastSynced.x === clampedPosition.x && lastSynced.y === clampedPosition.y) {
             return;
           }
+          // 移动距离未超过最小同步阈值则不更新待同步位置
           const baselinePosition = pendingPlayerPositionRef.current ?? lastSynced;
           if (
             baselinePosition &&

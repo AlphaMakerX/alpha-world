@@ -1,3 +1,8 @@
+/**
+ * 用户仓储的 Drizzle ORM 实现
+ *
+ * 提供用户实体的持久化操作，包括按 ID/用户名查询和 upsert 保存。
+ */
 import { eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { User } from "@/server/features/person/domain/entities/user";
@@ -5,6 +10,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { users } from "@/server/features/person/infrastructure/schema";
 
+/** 将数据库记录转换为领域实体 User */
 function toDomainUser(record: typeof users.$inferSelect) {
   return User.rehydrate({
     id: record.id,
@@ -21,6 +27,7 @@ function toDomainUser(record: typeof users.$inferSelect) {
   });
 }
 
+/** 基于 Drizzle ORM 的用户仓储实现 */
 export class DrizzleUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     const record = await getDbClient().query.users.findFirst({
@@ -47,6 +54,7 @@ export class DrizzleUserRepository implements UserRepository {
     return toDomainUser(record);
   }
 
+  /** 保存用户（insert or update），使用 onConflictDoUpdate 实现 upsert */
   async save(user: User): Promise<void> {
     await getDbClient()
       .insert(users)

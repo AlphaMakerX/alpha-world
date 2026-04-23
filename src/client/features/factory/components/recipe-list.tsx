@@ -1,8 +1,14 @@
+/**
+ * 配方列表组件
+ * 展示工厂可用的配方列表，支持按分类（全部/采购/加工/组装）筛选，配方可点击选中。
+ */
+
 import type { FactoryRecipe } from "@/client/features/factory/types/factory-ui";
 
 type RecipeCategory = FactoryRecipe["category"];
 type RecipeFilter = "all" | RecipeCategory;
 
+/** 配方分类 Tab 配置，用于左侧分类筛选栏 */
 const CATEGORY_TABS: Array<{
   key: RecipeFilter;
   label: string;
@@ -13,6 +19,7 @@ const CATEGORY_TABS: Array<{
   { key: "assembly", label: "组装" },
 ];
 
+/** 配方列表组件的 Props */
 type RecipeListProps = {
   allRecipes: FactoryRecipe[];
   recipes: FactoryRecipe[];
@@ -23,6 +30,7 @@ type RecipeListProps = {
   onSelect: (recipeId: string) => void;
 };
 
+/** 配方列表组件，包含左侧分类筛选栏和右侧配方卡片列表 */
 export function RecipeList({
   allRecipes,
   recipes,
@@ -32,6 +40,7 @@ export function RecipeList({
   onSelectCategory,
   onSelect,
 }: RecipeListProps) {
+  // 统计各分类下的配方数量，用于分类按钮的数字展示
   const categoryCounts = allRecipes.reduce<Record<RecipeCategory, number>>(
     (acc, recipe) => {
       acc[recipe.category] += 1;

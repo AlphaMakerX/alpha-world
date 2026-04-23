@@ -1,3 +1,9 @@
+/**
+ * 建筑仓储的 Drizzle ORM 实现
+ *
+ * 基于 Drizzle ORM 实现 BuildingRepository 接口，
+ * 负责建筑实体与数据库记录之间的映射和持久化操作。
+ */
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { Building } from "@/server/features/building/domain";
@@ -5,6 +11,7 @@ import type { BuildingRepository } from "@/server/features/building/domain";
 import { buildings } from "@/server/features/building/infrastructure/schema";
 import { plots } from "@/server/features/plot/infrastructure/schema";
 
+/** 将数据库记录转换为建筑领域实体 */
 function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
   return Building.rehydrate({
     id: record.id,
@@ -16,6 +23,7 @@ function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
   });
 }
 
+/** 基于 Drizzle ORM 的建筑仓储实现 */
 export class DrizzleBuildingRepository implements BuildingRepository {
   async findById(id: number): Promise<Building | null> {
     const record = await getDbClient().query.buildings.findFirst({
@@ -54,7 +62,9 @@ export class DrizzleBuildingRepository implements BuildingRepository {
     return buildingByPlotId;
   }
 
+  /** 通过关联地块表查询某用户名下的所有建筑 */
   async findByOwnerUserId(ownerUserId: string): Promise<Building[]> {
+    // 通过 inner join plots 表，按地块归属筛选建筑
     const records = await getDbClient()
       .select({
         id: buildings.id,
@@ -71,6 +81,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
     return records.map((record) => toDomainBuilding(record));
   }
 
+  /** 保存建筑：id > 0 时执行更新，否则执行插入 */
   async save(building: Building): Promise<Building> {
     if (building.id > 0) {
       const updated = await getDbClient()
@@ -101,4 +112,5 @@ export class DrizzleBuildingRepository implements BuildingRepository {
   }
 }
 
+/** 建筑仓储单例，供依赖注入使用 */
 export const buildingRepository: BuildingRepository = new DrizzleBuildingRepository();

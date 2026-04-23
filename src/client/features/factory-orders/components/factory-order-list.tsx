@@ -1,10 +1,17 @@
+/**
+ * 历史订单列表组件
+ * 展示工厂已完成/已取消的历史订单列表，支持滚动浏览。
+ */
+
 import type { FactoryOrder } from "@/client/features/factory/types/factory-ui";
 import { FactoryOrderCard } from "./factory-order-card";
 
+/** 历史订单列表组件的 Props */
 type FactoryOrderListProps = {
   historyOrders?: FactoryOrder[];
 };
 
+/** 历史订单列表组件 */
 export function FactoryOrderList({ historyOrders }: FactoryOrderListProps) {
   return (
     <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">

@@ -1,3 +1,9 @@
+/**
+ * Person 模块数据库表结构定义
+ *
+ * 使用 Drizzle ORM 定义 users 表和 money_transactions 表的 Schema，
+ * 包含字段约束、索引和 CHECK 约束。
+ */
 import {
   bigint,
   check,
@@ -10,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+/** 用户表：存储用户基本信息、资金、坐标和体力数据 */
 export const users = pgTable(
   "users",
   {
@@ -36,9 +43,12 @@ export const users = pgTable(
   ],
 );
 
+/** 用户表查询结果类型 */
 export type UserRecord = typeof users.$inferSelect;
+/** 用户表插入数据类型 */
 export type NewUserRecord = typeof users.$inferInsert;
 
+/** 资金交易流水表：记录所有用户间的资金流转 */
 export const moneyTransactions = pgTable(
   "money_transactions",
   {

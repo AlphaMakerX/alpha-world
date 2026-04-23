@@ -1,3 +1,10 @@
+/**
+ * 地块管理 Hook
+ *
+ * 负责地块数据的查询、选中状态管理、购买和建造操作。
+ * 将服务端的地块数据转换为 Phaser 可渲染的格式（WorldMapRenderablePlot），
+ * 并派生出选中地块的权限信息（是否为所有者、建筑能力等）。
+ */
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -9,6 +16,7 @@ import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilit
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 import type { WorldMapRenderablePlot } from "../rendering/world-map-plot";
 
+/** 地块数据查询、选中管理与购买/建造操作 Hook */
 export function useWorldMapPlots(options: {
   authStatus: "loading" | "authenticated" | "unauthenticated";
   currentUserId: string | undefined;
@@ -28,6 +36,7 @@ export function useWorldMapPlots(options: {
   const purchaseMutation = trpc.plot.purchase.useMutation();
   const buildMutation = trpc.building.build.useMutation();
 
+  // 将服务端地块数据转换为 Phaser 渲染所需的格式，id 格式为 P{x}-{yy}
   const worldMapPlots = useMemo<WorldMapRenderablePlot[]>(
     () =>
       (plotData?.plots ?? []).map((plot) => ({
@@ -38,6 +47,7 @@ export function useWorldMapPlots(options: {
     [plotData?.plots],
   );
 
+  // 生成地块列表的内容摘要 key，用于精确判断数据是否发生变化
   const worldMapPlotsKey = useMemo(
     () =>
       worldMapPlots
@@ -47,6 +57,7 @@ export function useWorldMapPlots(options: {
     [worldMapPlots],
   );
 
+  // 建立 plotId -> Plot 的映射，方便通过选中 id 快速查找完整数据
   const plotById = useMemo(() => {
     const map = new Map<string, Plot>();
     for (const plot of plotData?.plots ?? []) {
@@ -77,6 +88,7 @@ export function useWorldMapPlots(options: {
       .length;
   }, [currentUserId, plotData?.plots]);
 
+  /** 购买选中地块 */
   const handlePurchase = useCallback(async () => {
     if (!selectedPlot) {
       return;
@@ -96,6 +108,7 @@ export function useWorldMapPlots(options: {
     }
   }, [authStatus, messageApi, purchaseMutation, selectedPlot, setLoginModalOpen, trpcUtils]);
 
+  /** 在选中地块上建造指定类型的建筑 */
   const handleBuild = useCallback(
     async (buildingType: BuildingType) => {
       if (!selectedPlot) {

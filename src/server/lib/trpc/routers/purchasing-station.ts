@@ -1,3 +1,10 @@
+/**
+ * 收购站路由器
+ *
+ * 提供收购站相关接口：创建求购订单、查询订单列表、
+ * 履行订单（卖家向买家出售）、取消订单以及查询交易历史。
+ */
+
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -18,6 +25,7 @@ import {
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
 
 export const purchasingStationRouter = createTRPCRouter({
+  /** 创建求购订单（指定物品、数量和单价） */
   createBuyOrder: protectedProcedure
     .input(createBuyOrderSchema.omit({ buyerUserId: true }))
     .mutation(async ({ input, ctx }) => {
@@ -31,6 +39,7 @@ export const purchasingStationRouter = createTRPCRouter({
         }),
       );
     }),
+  /** 查询指定收购站的所有求购订单（公开接口） */
   buyOrders: publicProcedure
     .input(listBuyOrdersSchema)
     .query(async ({ input }) => {
@@ -38,6 +47,7 @@ export const purchasingStationRouter = createTRPCRouter({
         await executeListBuyOrdersUseCase({ buildingId: input.buildingId }),
       );
     }),
+  /** 履行求购订单（卖家将物品出售给买家） */
   fulfillBuyOrder: protectedProcedure
     .input(fulfillBuyOrderSchema.omit({ sellerUserId: true }))
     .mutation(async ({ input, ctx }) => {
@@ -49,6 +59,7 @@ export const purchasingStationRouter = createTRPCRouter({
         }),
       );
     }),
+  /** 取消求购订单（仅订单创建者可操作） */
   cancelBuyOrder: protectedProcedure
     .input(cancelBuyOrderSchema.omit({ buyerUserId: true }))
     .mutation(async ({ input, ctx }) => {
@@ -59,6 +70,7 @@ export const purchasingStationRouter = createTRPCRouter({
         }),
       );
     }),
+  /** 查询收购站的交易历史记录（公开接口） */
   transactionHistory: publicProcedure
     .input(getPurchasingStationTransactionHistorySchema)
     .query(async ({ input }) => {

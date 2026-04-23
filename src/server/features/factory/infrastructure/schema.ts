@@ -1,3 +1,9 @@
+/**
+ * 工厂生产任务表数据库 Schema 定义
+ *
+ * 使用 Drizzle ORM 定义 factory_production_jobs 表结构，
+ * 记录工厂中每次生产任务的输入/输出材料、状态和时间信息。
+ */
 import {
   bigint,
   check,
@@ -12,6 +18,7 @@ import { sql } from "drizzle-orm";
 import { buildings } from "@/server/features/building/infrastructure/schema";
 import { users } from "@/server/features/person/infrastructure/schema";
 
+/** 工厂生产任务表（factory_production_jobs） */
 export const factoryProductionJobs = pgTable(
   "factory_production_jobs",
   {

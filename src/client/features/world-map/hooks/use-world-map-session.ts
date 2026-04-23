@@ -1,3 +1,10 @@
+/**
+ * 世界地图会话管理 Hook
+ *
+ * 整合用户认证状态、个人数据查询、背包数据查询、
+ * 位置更新 mutation 和登出逻辑。登出时会尝试保存
+ * 最新玩家位置，然后清除缓存并刷新页面。
+ */
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -6,6 +13,7 @@ import type { MessageInstance } from "antd/es/message/interface";
 import { useState, type MutableRefObject } from "react";
 import { trpc } from "@/client/lib/trpc";
 
+/** 用户会话、个人数据与登出逻辑管理 Hook */
 export function useWorldMapSession(options: {
   messageApi: MessageInstance;
   pendingPlayerPositionRef: MutableRefObject<{ x: number; y: number } | null>;
@@ -42,6 +50,7 @@ export function useWorldMapSession(options: {
       : undefined;
   const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
 
+  /** 登出流程：先保存位置 -> 调用 signOut -> 清除缓存 -> 刷新页面 */
   const handleLogout = async () => {
     try {
       setLogoutLoading(true);

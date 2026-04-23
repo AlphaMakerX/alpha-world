@@ -1,8 +1,18 @@
+/**
+ * 建筑领域实体
+ *
+ * 定义建筑的核心领域模型，包括建筑类型、状态以及建筑实体类。
+ * 建筑归属于某个地块（Plot），支持住宅、工厂、商店、收购站四种类型。
+ */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 
+/** 建筑类型：住宅 | 工厂 | 商店 | 收购站 */
 export type BuildingType = "residential" | "factory" | "shop" | "purchasing_station";
+
+/** 建筑状态（目前仅有 active） */
 export type BuildingStatus = "active";
 
+/** 建筑实体的内部属性 */
 type BuildingProps = {
   id: number;
   plotId: number;
@@ -12,9 +22,17 @@ type BuildingProps = {
   updatedAt: Date;
 };
 
+/**
+ * 建筑领域实体类
+ *
+ * 采用私有构造函数模式，通过静态工厂方法创建实例：
+ * - construct: 新建建筑时使用
+ * - rehydrate: 从持久化数据重建实体时使用
+ */
 export class Building {
   private constructor(private props: BuildingProps) {}
 
+  /** 创建新建筑实例，自动设置状态为 active 并记录当前时间 */
   static construct(input: {
     id: number;
     plotId: number;
@@ -31,22 +49,26 @@ export class Building {
     });
   }
 
+  /** 从持久化数据恢复建筑实体（不执行业务校验） */
   static rehydrate(props: BuildingProps): Building {
     return new Building(props);
   }
 
+  /** 断言当前建筑为工厂类型，否则抛出领域错误 */
   ensureFactory(): void {
     if (this.props.type !== "factory") {
       throw new DomainError("当前建筑不是工厂");
     }
   }
 
+  /** 断言当前建筑为商店类型，否则抛出领域错误 */
   ensureShop(): void {
     if (this.props.type !== "shop") {
       throw new DomainError("当前建筑不是商店");
     }
   }
 
+  /** 断言当前建筑为收购站类型，否则抛出领域错误 */
   ensurePurchasingStation(): void {
     if (this.props.type !== "purchasing_station") {
       throw new DomainError("当前建筑不是收购站");

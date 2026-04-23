@@ -1,6 +1,12 @@
+/**
+ * 地块操作区组件
+ * 提供地块的购买和建筑建造操作，支持展开建造选项列表。
+ */
+
 import { Button, Popconfirm } from "antd";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
 
+/** 地块操作区组件的 Props */
 type PlotActionSectionProps = {
   canPurchase: boolean;
   canBuild: boolean;
@@ -14,6 +20,7 @@ type PlotActionSectionProps = {
   onBuild: (buildingType: BuildingType) => void;
 };
 
+/** 可建造的建筑类型选项列表 */
 const buildingTypeOptions: Array<{
   value: BuildingType;
   label: string;
@@ -25,6 +32,7 @@ const buildingTypeOptions: Array<{
   { value: "purchasing_station", label: "收购站", description: "发布收购订单" },
 ];
 
+/** 地块操作区组件，提供购买和建造功能 */
 export function PlotActionSection({
   canPurchase,
   canBuild,

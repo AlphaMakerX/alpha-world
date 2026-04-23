@@ -1,3 +1,10 @@
+/**
+ * tRPC 根路由器定义文件
+ *
+ * 将所有子路由器（auth、plot、building 等）聚合为一个统一的应用路由器，
+ * 并导出 AppRouter 类型供客户端进行端到端类型推断。
+ */
+
 import { createTRPCRouter } from "@/server/lib/trpc/core";
 import { authRouter } from "./auth";
 import { apiAccessTokenRouter } from "./api-access-token";
@@ -10,6 +17,7 @@ import { shopRouter } from "./shop";
 import { purchasingStationRouter } from "./purchasing-station";
 import { itemRouter } from "./item";
 
+/** 应用根路由器，聚合所有业务子路由器 */
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   apiAccessToken: apiAccessTokenRouter,
@@ -23,4 +31,5 @@ export const appRouter = createTRPCRouter({
   item: itemRouter,
 });
 
+/** 应用路由器类型，供 tRPC 客户端进行端到端类型推断 */
 export type AppRouter = typeof appRouter;

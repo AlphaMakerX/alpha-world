@@ -1,5 +1,12 @@
+/**
+ * 物品展示工具模块
+ * 定义物品的展示信息（名称、图标、等级、样式），提供按 itemKey 查询展示信息的函数。
+ */
+
+/** 物品等级类型：基础材料、加工品、高级制品 */
 export type ItemTier = "base_material" | "processed_goods" | "advanced_goods";
 
+/** 物品展示信息的类型定义 */
 export type ItemDisplay = {
   name: string;
   icon: string;
@@ -8,6 +15,7 @@ export type ItemDisplay = {
   iconClassName: string;
 };
 
+/** 所有物品的展示信息配置表，以 itemKey 为键 */
 const itemDisplayByKey: Record<string, ItemDisplay> = {
   money: {
     name: "金币",
@@ -158,14 +166,17 @@ const itemDisplayByKey: Record<string, ItemDisplay> = {
   },
 };
 
+/** 物品等级到中文标签的映射 */
 export const TIER_LABELS: Record<ItemTier, string> = {
   base_material: "基础材料",
   processed_goods: "加工品",
   advanced_goods: "高级制品",
 };
 
+/** 所有物品等级的有序列表 */
 export const ALL_TIERS: ItemTier[] = ["base_material", "processed_goods", "advanced_goods"];
 
+/** 根据 itemKey 获取物品展示信息，未知物品返回默认展示 */
 export const getItemDisplay = (itemKey: string): ItemDisplay =>
   itemDisplayByKey[itemKey] ?? {
     name: itemKey,

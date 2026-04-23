@@ -1,3 +1,11 @@
+/**
+ * 收购站模块组合根（Composition Root）
+ *
+ * 负责将收购站相关的所有用例与具体的基础设施实现进行组装，
+ * 对外暴露带有参数校验（Zod schema）的用例入口函数。
+ * 调用方只需传入原始输入，组合根负责校验、依赖注入和执行。
+ */
+
 import { z } from "zod";
 import {
   executeCreateBuyOrderUseCase as executeCreateBuyOrderUseCaseImpl,
@@ -26,6 +34,7 @@ import { plotRepository } from "@/server/features/plot/infrastructure";
 import { buyOrderRepository, purchasingStationTransactionQueryRepository } from "@/server/features/purchasing-station/infrastructure";
 import { transact } from "@/server/lib/db";
 
+/** 创建收购订单的参数校验 schema */
 export const createBuyOrderSchema = z.object({
   buyerUserId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
@@ -34,25 +43,30 @@ export const createBuyOrderSchema = z.object({
   unitPrice: z.number().positive("单价必须大于 0"),
 });
 
+/** 查询收购订单列表的参数校验 schema */
 export const listBuyOrdersSchema = z.object({
   buildingId: z.number().int().positive(),
 });
 
+/** 履行收购订单（出售物品）的参数校验 schema */
 export const fulfillBuyOrderSchema = z.object({
   sellerUserId: z.string().uuid("用户 ID 不合法"),
   orderId: z.number().int().positive(),
   quantity: z.number().int().positive("出售数量必须为正整数"),
 });
 
+/** 取消收购订单的参数校验 schema */
 export const cancelBuyOrderSchema = z.object({
   buyerUserId: z.string().uuid("用户 ID 不合法"),
   orderId: z.number().int().positive(),
 });
 
+/** 查询收购站交易历史的参数校验 schema */
 export const getPurchasingStationTransactionHistorySchema = z.object({
   buildingId: z.number().int().positive(),
 });
 
+/** 创建收购订单入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeCreateBuyOrderUseCase(input: unknown): Promise<CreateBuyOrderResult> {
   const parsed = createBuyOrderSchema.safeParse(input);
   if (!parsed.success) {
@@ -72,6 +86,7 @@ export async function executeCreateBuyOrderUseCase(input: unknown): Promise<Crea
   });
 }
 
+/** 查询收购订单列表入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeListBuyOrdersUseCase(input: unknown): Promise<ListBuyOrdersResult> {
   const parsed = listBuyOrdersSchema.safeParse(input);
   if (!parsed.success) {
@@ -88,6 +103,7 @@ export async function executeListBuyOrdersUseCase(input: unknown): Promise<ListB
   });
 }
 
+/** 履行收购订单入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeFulfillBuyOrderUseCase(input: unknown): Promise<FulfillBuyOrderResult> {
   const parsed = fulfillBuyOrderSchema.safeParse(input);
   if (!parsed.success) {
@@ -107,6 +123,7 @@ export async function executeFulfillBuyOrderUseCase(input: unknown): Promise<Ful
   });
 }
 
+/** 取消收购订单入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeCancelBuyOrderUseCase(input: unknown): Promise<CancelBuyOrderResult> {
   const parsed = cancelBuyOrderSchema.safeParse(input);
   if (!parsed.success) {
@@ -124,6 +141,7 @@ export async function executeCancelBuyOrderUseCase(input: unknown): Promise<Canc
   });
 }
 
+/** 查询收购站交易历史入口：校验参数 -> 注入依赖 -> 执行用例 */
 export async function executeGetPurchasingStationTransactionHistoryUseCase(
   input: unknown,
 ): Promise<GetPurchasingStationTransactionHistoryResult> {

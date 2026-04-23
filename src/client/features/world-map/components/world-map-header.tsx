@@ -1,8 +1,15 @@
+/**
+ * 世界地图顶部导航栏组件
+ *
+ * 显示用户登录状态、余额、背包入口、游戏信息入口，
+ * 以及登录/登出操作按钮。未登录时只展示登录按钮和游戏信息。
+ */
 "use client";
 
 import { Button, Popconfirm } from "antd";
 import type { AuthStatus } from "@/client/types/auth-ui";
 
+/** WorldMapHeader 组件的 props 类型 */
 type WorldMapHeaderProps = {
   authStatus: AuthStatus;
   username?: string;
@@ -15,6 +22,7 @@ type WorldMapHeaderProps = {
   logoutLoading?: boolean;
 };
 
+/** 世界地图顶部导航栏，根据认证状态展示不同的操作按钮 */
 export function WorldMapHeader({
   authStatus,
   username,
@@ -26,14 +34,17 @@ export function WorldMapHeader({
   onLogoutClick,
   logoutLoading = false,
 }: WorldMapHeaderProps) {
+  // 格式化金额为中文本地化格式（千分位分隔）
   const displayMoney = Number(money ?? 0).toLocaleString("zh-CN");
   const isAuthenticated = authStatus === "authenticated";
+  // 根据认证状态生成显示文案
   const displayStatus =
     isAuthenticated
       ? `已登录：${username ?? "未知用户"}`
       : authStatus === "loading"
         ? "登录状态检查中..."
         : "未登录";
+  // 根据认证状态设置不同的样式色调
   const statusToneClass = isAuthenticated
     ? "border-violet-300 bg-violet-100 text-violet-800"
     : authStatus === "loading"

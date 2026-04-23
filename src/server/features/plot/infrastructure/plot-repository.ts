@@ -1,9 +1,15 @@
+/**
+ * 地块仓储的 Drizzle ORM 实现
+ *
+ * 提供地块实体的持久化操作，包括全量查询、按 ID/坐标查询和 upsert 保存。
+ */
 import { and, asc, eq } from "drizzle-orm";
 import { Plot, PlotCoordinate } from "@/server/features/plot/domain";
 import type { PlotRepository } from "@/server/features/plot/domain";
 import { getDbClient } from "@/server/lib/db";
 import { plots } from "@/server/features/plot/infrastructure/schema";
 
+/** 将数据库记录转换为领域实体 Plot */
 function toDomainPlot(record: typeof plots.$inferSelect): Plot {
   return Plot.rehydrate({
     id: record.id,
@@ -16,6 +22,7 @@ function toDomainPlot(record: typeof plots.$inferSelect): Plot {
   });
 }
 
+/** 基于 Drizzle ORM 的地块仓储实现 */
 export class DrizzlePlotRepository implements PlotRepository {
   async findAll(): Promise<Plot[]> {
     const records = await getDbClient().query.plots.findMany({
@@ -48,6 +55,7 @@ export class DrizzlePlotRepository implements PlotRepository {
     return toDomainPlot(record);
   }
 
+  /** 保存地块（insert or update），使用 onConflictDoUpdate 实现 upsert */
   async save(plot: Plot): Promise<void> {
     await getDbClient()
       .insert(plots)

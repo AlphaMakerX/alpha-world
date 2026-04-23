@@ -1,3 +1,11 @@
+/**
+ * 工厂系统 Hook
+ *
+ * 管理工厂相关的数据查询与操作，包括：
+ * - 查询工厂配方列表
+ * - 查询当前工厂的生产订单（进行中的订单自动轮询）
+ * - 发起生产操作
+ */
 "use client";
 
 import { useCallback } from "react";
@@ -6,6 +14,7 @@ import { trpc } from "@/client/lib/trpc";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 import { isInitialQueryLoading } from "../world-map-utils";
 
+/** 工厂系统数据查询与操作 Hook */
 export function useWorldMapFactory(options: {
   authStatus: "loading" | "authenticated" | "unauthenticated";
   selectedPlot: Plot | undefined;
@@ -54,6 +63,7 @@ export function useWorldMapFactory(options: {
     isFetching: isFactoryRecipesFetching,
   });
 
+  /** 开始生产：校验权限后调用 mutation，成功后刷新背包、订单和用户数据 */
   const handleStartProduction = useCallback(
     async (recipeId: string, quantity: number = 1) => {
       if (!selectedPlot?.building) {

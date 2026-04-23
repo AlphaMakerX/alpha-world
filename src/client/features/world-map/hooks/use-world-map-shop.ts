@@ -1,3 +1,9 @@
+/**
+ * 商店系统 Hook
+ *
+ * 管理商店的商品列表查询、交易历史查询，
+ * 以及上架、购买、下架等操作。
+ */
 "use client";
 
 import { useCallback } from "react";
@@ -5,6 +11,7 @@ import type { MessageInstance } from "antd/es/message/interface";
 import { trpc } from "@/client/lib/trpc";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
+/** 商店数据查询与操作 Hook */
 export function useWorldMapShop(options: {
   authStatus: "loading" | "authenticated" | "unauthenticated";
   selectedPlot: Plot | undefined;
@@ -37,6 +44,7 @@ export function useWorldMapShop(options: {
   const purchaseShopListingMutation = trpc.shop.purchase.useMutation();
   const cancelShopListingMutation = trpc.shop.cancelListing.useMutation();
 
+  /** 上架商品到商店 */
   const handleCreateListing = useCallback(
     async (itemKey: string, quantity: number, unitPrice: number) => {
       if (!selectedPlot?.building) {
@@ -63,6 +71,7 @@ export function useWorldMapShop(options: {
     [authStatus, createShopListingMutation, messageApi, selectedPlot?.building, setLoginModalOpen, trpcUtils],
   );
 
+  /** 购买商店中的商品 */
   const handlePurchaseListing = useCallback(
     async (listingId: number, quantity: number) => {
       if (authStatus !== "authenticated") {
@@ -86,6 +95,7 @@ export function useWorldMapShop(options: {
     [authStatus, messageApi, purchaseShopListingMutation, setLoginModalOpen, trpcUtils],
   );
 
+  /** 下架商品，物品退回卖家背包 */
   const handleCancelListing = useCallback(
     async (listingId: number) => {
       if (authStatus !== "authenticated") {

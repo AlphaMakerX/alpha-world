@@ -1,3 +1,9 @@
+/**
+ * 查询工厂订单列表用例
+ *
+ * 查询指定工厂建筑的生产订单，同时自动结算已到期的订单（将产出物品入库）。
+ * 返回一个"焦点订单"（当前进行中）和历史订单列表。
+ */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import { receiveFactoryOutputs } from "@/server/features/inventory/domain";
@@ -6,6 +12,7 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 
+/** 将生产任务实体转换为前端所需的 DTO 格式 */
 function toOrderDto(job: {
   id: number;
   buildingId: number;
@@ -32,11 +39,13 @@ function toOrderDto(job: {
   };
 }
 
+/** 查询工厂订单的命令参数 */
 export type ListFactoryOrdersCommand = {
   ownerUserId: string;
   buildingId: number;
 };
 
+/** 用例所需的外部依赖 */
 export type ListFactoryOrdersUseCaseDeps = {
   factoryProductionJobRepository: FactoryProductionJobRepository;
   buildingRepository: BuildingRepository;
@@ -44,20 +53,28 @@ export type ListFactoryOrdersUseCaseDeps = {
   plotRepository: PlotRepository;
 };
 
+/** 查询成功的返回结果 */
 type ListFactoryOrdersSuccessResult = {
   ok: true;
   focusOrder: ReturnType<typeof toOrderDto> | null;
   historyOrders: Array<ReturnType<typeof toOrderDto>>;
 };
 
+/** 查询失败的返回结果 */
 type ListFactoryOrdersFailureResult = {
   ok: false;
   error: string;
   code: UseCaseErrorCode;
 };
 
+/** 用例返回类型（成功 | 失败） */
 export type ListFactoryOrdersResult = ListFactoryOrdersSuccessResult | ListFactoryOrdersFailureResult;
 
+/**
+ * 执行查询工厂订单列表用例
+ *
+ * 流程：校验建筑与地块归属 -> 自动结算到期订单 -> 返回焦点订单和历史订单
+ */
 export async function executeListFactoryOrdersUseCase(
   command: ListFactoryOrdersCommand,
   deps: ListFactoryOrdersUseCaseDeps,

@@ -1,14 +1,22 @@
+/**
+ * 商店上架商品表单组件
+ *
+ * 允许商店所有者从背包中选择物品并设置数量和单价进行上架。
+ * 包含物品选择、数量输入、单价输入和确认弹窗。
+ */
 import { useState } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
+/** ShopCreateListingForm 组件的 props 类型 */
 type ShopCreateListingFormProps = {
   inventoryItems: InventoryItem[];
   loading: boolean;
   onCreateListing: (itemKey: string, quantity: number, unitPrice: number) => void;
 };
 
+/** 商店上架商品表单，从背包选择物品并设置价格后上架 */
 export function ShopCreateListingForm({
   inventoryItems,
   loading,
@@ -18,11 +26,14 @@ export function ShopCreateListingForm({
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
 
+  // 仅展示数量大于 0 的背包物品
   const availableItems = inventoryItems.filter((item) => item.quantity > 0);
   const selectedItem = availableItems.find((item) => item.itemKey === selectedItemKey);
   const maxQuantity = selectedItem?.quantity ?? 0;
+  // 提交条件：已选物品、数量合法、单价非负
   const canSubmit = selectedItemKey && quantity > 0 && quantity <= maxQuantity && unitPrice >= 0;
 
+  /** 确认上架：调用回调并重置表单状态 */
   const handleConfirm = () => {
     if (!selectedItemKey || !canSubmit) return;
     onCreateListing(selectedItemKey, quantity, unitPrice);

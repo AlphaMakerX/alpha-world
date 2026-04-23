@@ -1,12 +1,23 @@
+/**
+ * 物品图块组件
+ * 展示单个物品的图标、名称和数量，支持显示库存数量及材料不足状态高亮。
+ */
+
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
+/** 物品图块组件的 Props */
 type ItemTileProps = {
+  /** 物品的唯一标识键 */
   itemKey: string;
+  /** 显示的数量 */
   quantity: number;
+  /** 背包中拥有的数量（可选，用于材料对比） */
   ownedQuantity?: number;
+  /** 是否标记为材料不足（红色边框高亮） */
   isInsufficient?: boolean;
 };
 
+/** 物品图块组件，展示物品图标、名称、数量和库存状态 */
 export function ItemTile({ itemKey, quantity, ownedQuantity, isInsufficient = false }: ItemTileProps) {
   const display = getItemDisplay(itemKey);
   const showOwnedQuantity = typeof ownedQuantity === "number";

@@ -1,3 +1,9 @@
+/**
+ * 收购站系统 Hook
+ *
+ * 管理收购站的收购订单查询、交易历史查询，
+ * 以及发布收购订单、出售物品（履行订单）、取消订单等操作。
+ */
 "use client";
 
 import { useCallback } from "react";
@@ -5,6 +11,7 @@ import type { MessageInstance } from "antd/es/message/interface";
 import { trpc } from "@/client/lib/trpc";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
+/** 收购站数据查询与操作 Hook */
 export function useWorldMapPurchasingStation(options: {
   authStatus: "loading" | "authenticated" | "unauthenticated";
   selectedPlot: Plot | undefined;
@@ -41,6 +48,7 @@ export function useWorldMapPurchasingStation(options: {
   const fulfillBuyOrderMutation = trpc.purchasingStation.fulfillBuyOrder.useMutation();
   const cancelBuyOrderMutation = trpc.purchasingStation.cancelBuyOrder.useMutation();
 
+  /** 发布收购订单：预付总价后等待卖家出售 */
   const handleCreateBuyOrder = useCallback(
     async (itemKey: string, quantity: number, unitPrice: number) => {
       if (!selectedPlot?.building) {
@@ -70,6 +78,7 @@ export function useWorldMapPurchasingStation(options: {
     [authStatus, createBuyOrderMutation, messageApi, selectedPlot?.building, setLoginModalOpen, trpcUtils],
   );
 
+  /** 出售物品以履行收购订单 */
   const handleFulfillBuyOrder = useCallback(
     async (orderId: number, quantity: number) => {
       if (authStatus !== "authenticated") {
@@ -93,6 +102,7 @@ export function useWorldMapPurchasingStation(options: {
     [authStatus, fulfillBuyOrderMutation, messageApi, setLoginModalOpen, trpcUtils],
   );
 
+  /** 取消收购订单，预付款退回余额 */
   const handleCancelBuyOrder = useCallback(
     async (orderId: number) => {
       if (authStatus !== "authenticated") {

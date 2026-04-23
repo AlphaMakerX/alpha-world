@@ -1,3 +1,9 @@
+/**
+ * 建筑表数据库 Schema 定义
+ *
+ * 使用 Drizzle ORM 定义 plot_buildings 表结构，
+ * 建筑通过外键关联地块（plots）表，每个地块最多一栋建筑（unique 约束）。
+ */
 import {
   bigint,
   check,
@@ -8,6 +14,7 @@ import {
 import { sql } from "drizzle-orm";
 import { plots } from "@/server/features/plot/infrastructure/schema";
 
+/** 建筑表（plot_buildings） */
 export const buildings = pgTable(
   "plot_buildings",
   {

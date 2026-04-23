@@ -1,13 +1,20 @@
+/**
+ * 游戏信息模态框组件
+ * 包含三个 Tab 页：游戏规则说明、财富排行榜、央行 Adam 信息。
+ */
+
 "use client";
 
 import { Modal, Tabs, Spin } from "antd";
 import { trpc } from "@/client/lib/trpc";
 
+/** 游戏信息模态框组件的 Props */
 type GameInfoModalProps = {
   open: boolean;
   onClose: () => void;
 };
 
+/** 游戏规则 Tab 页，展示游戏的基本规则说明 */
 function GameRulesTab() {
   return (
     <div className="space-y-4 text-sm leading-relaxed text-slate-700">
@@ -104,6 +111,7 @@ function GameRulesTab() {
   );
 }
 
+/** 财富排行榜 Tab 页，展示玩家财富排名和货币总量，每 10 秒自动刷新 */
 function WealthLeaderboardTab() {
   const { data, isLoading } = trpc.person.wealthLeaderboard.useQuery(undefined, {
     refetchInterval: 10_000,
@@ -128,6 +136,7 @@ function WealthLeaderboardTab() {
     );
   }
 
+  // 前三名的奖牌样式：金、银、铜
   const medalColors = [
     "bg-amber-100 text-amber-700 border-amber-300",
     "bg-slate-100 text-slate-600 border-slate-300",
@@ -199,6 +208,7 @@ function WealthLeaderboardTab() {
   );
 }
 
+/** 央行 Adam Tab 页，展示系统央行的余额和交易日志，每 10 秒自动刷新 */
 function AdamProfileTab() {
   const { data, isLoading } = trpc.person.adamProfile.useQuery(undefined, {
     refetchInterval: 10_000,
@@ -273,6 +283,7 @@ function AdamProfileTab() {
   );
 }
 
+/** 游戏信息模态框组件，整合规则、排行榜和央行信息 */
 export function GameInfoModal({ open, onClose }: GameInfoModalProps) {
   return (
     <Modal

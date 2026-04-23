@@ -1,3 +1,10 @@
+/**
+ * 创建商店上架商品用例
+ *
+ * 卖家将自己库存中的物品上架到所属地块的商店建筑中进行出售。
+ * 上架时会从卖家库存中扣除相应数量，创建在售的上架记录。
+ */
+
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
@@ -6,6 +13,7 @@ import type { InventoryRepository } from "@/server/features/inventory/domain/rep
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
+/** 创建上架成功的返回结果 */
 type CreateShopListingSuccessResult = {
   ok: true;
   listing: {
@@ -21,30 +29,46 @@ type CreateShopListingSuccessResult = {
   };
 };
 
+/** 创建上架失败的返回结果 */
 type CreateShopListingFailureResult = {
   ok: false;
   error: string;
   code: UseCaseErrorCode;
 };
 
+/** 创建上架用例的返回结果联合类型 */
 export type CreateShopListingResult = CreateShopListingSuccessResult | CreateShopListingFailureResult;
 
+/** 创建上架命令参数 */
 export type CreateShopListingCommand = {
+  /** 卖家用户 ID */
   sellerUserId: string;
+  /** 目标商店建筑 ID */
   buildingId: number;
+  /** 物品标识键 */
   itemKey: string;
+  /** 上架数量 */
   quantity: number;
+  /** 单价 */
   unitPrice: number;
 };
 
+/** 创建上架用例的依赖 */
 export type CreateShopListingUseCaseDeps = {
   buildingRepository: BuildingRepository;
   shopListingRepository: ShopListingRepository;
   inventoryRepository: InventoryRepository;
   plotRepository: PlotRepository;
+  /** 事务执行器，确保扣减库存和创建上架记录的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/**
+ * 执行创建商店上架商品用例
+ *
+ * 流程：校验建筑存在 -> 校验地块归属 -> 确认建筑为商店类型
+ * -> 校验卖家库存充足 -> 事务中扣减库存并创建上架记录
+ */
 export async function executeCreateShopListingUseCase(
   command: CreateShopListingCommand,
   deps: CreateShopListingUseCaseDeps,
@@ -59,6 +83,7 @@ export async function executeCreateShopListingUseCase(
   }
 
   try {
+    // 校验地块存在且归属于卖家
     const plot = await deps.plotRepository.findById(building.plotId);
     if (!plot) {
       return {
@@ -74,8 +99,10 @@ export async function executeCreateShopListingUseCase(
         code: "CONFLICT",
       };
     }
+    // 确认该建筑是商店类型，否则抛出 DomainError
     building.ensureShop();
 
+    // 标准化物品键并检查卖家库存
     const normalizedItemKey = normalizeItemKey(command.itemKey);
     const quantity = await deps.inventoryRepository.getItemQuantity(command.sellerUserId, normalizedItemKey);
     if (quantity < command.quantity) {
@@ -86,6 +113,7 @@ export async function executeCreateShopListingUseCase(
       };
     }
 
+    // 事务：从卖家库存扣除物品 + 创建上架记录
     const listing = await deps.transact(async () => {
       await deps.inventoryRepository.consumeItem(
         command.sellerUserId,

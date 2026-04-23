@@ -1,11 +1,20 @@
+/**
+ * 物品目录（Item Catalog）
+ * 定义游戏中所有物品的静态数据，包括物品标识、名称和阶级（tier）。
+ * 提供按阶级筛选、按标识查询名称等工具函数。
+ */
+
+/** 物品阶级：基础材料 | 加工品 | 高级品 */
 export type ItemTier = "base_material" | "processed_goods" | "advanced_goods";
 
+/** 物品定义：描述单个物品的元数据 */
 export type ItemDefinition = {
   key: string;
   name: string;
   tier: ItemTier;
 };
 
+/** 全量物品定义列表 */
 const ITEM_DEFINITIONS: ItemDefinition[] = [
   { key: "wood", name: "木材", tier: "base_material" },
   { key: "iron_ore", name: "铁矿石", tier: "base_material" },
@@ -30,18 +39,22 @@ const ITEM_DEFINITIONS: ItemDefinition[] = [
   { key: "land_reclamation_badge", name: "开垦土地徽章", tier: "advanced_goods" },
 ];
 
+/** 获取全部物品定义列表 */
 export function listItemDefinitions(): ItemDefinition[] {
   return ITEM_DEFINITIONS;
 }
 
+/** 根据阶级筛选物品定义 */
 export function listItemDefinitionsByTier(tier: ItemTier): ItemDefinition[] {
   return ITEM_DEFINITIONS.filter((item) => item.tier === tier);
 }
 
+/** 根据物品标识获取物品名称，未找到时返回标识本身 */
 export function getItemName(itemKey: string): string {
   return ITEM_DEFINITIONS.find((item) => item.key === itemKey)?.name ?? itemKey;
 }
 
+/** 判断给定的物品标识是否在目录中 */
 export function isKnownItemKey(itemKey: string): boolean {
   return ITEM_DEFINITIONS.some((item) => item.key === itemKey);
 }

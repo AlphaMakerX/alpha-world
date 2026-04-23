@@ -1,3 +1,9 @@
+/**
+ * Person 模块组合根
+ *
+ * 负责组装用例与基础设施依赖，对外暴露带参数校验的用例入口函数。
+ * 使用 Zod 进行输入校验，注入具体仓储实现。
+ */
 import { z } from "zod";
 import {
   executeGetAdamProfileUseCase as executeGetAdamProfileUseCaseImpl,
@@ -22,14 +28,17 @@ import {
 import { personQueryRepository, userRepository } from "@/server/features/person/infrastructure";
 import { PERSONA_IDS } from "@/server/features/person/domain/personas";
 
+/** 获取当前用户的入参校验 Schema */
 export const getCurrentUserSchema = z.object({
   userId: z.string().uuid("用户 ID 格式不正确"),
 });
 
+/** 获取角色档案的入参校验 Schema */
 export const getPersonaProfileSchema = z.object({
   personaId: z.enum(PERSONA_IDS),
 });
 
+/** 更新用户位置的入参校验 Schema（坐标范围 x:0~3200, y:0~1200） */
 export const updateUserPositionSchema = z.object({
   userId: z.string().uuid("用户 ID 格式不正确"),
   position: z.object({
@@ -38,6 +47,7 @@ export const updateUserPositionSchema = z.object({
   }),
 });
 
+/** 获取当前用户信息（带输入校验） */
 export async function executeGetCurrentUserUseCase(
   input: unknown,
 ): Promise<GetCurrentUserResult> {
@@ -55,12 +65,14 @@ export async function executeGetCurrentUserUseCase(
   });
 }
 
+/** 获取财富排行榜 */
 export async function executeGetWealthLeaderboardUseCase(): Promise<GetWealthLeaderboardResult> {
   return executeGetWealthLeaderboardUseCaseImpl({
     personQueryRepository,
   });
 }
 
+/** 更新用户位置（带输入校验） */
 export async function executeUpdateUserPositionUseCase(
   input: unknown,
 ): Promise<UpdateUserPositionResult | { ok: false; error: string; status: 400 }> {
@@ -78,12 +90,14 @@ export async function executeUpdateUserPositionUseCase(
   });
 }
 
+/** 获取 Adam 资金概况 */
 export async function executeGetAdamProfileUseCase(): Promise<GetAdamProfileResult> {
   return executeGetAdamProfileUseCaseImpl({
     personQueryRepository,
   });
 }
 
+/** 获取角色档案（带输入校验） */
 export async function executeGetPersonaProfileUseCase(
   input: unknown,
 ): Promise<GetPersonaProfileResult | { ok: false; error: string; status: 400 }> {

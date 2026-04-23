@@ -1,16 +1,25 @@
+/**
+ * 配方目录（Recipe Catalog）
+ * 定义游戏中所有工厂配方的静态数据，包括采购、加工、组装三大类。
+ * 每个配方描述了所需的输入物品、产出物品以及生产耗时。
+ */
+
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
 
+/** 配方类别：采购 | 加工 | 组装 */
 export type RecipeCategory = "procurement" | "processing" | "assembly";
 
+/** 配方定义：描述一个工厂生产配方的完整信息 */
 export type Recipe = {
-  id: string;
-  name: string;
-  category: RecipeCategory;
-  durationSeconds: number;
-  inputs: ItemStack[];
-  outputs: ItemStack[];
+  id: string;             // 配方唯一标识
+  name: string;           // 配方名称
+  category: RecipeCategory; // 配方类别
+  durationSeconds: number;  // 生产耗时（秒）
+  inputs: ItemStack[];    // 所需输入物品列表
+  outputs: ItemStack[];   // 产出物品列表
 };
 
+/** 全量配方列表 */
 const recipes: Recipe[] = [
   {
     id: "buy_iron_ore",
@@ -255,14 +264,17 @@ const recipes: Recipe[] = [
   },
 ];
 
+/** 获取全部配方列表 */
 export function listRecipes(): Recipe[] {
   return recipes;
 }
 
+/** 根据类别筛选配方 */
 export function listRecipesByCategory(category: RecipeCategory): Recipe[] {
   return recipes.filter((recipe) => recipe.category === category);
 }
 
+/** 根据配方 ID 查找配方，未找到时返回 null */
 export function getRecipeById(recipeId: string): Recipe | null {
   return recipes.find((recipe) => recipe.id === recipeId) ?? null;
 }

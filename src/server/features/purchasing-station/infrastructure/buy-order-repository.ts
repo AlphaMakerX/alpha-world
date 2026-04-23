@@ -1,8 +1,16 @@
+/**
+ * 收购订单仓储的 Drizzle ORM 实现
+ *
+ * 基于 Drizzle ORM 实现 BuyOrderRepository 接口，
+ * 提供收购订单的增删改查持久化操作。
+ */
+
 import { and, eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import type { BuyOrder, BuyOrderRepository, BuyOrderStatus } from "@/server/features/purchasing-station/domain";
 import { buyOrders } from "@/server/features/purchasing-station/infrastructure/schema";
 
+/** 将数据库记录转换为领域模型（注意 unitPrice 从 string 转为 number） */
 function toBuyOrder(record: typeof buyOrders.$inferSelect): BuyOrder {
   return {
     id: record.id,
@@ -17,7 +25,9 @@ function toBuyOrder(record: typeof buyOrders.$inferSelect): BuyOrder {
   };
 }
 
+/** BuyOrderRepository 的 Drizzle ORM 实现 */
 export class DrizzleBuyOrderRepository implements BuyOrderRepository {
+  /** 插入一条新的收购订单并返回完整实体 */
   async create(input: Omit<BuyOrder, "id" | "createdAt" | "updatedAt">): Promise<BuyOrder> {
     const now = new Date();
     const inserted = await getDbClient()
@@ -68,4 +78,5 @@ export class DrizzleBuyOrderRepository implements BuyOrderRepository {
   }
 }
 
+/** 导出单例实例，供组合根注入使用 */
 export const buyOrderRepository: BuyOrderRepository = new DrizzleBuyOrderRepository();

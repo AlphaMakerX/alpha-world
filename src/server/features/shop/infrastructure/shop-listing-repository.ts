@@ -1,8 +1,16 @@
+/**
+ * 商店上架商品仓储的 Drizzle ORM 实现
+ *
+ * 基于 Drizzle ORM 实现 ShopListingRepository 接口，
+ * 提供商品上架记录的增删改查持久化操作。
+ */
+
 import { and, eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import type { ShopListing, ShopListingRepository, ShopListingStatus } from "@/server/features/shop/domain";
 import { shopListings } from "@/server/features/shop/infrastructure/schema";
 
+/** 将数据库记录转换为领域模型（注意 unitPrice 从 string 转为 number） */
 function toShopListing(record: typeof shopListings.$inferSelect): ShopListing {
   return {
     id: record.id,
@@ -17,7 +25,9 @@ function toShopListing(record: typeof shopListings.$inferSelect): ShopListing {
   };
 }
 
+/** ShopListingRepository 的 Drizzle ORM 实现 */
 export class DrizzleShopListingRepository implements ShopListingRepository {
+  /** 插入一条新的上架记录并返回完整实体 */
   async create(input: Omit<ShopListing, "id" | "createdAt" | "updatedAt">): Promise<ShopListing> {
     const now = new Date();
     const inserted = await getDbClient()
@@ -68,4 +78,5 @@ export class DrizzleShopListingRepository implements ShopListingRepository {
   }
 }
 
+/** 导出单例实例，供组合根注入使用 */
 export const shopListingRepository: ShopListingRepository = new DrizzleShopListingRepository();

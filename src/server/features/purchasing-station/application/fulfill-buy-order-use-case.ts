@@ -1,3 +1,11 @@
+/**
+ * 履行收购订单用例（出售物品给收购站）
+ *
+ * 卖家向收购站的收购订单出售物品。出售时会从卖家库存扣除物品，
+ * 将物品添加到收购方库存，将预冻结的资金转给卖家，并记录交易流水。
+ * 支持部分成交（出售数量可小于订单需求数量）。
+ */
+
 import { getItemName } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
@@ -6,6 +14,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
+/** 履行收购订单成功的返回结果 */
 type FulfillBuyOrderSuccessResult = {
   ok: true;
   order: {
@@ -13,32 +22,47 @@ type FulfillBuyOrderSuccessResult = {
     itemKey: string;
     quantity: number;
     unitPrice: number;
+    /** 卖家总收入 = 单价 * 出售数量 */
     totalIncome: number;
   };
 };
 
+/** 履行收购订单失败的返回结果 */
 type FulfillBuyOrderFailureResult = {
   ok: false;
   error: string;
   code: UseCaseErrorCode;
 };
 
+/** 履行收购订单用例的返回结果联合类型 */
 export type FulfillBuyOrderResult = FulfillBuyOrderSuccessResult | FulfillBuyOrderFailureResult;
 
+/** 履行收购订单命令参数 */
 export type FulfillBuyOrderCommand = {
+  /** 卖家用户 ID */
   sellerUserId: string;
+  /** 收购订单 ID */
   orderId: number;
+  /** 出售数量 */
   quantity: number;
 };
 
+/** 履行收购订单用例的依赖 */
 export type FulfillBuyOrderUseCaseDeps = {
   buyOrderRepository: BuyOrderRepository;
   inventoryRepository: InventoryRepository;
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
+  /** 事务执行器，确保库存转移、资金转移和流水记录的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/**
+ * 执行履行收购订单用例
+ *
+ * 流程：校验订单存在且进行中 -> 禁止自卖 -> 校验出售数量 -> 校验卖家库存
+ * -> 卖家收款 -> 事务中扣除/添加库存、更新订单状态、记录交易流水
+ */
 export async function executeFulfillBuyOrderUseCase(
   command: FulfillBuyOrderCommand,
   deps: FulfillBuyOrderUseCaseDeps,
@@ -52,6 +76,7 @@ export async function executeFulfillBuyOrderUseCase(
     return { ok: false, error: "该订单已完成或已取消", code: "CONFLICT" };
   }
 
+  // 不允许向自己的收购订单出售
   if (order.buyerUserId === command.sellerUserId) {
     return { ok: false, error: "不能出售给自己的收购订单", code: "CONFLICT" };
   }
@@ -66,6 +91,7 @@ export async function executeFulfillBuyOrderUseCase(
     return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
 
+  // 校验卖家库存是否充足
   const sellerQuantity = await deps.inventoryRepository.getItemQuantity(
     command.sellerUserId,
     order.itemKey,
@@ -77,6 +103,7 @@ export async function executeFulfillBuyOrderUseCase(
   const totalIncome = order.unitPrice * sellQuantity;
 
   try {
+    // 在领域模型层执行卖家收款（收购方的资金已在创建订单时预冻结）
     seller.receiveMoney(totalIncome);
   } catch (error) {
     if (error instanceof DomainError) {
@@ -85,6 +112,7 @@ export async function executeFulfillBuyOrderUseCase(
     throw error;
   }
 
+  // 事务：扣除卖家库存 + 添加收购方库存 + 保存卖家余额 + 更新订单状态 + 记录流水
   await deps.transact(async () => {
     await deps.inventoryRepository.consumeItem(
       command.sellerUserId,
@@ -98,6 +126,7 @@ export async function executeFulfillBuyOrderUseCase(
     );
     await deps.userRepository.save(seller);
 
+    // 若全部成交则标记为 fulfilled，否则仅减少剩余需求数量
     const remainingQuantity = order.quantity - sellQuantity;
     if (remainingQuantity === 0) {
       await deps.buyOrderRepository.updateStatus(order.id, "fulfilled");
@@ -105,6 +134,7 @@ export async function executeFulfillBuyOrderUseCase(
       await deps.buyOrderRepository.updateQuantity(order.id, remainingQuantity);
     }
 
+    // 记录交易流水
     await deps.transactionLedgerRepository.record({
       fromUserId: order.buyerUserId,
       toUserId: command.sellerUserId,

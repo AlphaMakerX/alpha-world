@@ -1,3 +1,11 @@
+/**
+ * 商店区域组件
+ *
+ * 商店地块详情中的商店面板，包括：
+ * - 所有者专属的上架表单
+ * - 物品分类筛选器（按品阶过滤）
+ * - 在售商品列表
+ */
 import { useState } from "react";
 import type { InventoryItem, ShopListing } from "@/client/features/building/types/building-ui";
 import { ShopListingCard } from "./shop-listing-card";
@@ -5,6 +13,7 @@ import { ShopCreateListingForm } from "./shop-create-listing-form";
 import { ItemTierFilter, type FilterOption } from "@/client/features/item/components/item-tier-filter";
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
+/** ShopSection 组件的 props 类型 */
 type ShopSectionProps = {
   isOwner: boolean;
   listings: ShopListing[];
@@ -17,6 +26,7 @@ type ShopSectionProps = {
   onCancel: (listingId: number) => void;
 };
 
+/** 商店面板：含上架表单、品阶筛选和商品列表 */
 export function ShopSection({
   isOwner,
   listings,
@@ -30,6 +40,7 @@ export function ShopSection({
 }: ShopSectionProps) {
   const [filter, setFilter] = useState<FilterOption>("all");
 
+  // 根据品阶筛选条件过滤商品列表
   const filteredListings =
     filter === "all" ? listings : listings.filter((l) => getItemDisplay(l.itemKey).tier === filter);
 

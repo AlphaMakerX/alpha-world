@@ -1,5 +1,12 @@
+/**
+ * 获取当前用户信息用例
+ *
+ * 根据用户 ID 查询用户详情，同时触发体力自动恢复计算。
+ * 若体力值发生变化则持久化更新后的体力数据。
+ */
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 
+/** 查询成功的返回结构 */
 type GetCurrentUserSuccessResult = {
   ok: true;
   user: {
@@ -17,6 +24,7 @@ type GetCurrentUserSuccessResult = {
   };
 };
 
+/** 查询失败的返回结构 */
 type GetCurrentUserFailureResult = {
   ok: false;
   error: string;
@@ -31,6 +39,7 @@ export type GetCurrentUserUseCaseDeps = {
   userRepository: UserRepository;
 };
 
+/** 执行获取当前用户信息用例，自动恢复体力后返回用户数据 */
 export async function executeGetCurrentUserUseCase(input: {
   userId: string;
 }, deps: GetCurrentUserUseCaseDeps): Promise<GetCurrentUserResult> {
@@ -43,6 +52,7 @@ export async function executeGetCurrentUserUseCase(input: {
     };
   }
 
+  // 记录恢复前的体力值，用于判断是否需要持久化
   const staminaCurrentBefore = user.staminaCurrent;
   const staminaUpdatedAtBefore = user.staminaUpdatedAt.getTime();
   user.recoverStamina(new Date());

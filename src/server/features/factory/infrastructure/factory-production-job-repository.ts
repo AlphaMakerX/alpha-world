@@ -1,3 +1,9 @@
+/**
+ * 工厂生产任务仓储的 Drizzle ORM 实现
+ *
+ * 基于 Drizzle ORM 实现 FactoryProductionJobRepository 接口，
+ * 负责生产任务实体与数据库记录之间的映射和持久化操作。
+ */
 import { and, desc, eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
@@ -5,6 +11,7 @@ import type { FactoryProductionJobRepository } from "@/server/features/factory/d
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
 import { factoryProductionJobs } from "@/server/features/factory/infrastructure/schema";
 
+/** 将数据库中的 JSONB 字段解析为 ItemStack 数组，过滤无效条目 */
 function toItemStacks(value: unknown): ItemStack[] {
   if (!Array.isArray(value)) {
     return [];
@@ -24,6 +31,7 @@ function toItemStacks(value: unknown): ItemStack[] {
     .filter((entry): entry is ItemStack => entry !== null);
 }
 
+/** 将数据库记录转换为生产任务领域实体 */
 function toDomainJob(record: typeof factoryProductionJobs.$inferSelect): FactoryProductionJob {
   return FactoryProductionJob.rehydrate({
     id: record.id,
@@ -41,6 +49,7 @@ function toDomainJob(record: typeof factoryProductionJobs.$inferSelect): Factory
   });
 }
 
+/** 基于 Drizzle ORM 的工厂生产任务仓储实现 */
 export class DrizzleFactoryProductionJobRepository implements FactoryProductionJobRepository {
   async findById(id: number): Promise<FactoryProductionJob | null> {
     const record = await getDbClient().query.factoryProductionJobs.findFirst({
@@ -76,6 +85,7 @@ export class DrizzleFactoryProductionJobRepository implements FactoryProductionJ
     return records.map(toDomainJob);
   }
 
+  /** 保存生产任务：id > 0 时执行更新（仅更新状态相关字段），否则执行插入 */
   async save(job: FactoryProductionJob): Promise<FactoryProductionJob> {
     if (job.id > 0) {
       const updated = await getDbClient()
@@ -110,5 +120,6 @@ export class DrizzleFactoryProductionJobRepository implements FactoryProductionJ
   }
 }
 
+/** 工厂生产任务仓储单例，供依赖注入使用 */
 export const factoryProductionJobRepository: FactoryProductionJobRepository =
   new DrizzleFactoryProductionJobRepository();

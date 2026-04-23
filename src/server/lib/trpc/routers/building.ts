@@ -1,3 +1,10 @@
+/**
+ * 建筑路由器
+ *
+ * 提供建筑建造和查询当前用户建筑列表的接口。
+ * 所有接口均需要用户登录（protectedProcedure）。
+ */
+
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -10,6 +17,7 @@ import {
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
 
 export const buildingRouter = createTRPCRouter({
+  /** 在指定地块上建造建筑（ownerUserId 从上下文自动注入） */
   build: protectedProcedure
     .input(buildBuildingSchema.omit({ ownerUserId: true }))
     .mutation(async ({ input, ctx }) => {
@@ -21,6 +29,7 @@ export const buildingRouter = createTRPCRouter({
         }),
       );
     }),
+  /** 查询当前用户拥有的所有建筑 */
   myBuildings: protectedProcedure.query(async ({ ctx }) => {
     return unwrapUseCaseResult(
       await executeListMyBuildingsUseCase({ ownerUserId: ctx.userId }),

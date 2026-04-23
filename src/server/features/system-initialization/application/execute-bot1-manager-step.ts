@@ -1,3 +1,10 @@
+/**
+ * Bot1 管理员用户初始化步骤
+ *
+ * 创建或更新 Bot1 管理员用户，并由 Adam 向其转账初始运营资金。
+ * 转账具有幂等性，通过 referenceId 防止重复转账。
+ */
+
 import { randomUUID } from "crypto";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
@@ -11,6 +18,7 @@ import {
 } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
+/** 步骤所需的外部依赖 */
 type ExecuteBot1ManagerStepDeps = {
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
@@ -39,6 +47,7 @@ export type ExecuteBot1ManagerStepResult =
   | Bot1ManagerStepSuccessResult
   | Bot1ManagerStepFailureResult;
 
+/** 从环境变量读取 Bot1 管理员初始密码 */
 function getBot1ManagerInitialPasswordFromEnv():
   | { ok: true; value: string }
   | { ok: false; error: string; code: UseCaseErrorCode } {
@@ -54,6 +63,11 @@ function getBot1ManagerInitialPasswordFromEnv():
   return { ok: true, value };
 }
 
+/**
+ * 执行 Bot1 管理员初始化步骤
+ *
+ * 流程：校验转账金额 -> 读取密码 -> 创建/更新 bot 用户 -> 检查转账幂等性 -> 从 Adam 转账
+ */
 export async function executeBot1ManagerStep(input: {
   deps: ExecuteBot1ManagerStepDeps;
 }): Promise<ExecuteBot1ManagerStepResult> {
@@ -74,6 +88,7 @@ export async function executeBot1ManagerStep(input: {
   const botPasswordHash = await input.deps.passwordHasher.hash(initialPasswordResult.value);
   const botUsername = Username.create(BOT1_MANAGER_PERSONA_CONFIG.username).getValue();
 
+  // 若 bot 用户已存在则更新密码，否则新建（初始资金为 0，后续由 Adam 转账）
   let bot = await input.deps.userRepository.findByUsername(Username.create(botUsername));
   if (!bot) {
     bot = User.register({
@@ -87,6 +102,7 @@ export async function executeBot1ManagerStep(input: {
   }
   await input.deps.userRepository.save(bot);
 
+  // 幂等性检查：如果已有相同 referenceId 的转账记录，跳过转账
   const transferExists = await input.deps.systemInitializationRepository.hasMoneyTransfer({
     fromUserId: ADAM_PERSONA_CONFIG.userId,
     toUserId: bot.id,
@@ -97,6 +113,7 @@ export async function executeBot1ManagerStep(input: {
     return { transferSkipped };
   }
 
+  // 从 Adam（系统账户）向 bot 转账初始运营资金
   const adamSystemAccount = await input.deps.systemAccountService.getSystemAccount();
   const latestBot = bot;
 

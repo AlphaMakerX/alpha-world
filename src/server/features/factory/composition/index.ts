@@ -1,3 +1,9 @@
+/**
+ * 工厂模块组合根（Composition Root）
+ *
+ * 负责将工厂相关的应用层用例与基础设施层实现进行组装，
+ * 并对外暴露带参数校验的用例入口（配方列表、订单列表、开始生产）。
+ */
 import { z } from "zod";
 import { executeListFactoryRecipesUseCase as executeListFactoryRecipesUseCaseImpl } from "@/server/features/recipe/application";
 import {
@@ -15,11 +21,13 @@ import { plotRepository } from "@/server/features/plot/infrastructure";
 import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
 import { transact } from "@/server/lib/db";
 
+/** 查询工厂订单接口的参数校验 Schema */
 export const listFactoryOrdersSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
 });
 
+/** 开始工厂生产接口的参数校验 Schema */
 export const startFactoryProductionSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
@@ -27,10 +35,12 @@ export const startFactoryProductionSchema = z.object({
   quantity: z.number().int().min(1).max(100, "制造数量不能超过 100").default(1),
 });
 
+/** 查询工厂配方列表用例入口 */
 export async function executeListFactoryRecipesUseCase() {
   return executeListFactoryRecipesUseCaseImpl();
 }
 
+/** 查询工厂订单列表用例入口：校验参数后注入依赖并执行 */
 export async function executeListFactoryOrdersUseCase(input: unknown): Promise<ListFactoryOrdersResult> {
   const parsed = listFactoryOrdersSchema.safeParse(input);
   if (!parsed.success) {
@@ -49,6 +59,7 @@ export async function executeListFactoryOrdersUseCase(input: unknown): Promise<L
   });
 }
 
+/** 开始工厂生产用例入口：校验参数后注入依赖并执行 */
 export async function executeStartFactoryProductionUseCase(input: unknown): Promise<StartFactoryProductionResult> {
   const parsed = startFactoryProductionSchema.safeParse(input);
   if (!parsed.success) {

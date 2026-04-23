@@ -1,8 +1,17 @@
+/**
+ * 收购订单卡片组件
+ *
+ * 展示单个收购订单的信息（物品图标、名称、数量、单价、总价）。
+ * 根据当前用户是否为收购站所有者显示不同操作：
+ * - 所有者：显示取消订单按钮
+ * - 卖家：显示出售数量选择和出售按钮
+ */
 import { useState } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { BuyOrder } from "@/client/features/building/types/building-ui";
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
+/** BuyOrderCard 组件的 props 类型 */
 type BuyOrderCardProps = {
   order: BuyOrder;
   isOwner: boolean;
@@ -12,6 +21,7 @@ type BuyOrderCardProps = {
   onCancel: (orderId: number) => void;
 };
 
+/** 收购订单卡片，所有者可取消，卖家可选择数量出售 */
 export function BuyOrderCard({
   order,
   isOwner,

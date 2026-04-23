@@ -1,3 +1,9 @@
+/**
+ * 地块详情模态框组件
+ * 综合展示地块和建筑信息，包含"地块"和"建筑"两个 Tab 页，
+ * 集成地块购买/建造操作和建筑（工厂/商店/收购站）操作面板。
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,6 +18,7 @@ import type { BuildingType } from "@/client/features/building/types/building-ui"
 import { getBuildingCapabilities } from "@/client/features/building/model/building-capabilities";
 import { getPlotCapabilities } from "@/client/features/plot/model/plot-capabilities";
 
+/** 地块详情模态框组件 */
 export function PlotDetailModal({
   selectedPlotId,
   selectedPlot,
@@ -25,12 +32,14 @@ export function PlotDetailModal({
   shop,
   purchasingStation,
 }: PlotDetailModalProps) {
-  const [buildOptionsOpen, setBuildOptionsOpen] = useState(false);
-  const [pendingBuildType, setPendingBuildType] = useState<BuildingType | null>(null);
-  const [activeTabKey, setActiveTabKey] = useState("plot");
+  const [buildOptionsOpen, setBuildOptionsOpen] = useState(false); // 建造选项是否展开
+  const [pendingBuildType, setPendingBuildType] = useState<BuildingType | null>(null); // 正在建造的建筑类型
+  const [activeTabKey, setActiveTabKey] = useState("plot"); // 当前激活的 Tab 页
+  // 计算地块和建筑的用户权限
   const plotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
   const buildingCapabilities = getBuildingCapabilities(selectedPlot?.building, plotCapabilities.isOwner);
 
+  // 地块切换时重置所有操作状态
   useEffect(() => {
     if (!selectedPlot) {
       setBuildOptionsOpen(false);
@@ -39,6 +48,7 @@ export function PlotDetailModal({
     }
   }, [selectedPlot]);
 
+  // 建筑建成后自动关闭建造选项
   useEffect(() => {
     if (plotCapabilities.hasBuilding) {
       setBuildOptionsOpen(false);
@@ -46,6 +56,7 @@ export function PlotDetailModal({
     }
   }, [plotCapabilities.hasBuilding]);
 
+  // 建造完成后清除待建造类型
   useEffect(() => {
     if (!buildLoading) {
       setPendingBuildType(null);

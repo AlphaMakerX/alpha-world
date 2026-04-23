@@ -1,3 +1,8 @@
+/**
+ * 背包模态框组件
+ * 展示玩家的物品背包，支持按物品等级（基础材料/加工品/高级制品）筛选和分组显示。
+ */
+
 "use client";
 
 import { useMemo, useState } from "react";
@@ -8,6 +13,7 @@ import { ItemTile } from "@/client/features/item/components/item-tile";
 import { ItemTierFilter, type FilterOption } from "@/client/features/item/components/item-tier-filter";
 import { getItemDisplay, ALL_TIERS, TIER_LABELS } from "@/client/features/item/utils/item-display";
 
+/** 背包模态框组件的 Props */
 type InventoryModalProps = {
   open: boolean;
   authStatus: AuthStatus;
@@ -17,11 +23,14 @@ type InventoryModalProps = {
   onClose: () => void;
 };
 
+/** 背包模态框组件，展示物品列表并支持筛选和刷新 */
 export function InventoryModal({ open, authStatus, loading, items, onRefresh, onClose }: InventoryModalProps) {
   const [filter, setFilter] = useState<FilterOption>("all");
 
+  // 按数量降序排序物品
   const sortedItems = useMemo(() => [...items].sort((a, b) => b.quantity - a.quantity), [items]);
 
+  // 统计各等级物品的数量，用于筛选按钮的计数显示
   const counts = useMemo(() => {
     const c: Record<FilterOption, number> = { all: items.length, base_material: 0, processed_goods: 0, advanced_goods: 0 };
     for (const item of items) {
@@ -34,6 +43,7 @@ export function InventoryModal({ open, authStatus, loading, items, onRefresh, on
   const filteredItems =
     filter === "all" ? sortedItems : sortedItems.filter((item) => getItemDisplay(item.itemKey).tier === filter);
 
+  // "全部"模式下，按等级分组展示物品；非全部模式返回 null 使用扁平列表
   const groupedByTier = useMemo(() => {
     if (filter !== "all") return null;
     return ALL_TIERS

@@ -1,5 +1,11 @@
+/**
+ * 更新用户位置用例
+ *
+ * 接收用户 ID 和新坐标，更新用户在地图中的位置并持久化。
+ */
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 
+/** 更新成功的返回结构 */
 type UpdateUserPositionSuccessResult = {
   ok: true;
   user: {
@@ -14,6 +20,7 @@ type UpdateUserPositionSuccessResult = {
   };
 };
 
+/** 更新失败的返回结构 */
 type UpdateUserPositionFailureResult = {
   ok: false;
   error: string;
@@ -28,6 +35,7 @@ export type UpdateUserPositionUseCaseDeps = {
   userRepository: UserRepository;
 };
 
+/** 执行更新用户位置用例 */
 export async function executeUpdateUserPositionUseCase(
   input: {
     userId: string;

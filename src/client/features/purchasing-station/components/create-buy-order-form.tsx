@@ -1,19 +1,28 @@
+/**
+ * 创建收购订单表单组件
+ *
+ * 允许收购站所有者从物品目录中选择物品（按品阶分组），
+ * 设置收购数量和单价后发布收购订单。发布时需预付总价。
+ */
 import { useState } from "react";
 import { Button, InputNumber, Popconfirm, Spin } from "antd";
 import { getItemDisplay } from "@/client/features/item/utils/item-display";
 import { trpc } from "@/client/lib/trpc";
 
+/** 物品品阶分组定义 */
 const ITEM_TIERS = [
   { tier: "base_material", label: "基础材料" },
   { tier: "processed_goods", label: "加工品" },
   { tier: "advanced_goods", label: "高级品" },
 ] as const;
 
+/** CreateBuyOrderForm 组件的 props 类型 */
 type CreateBuyOrderFormProps = {
   loading: boolean;
   onCreateOrder: (itemKey: string, quantity: number, unitPrice: number) => void;
 };
 
+/** 创建收购订单表单，从物品目录选择物品并设置价格后发布 */
 export function CreateBuyOrderForm({
   loading,
   onCreateOrder,
@@ -25,6 +34,7 @@ export function CreateBuyOrderForm({
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(1);
 
+  // 按品阶分组可收购的物品
   const purchasableItemGroups = ITEM_TIERS.map(({ tier, label }) => ({
     label,
     itemKeys:
@@ -35,6 +45,7 @@ export function CreateBuyOrderForm({
   const canSubmit = selectedItemKey && quantity > 0 && unitPrice > 0;
   const totalCost = unitPrice * quantity;
 
+  /** 确认发布：调用回调并重置表单状态 */
   const handleConfirm = () => {
     if (!selectedItemKey || !canSubmit) return;
     onCreateOrder(selectedItemKey, quantity, unitPrice);

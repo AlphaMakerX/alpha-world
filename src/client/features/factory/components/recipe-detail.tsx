@@ -1,9 +1,15 @@
+/**
+ * 配方详情组件
+ * 展示选中配方的详细信息，包括所需材料（带库存对比）、产出预览、制造数量输入和制造确认操作。
+ */
+
 import { useState, useEffect, useMemo } from "react";
 import { Button, InputNumber, Popconfirm } from "antd";
 import type { FactoryRecipe } from "@/client/features/factory/types/factory-ui";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { ItemTile } from "@/client/features/item/components/item-tile";
 
+/** 配方详情组件的 Props */
 type RecipeDetailProps = {
   recipe: FactoryRecipe | null;
   inventoryItems: InventoryItem[];
@@ -11,6 +17,7 @@ type RecipeDetailProps = {
   onStartProduction: (recipeId: string, quantity: number) => void;
 };
 
+/** 将秒数格式化为人类可读的时长字符串（如"5 分 30 秒"） */
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} 秒`;
   const m = Math.floor(seconds / 60);
@@ -21,8 +28,10 @@ function formatDuration(seconds: number): string {
   return rm > 0 ? `${h} 时 ${rm} 分` : `${h} 时`;
 }
 
+/** 配方详情组件，展示材料需求、产出预览并提供制造操作 */
 export function RecipeDetail({ recipe, inventoryItems, productionLoading, onStartProduction }: RecipeDetailProps) {
   const [quantity, setQuantity] = useState(1);
+  // 将背包物品列表转为 Map，方便按 itemKey 快速查询数量
   const inventoryByItemKey = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of inventoryItems) {
@@ -39,7 +48,8 @@ export function RecipeDetail({ recipe, inventoryItems, productionLoading, onStar
     return <p className="text-xs text-slate-500">请选择一个配方以查看材料并制造</p>;
   }
 
-  const totalDuration = recipe.durationSeconds * quantity;
+  const totalDuration = recipe.durationSeconds * quantity; // 总制造时长 = 单次时长 * 数量
+  // 检查每种输入材料的库存是否充足（金币不检查库存）
   const inputChecks = recipe.inputs.map((input) => {
     const requiredQuantity = input.quantity * quantity;
     const ownedQuantity = inventoryByItemKey.get(input.itemKey) ?? 0;
