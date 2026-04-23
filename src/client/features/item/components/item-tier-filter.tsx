@@ -12,24 +12,33 @@ const FILTER_OPTIONS: { value: FilterOption; label: string }[] = [
 type ItemTierFilterProps = {
   value: FilterOption;
   onChange: (value: FilterOption) => void;
+  counts?: Record<FilterOption, number>;
 };
 
-export function ItemTierFilter({ value, onChange }: ItemTierFilterProps) {
+export function ItemTierFilter({ value, onChange, counts }: ItemTierFilterProps) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 rounded-lg bg-slate-100/80 p-1">
       {FILTER_OPTIONS.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
           className={[
-            "rounded-md px-2.5 py-1 text-xs font-medium transition",
+            "rounded-md px-2.5 py-1.5 text-xs font-medium transition",
             value === opt.value
-              ? "bg-slate-700 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500 hover:text-slate-700",
           ].join(" ")}
         >
           {opt.label}
+          {counts && counts[opt.value] > 0 ? (
+            <span className={[
+              "ml-1 text-[10px]",
+              value === opt.value ? "text-slate-500" : "text-slate-400",
+            ].join(" ")}>
+              {counts[opt.value]}
+            </span>
+          ) : null}
         </button>
       ))}
     </div>
