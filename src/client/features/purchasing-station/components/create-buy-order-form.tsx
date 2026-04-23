@@ -11,9 +11,10 @@ import { trpc } from "@/client/lib/trpc";
 
 /** 物品品阶分组定义 */
 const ITEM_TIERS = [
-  { tier: "base_material", label: "基础材料" },
-  { tier: "processed_goods", label: "加工品" },
-  { tier: "advanced_goods", label: "高级品" },
+  { tier: "raw_material", label: "原材料" },
+  { tier: "component", label: "加工件" },
+  { tier: "refined_goods", label: "精制品" },
+  { tier: "end_product", label: "成品" },
 ] as const;
 
 /** CreateBuyOrderForm 组件的 props 类型 */

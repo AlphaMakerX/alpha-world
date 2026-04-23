@@ -32,7 +32,7 @@ export function InventoryModal({ open, authStatus, loading, items, onRefresh, on
 
   // 统计各等级物品的数量，用于筛选按钮的计数显示
   const counts = useMemo(() => {
-    const c: Record<FilterOption, number> = { all: items.length, base_material: 0, processed_goods: 0, advanced_goods: 0 };
+    const c: Record<FilterOption, number> = { all: items.length, raw_material: 0, component: 0, refined_goods: 0, end_product: 0 };
     for (const item of items) {
       const tier = getItemDisplay(item.itemKey).tier;
       c[tier]++;
