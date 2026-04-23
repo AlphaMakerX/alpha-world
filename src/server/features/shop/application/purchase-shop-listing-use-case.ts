@@ -1,3 +1,4 @@
+import { getItemName } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
@@ -107,7 +108,7 @@ export async function executePurchaseShopListingUseCase(
       amount: totalCost,
       type: "shop_purchase",
       referenceId: String(listing.id),
-      description: `购买商品: ${listing.itemKey} x${purchaseQuantity}`,
+      description: `购买商品: ${getItemName(listing.itemKey)} x${purchaseQuantity}`,
     });
   });
 

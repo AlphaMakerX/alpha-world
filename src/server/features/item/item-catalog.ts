@@ -38,6 +38,10 @@ export function listItemDefinitionsByTier(tier: ItemTier): ItemDefinition[] {
   return ITEM_DEFINITIONS.filter((item) => item.tier === tier);
 }
 
+export function getItemName(itemKey: string): string {
+  return ITEM_DEFINITIONS.find((item) => item.key === itemKey)?.name ?? itemKey;
+}
+
 export function isKnownItemKey(itemKey: string): boolean {
   return ITEM_DEFINITIONS.some((item) => item.key === itemKey);
 }

@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import type { PurchasingStationTransaction } from "@/client/features/building/types/building-ui";
+import { getItemName } from "@/server/features/item/item-catalog";
 
 type PurchasingStationTransactionHistoryProps = {
   transactions: PurchasingStationTransaction[];
 };
+
+function translateDescription(desc: string): string {
+  return desc.replace(/: (\w+) x/, (_, key) => `: ${getItemName(key)} x`);
+}
 
 function formatTime(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -42,7 +47,7 @@ export function PurchasingStationTransactionHistory({ transactions }: Purchasing
                 >
                   <div className="min-w-0 flex-1">
                     <span className="font-medium text-slate-700">{tx.sellerUsername}</span>
-                    <span className="ml-1.5 text-slate-400">{tx.description}</span>
+                    <span className="ml-1.5 text-slate-400">{tx.description ? translateDescription(tx.description) : ""}</span>
                   </div>
                   <div className="shrink-0 pl-3 text-right">
                     <span className="font-medium text-emerald-600">¥{tx.amount.toFixed(2)}</span>

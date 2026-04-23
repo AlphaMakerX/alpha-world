@@ -1,5 +1,6 @@
 import type { FactoryOrder, FactoryOrderStatus } from "@/client/features/factory/types/factory-ui";
 import { ItemTile } from "@/client/features/item/components/item-tile";
+import { getRecipeById } from "@/server/features/recipe/application/recipe-catalog";
 import { useEffect, useState } from "react";
 
 type FactoryOrderCardProps = {
@@ -84,7 +85,7 @@ export function FactoryOrderCard({ order, className, showCollectedAt = false }: 
         <div className="flex items-center gap-2 text-xs">
           <span className="font-mono text-[11px] text-slate-400">#{order.id}</span>
           <span className="text-slate-300">·</span>
-          <span className="text-slate-500">{order.recipeId}</span>
+          <span className="text-slate-500">{getRecipeById(order.recipeId)?.name ?? order.recipeId}</span>
         </div>
         <span
           className={[

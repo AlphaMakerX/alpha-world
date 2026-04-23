@@ -1,3 +1,4 @@
+import { getItemName } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
@@ -110,7 +111,7 @@ export async function executeFulfillBuyOrderUseCase(
       amount: totalIncome,
       type: "buy_order_fulfilled",
       referenceId: String(order.id),
-      description: `收购订单成交: ${order.itemKey} x${sellQuantity}`,
+      description: `收购订单成交: ${getItemName(order.itemKey)} x${sellQuantity}`,
     });
   });
 
