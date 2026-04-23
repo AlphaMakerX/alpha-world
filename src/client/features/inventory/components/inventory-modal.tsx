@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { AuthStatus } from "@/client/types/auth-ui";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
 import { DraggableWindow } from "@/client/components/draggable-window";
 import { ItemTile } from "@/client/features/item/components/item-tile";
+import { ItemTierFilter, type FilterOption } from "@/client/features/item/components/item-tier-filter";
+import { getItemDisplay } from "@/client/features/item/utils/item-display";
 
 type InventoryModalProps = {
   open: boolean;
@@ -15,7 +18,11 @@ type InventoryModalProps = {
 };
 
 export function InventoryModal({ open, authStatus, loading, items, onRefresh, onClose }: InventoryModalProps) {
+  const [filter, setFilter] = useState<FilterOption>("all");
+
   const sortedItems = [...items].sort((a, b) => b.quantity - a.quantity);
+  const filteredItems =
+    filter === "all" ? sortedItems : sortedItems.filter((item) => getItemDisplay(item.itemKey).tier === filter);
 
   return (
     <DraggableWindow
@@ -53,12 +60,19 @@ export function InventoryModal({ open, authStatus, loading, items, onRefresh, on
               </span>
             </button>
           </div>
+
+          <ItemTierFilter value={filter} onChange={setFilter} />
+
           {items.length ? (
-            <div className="flex flex-wrap gap-2">
-              {sortedItems.map((item) => (
-                <ItemTile key={item.itemKey} itemKey={item.itemKey} quantity={item.quantity} />
-              ))}
-            </div>
+            filteredItems.length ? (
+              <div className="flex flex-wrap gap-2">
+                {filteredItems.map((item) => (
+                  <ItemTile key={item.itemKey} itemKey={item.itemKey} quantity={item.quantity} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">该分类下暂无物品</p>
+            )
           ) : loading ? (
             <p className="text-sm text-slate-500">加载中...</p>
           ) : (
