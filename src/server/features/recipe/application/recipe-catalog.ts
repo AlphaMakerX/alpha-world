@@ -1,7 +1,8 @@
 /**
  * 配方目录（Recipe Catalog）
  * 定义游戏中所有工厂配方的静态数据，包括采购、加工、组装三大类。
- * 每个配方描述了所需的输入物品、产出物品以及生产耗时。
+ * 每个配方描述了所需的输入物品、产出物品、生产耗时，
+ * 以及工厂类型归属、解锁费用、等级要求等元数据。
  */
 
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
@@ -9,14 +10,31 @@ import type { ItemStack } from "@/server/features/item/domain/value-objects/item
 /** 配方类别：采购 | 加工 | 组装 */
 export type RecipeCategory = "procurement" | "processing" | "assembly";
 
+/** 工厂子类型（与 building 模块共享定义） */
+export type FactorySubtype =
+  | "mine"
+  | "lumber_mill"
+  | "textile_mill"
+  | "ranch"
+  | "apothecary"
+  | "waterworks"
+  | "smelter"
+  | "carpentry"
+  | "paper_mill"
+  | "assembler";
+
 /** 配方定义：描述一个工厂生产配方的完整信息 */
 export type Recipe = {
-  id: string;             // 配方唯一标识
-  name: string;           // 配方名称
-  category: RecipeCategory; // 配方类别
-  durationSeconds: number;  // 生产耗时（秒）
-  inputs: ItemStack[];    // 所需输入物品列表
-  outputs: ItemStack[];   // 产出物品列表
+  id: string;                                    // 配方唯一标识
+  name: string;                                  // 配方名称
+  category: RecipeCategory;                      // 配方类别
+  durationSeconds: number;                       // 生产耗时（秒）
+  inputs: ItemStack[];                           // 所需输入物品列表
+  outputs: ItemStack[];                          // 产出物品列表
+  factorySubtypes: FactorySubtype[] | "*";       // 可用的工厂类型，"*" 表示通用
+  unlockCost: number;                            // 解锁费用（金币）
+  requiredLevel: number;                         // 所需最低工厂等级
+  defaultUnlocked: FactorySubtype[] | boolean;    // 建成后自动解锁：true=所有可用类型, 数组=指定类型, false=不自动解锁
 };
 
 /** 全量配方列表 */
@@ -31,6 +49,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 80 }],
     outputs: [{ itemKey: "wood", quantity: 8 }],
+    factorySubtypes: ["lumber_mill"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "buy_iron_ore",
@@ -39,6 +61,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 120 }],
     outputs: [{ itemKey: "iron_ore", quantity: 6 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "buy_copper_ore",
@@ -47,6 +73,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 100 }],
     outputs: [{ itemKey: "copper_ore", quantity: 5 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "buy_coal",
@@ -55,6 +85,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 60 }],
     outputs: [{ itemKey: "coal", quantity: 4 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "buy_stone",
@@ -63,6 +97,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 70 }],
     outputs: [{ itemKey: "stone", quantity: 6 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "buy_sand",
@@ -71,6 +109,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 45 }],
     outputs: [{ itemKey: "sand", quantity: 6 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "buy_clay",
@@ -79,6 +121,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 50 }],
     outputs: [{ itemKey: "clay", quantity: 6 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "buy_cotton",
@@ -87,6 +133,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 100 }],
     outputs: [{ itemKey: "cotton", quantity: 5 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "buy_flax",
@@ -95,6 +145,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 85 }],
     outputs: [{ itemKey: "flax", quantity: 5 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "buy_raw_hide",
@@ -103,6 +157,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 110 }],
     outputs: [{ itemKey: "raw_hide", quantity: 4 }],
+    factorySubtypes: ["ranch"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "buy_herbs",
@@ -111,6 +169,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 90 }],
     outputs: [{ itemKey: "herbs", quantity: 4 }],
+    factorySubtypes: ["apothecary"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "buy_water",
@@ -119,6 +181,10 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 40 }],
     outputs: [{ itemKey: "water", quantity: 6 }],
+    factorySubtypes: "*",
+    unlockCost: 30,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "buy_animal_fat",
@@ -127,6 +193,22 @@ const recipes: Recipe[] = [
     durationSeconds: 10,
     inputs: [{ itemKey: "money", quantity: 70 }],
     outputs: [{ itemKey: "animal_fat", quantity: 4 }],
+    factorySubtypes: ["ranch"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: false,
+  },
+  {
+    id: "buy_water_bulk",
+    name: "批量采水",
+    category: "procurement",
+    durationSeconds: 10,
+    inputs: [{ itemKey: "money", quantity: 60 }],
+    outputs: [{ itemKey: "water", quantity: 12 }],
+    factorySubtypes: ["waterworks"],
+    unlockCost: 50,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -144,6 +226,10 @@ const recipes: Recipe[] = [
       { itemKey: "wood", quantity: 2 },
     ],
     outputs: [{ itemKey: "wood_plank", quantity: 1 }],
+    factorySubtypes: ["lumber_mill", "carpentry"],
+    unlockCost: 100,
+    requiredLevel: 1,
+    defaultUnlocked: ["carpentry"],
   },
   {
     id: "burn_charcoal",
@@ -155,6 +241,10 @@ const recipes: Recipe[] = [
       { itemKey: "wood", quantity: 3 },
     ],
     outputs: [{ itemKey: "charcoal", quantity: 2 }],
+    factorySubtypes: ["lumber_mill"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "pulp_paper",
@@ -167,6 +257,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "paper", quantity: 1 }],
+    factorySubtypes: ["paper_mill"],
+    unlockCost: 100,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
 
   // ── 金属线 ──
@@ -181,6 +275,10 @@ const recipes: Recipe[] = [
       { itemKey: "coal", quantity: 1 },
     ],
     outputs: [{ itemKey: "iron_ingot", quantity: 1 }],
+    factorySubtypes: ["smelter"],
+    unlockCost: 100,
+    requiredLevel: 1,
+    defaultUnlocked: true,
   },
   {
     id: "smelt_copper_ingot",
@@ -193,6 +291,10 @@ const recipes: Recipe[] = [
       { itemKey: "coal", quantity: 1 },
     ],
     outputs: [{ itemKey: "copper_ingot", quantity: 1 }],
+    factorySubtypes: ["smelter"],
+    unlockCost: 100,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "forge_nails",
@@ -204,6 +306,10 @@ const recipes: Recipe[] = [
       { itemKey: "iron_ingot", quantity: 1 },
     ],
     outputs: [{ itemKey: "nails", quantity: 3 }],
+    factorySubtypes: ["smelter"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "forge_steel",
@@ -216,6 +322,10 @@ const recipes: Recipe[] = [
       { itemKey: "charcoal", quantity: 1 },
     ],
     outputs: [{ itemKey: "steel", quantity: 1 }],
+    factorySubtypes: ["smelter"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "cast_bronze",
@@ -228,6 +338,10 @@ const recipes: Recipe[] = [
       { itemKey: "iron_ingot", quantity: 1 },
     ],
     outputs: [{ itemKey: "bronze", quantity: 1 }],
+    factorySubtypes: ["smelter"],
+    unlockCost: 400,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
 
   // ── 纺织线 ──
@@ -241,6 +355,10 @@ const recipes: Recipe[] = [
       { itemKey: "cotton", quantity: 2 },
     ],
     outputs: [{ itemKey: "thread", quantity: 2 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 100,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "woven_cloth",
@@ -253,6 +371,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "cloth", quantity: 1 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "weave_linen",
@@ -265,6 +387,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "linen", quantity: 1 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "twist_rope",
@@ -276,6 +402,10 @@ const recipes: Recipe[] = [
       { itemKey: "flax", quantity: 2 },
     ],
     outputs: [{ itemKey: "rope", quantity: 1 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 100,
+    requiredLevel: 1,
+    defaultUnlocked: false,
   },
   {
     id: "tan_leather",
@@ -288,6 +418,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "leather", quantity: 1 }],
+    factorySubtypes: ["ranch"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "extract_dye",
@@ -300,6 +434,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "dye", quantity: 1 }],
+    factorySubtypes: ["apothecary"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "weave_fine_cloth",
@@ -313,6 +451,10 @@ const recipes: Recipe[] = [
       { itemKey: "thread", quantity: 2 },
     ],
     outputs: [{ itemKey: "fine_cloth", quantity: 1 }],
+    factorySubtypes: ["textile_mill"],
+    unlockCost: 400,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
 
   // ── 土石线 ──
@@ -327,6 +469,10 @@ const recipes: Recipe[] = [
       { itemKey: "coal", quantity: 1 },
     ],
     outputs: [{ itemKey: "brick", quantity: 1 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "smelt_glass",
@@ -339,6 +485,10 @@ const recipes: Recipe[] = [
       { itemKey: "charcoal", quantity: 1 },
     ],
     outputs: [{ itemKey: "glass", quantity: 1 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "calcine_lime",
@@ -351,6 +501,10 @@ const recipes: Recipe[] = [
       { itemKey: "coal", quantity: 1 },
     ],
     outputs: [{ itemKey: "lime", quantity: 1 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "fire_pottery",
@@ -364,6 +518,10 @@ const recipes: Recipe[] = [
       { itemKey: "charcoal", quantity: 1 },
     ],
     outputs: [{ itemKey: "pottery", quantity: 1 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 400,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "fire_porcelain",
@@ -377,6 +535,10 @@ const recipes: Recipe[] = [
       { itemKey: "charcoal", quantity: 2 },
     ],
     outputs: [{ itemKey: "porcelain", quantity: 1 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 400,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "mix_plaster",
@@ -390,6 +552,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "plaster", quantity: 1 }],
+    factorySubtypes: ["mine"],
+    unlockCost: 400,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
 
   // ── 油脂 / 化学线 ──
@@ -404,6 +570,10 @@ const recipes: Recipe[] = [
       { itemKey: "water", quantity: 1 },
     ],
     outputs: [{ itemKey: "tallow", quantity: 2 }],
+    factorySubtypes: ["ranch"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "make_candle",
@@ -416,6 +586,10 @@ const recipes: Recipe[] = [
       { itemKey: "thread", quantity: 1 },
     ],
     outputs: [{ itemKey: "candle", quantity: 2 }],
+    factorySubtypes: ["ranch"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "grind_ink",
@@ -429,6 +603,10 @@ const recipes: Recipe[] = [
       { itemKey: "tallow", quantity: 1 },
     ],
     outputs: [{ itemKey: "ink", quantity: 1 }],
+    factorySubtypes: ["apothecary", "paper_mill"],
+    unlockCost: 200,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -448,6 +626,10 @@ const recipes: Recipe[] = [
       { itemKey: "nails", quantity: 2 },
     ],
     outputs: [{ itemKey: "furniture", quantity: 1 }],
+    factorySubtypes: ["carpentry"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "assemble_barrel",
@@ -461,6 +643,10 @@ const recipes: Recipe[] = [
       { itemKey: "rope", quantity: 1 },
     ],
     outputs: [{ itemKey: "barrel", quantity: 1 }],
+    factorySubtypes: ["carpentry"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "assemble_window",
@@ -474,6 +660,10 @@ const recipes: Recipe[] = [
       { itemKey: "nails", quantity: 2 },
     ],
     outputs: [{ itemKey: "window", quantity: 1 }],
+    factorySubtypes: ["carpentry"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
 
   // ── 金属成品 ──
@@ -489,6 +679,10 @@ const recipes: Recipe[] = [
       { itemKey: "leather", quantity: 1 },
     ],
     outputs: [{ itemKey: "tools", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "assemble_machine_parts",
@@ -502,6 +696,10 @@ const recipes: Recipe[] = [
       { itemKey: "copper_ingot", quantity: 1 },
     ],
     outputs: [{ itemKey: "machine_parts", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "forge_armor",
@@ -515,6 +713,10 @@ const recipes: Recipe[] = [
       { itemKey: "linen", quantity: 1 },
     ],
     outputs: [{ itemKey: "armor", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "assemble_compass",
@@ -528,6 +730,10 @@ const recipes: Recipe[] = [
       { itemKey: "iron_ingot", quantity: 1 },
     ],
     outputs: [{ itemKey: "compass", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
 
   // ── 纺织 / 皮革成品 ──
@@ -543,6 +749,10 @@ const recipes: Recipe[] = [
       { itemKey: "rope", quantity: 1 },
     ],
     outputs: [{ itemKey: "backpack", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "craft_saddle",
@@ -556,6 +766,10 @@ const recipes: Recipe[] = [
       { itemKey: "iron_ingot", quantity: 1 },
     ],
     outputs: [{ itemKey: "saddle", quantity: 1 }],
+    factorySubtypes: ["ranch"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
 
   // ── 光学 / 精密成品 ──
@@ -571,6 +785,10 @@ const recipes: Recipe[] = [
       { itemKey: "candle", quantity: 1 },
     ],
     outputs: [{ itemKey: "lantern", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
   {
     id: "assemble_telescope",
@@ -585,6 +803,10 @@ const recipes: Recipe[] = [
       { itemKey: "tools", quantity: 1 },
     ],
     outputs: [{ itemKey: "telescope", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "assemble_clock",
@@ -599,6 +821,10 @@ const recipes: Recipe[] = [
       { itemKey: "tools", quantity: 1 },
     ],
     outputs: [{ itemKey: "clock", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
 
   // ── 药学 / 文化成品 ──
@@ -614,6 +840,10 @@ const recipes: Recipe[] = [
       { itemKey: "paper", quantity: 1 },
     ],
     outputs: [{ itemKey: "medicine", quantity: 1 }],
+    factorySubtypes: ["apothecary"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "bind_books",
@@ -627,6 +857,10 @@ const recipes: Recipe[] = [
       { itemKey: "ink", quantity: 1 },
     ],
     outputs: [{ itemKey: "books", quantity: 1 }],
+    factorySubtypes: ["paper_mill"],
+    unlockCost: 500,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
   {
     id: "carve_sculpture",
@@ -639,6 +873,10 @@ const recipes: Recipe[] = [
       { itemKey: "tools", quantity: 1 },
     ],
     outputs: [{ itemKey: "sculpture", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
 
   // ── 建筑成品 ──
@@ -655,6 +893,10 @@ const recipes: Recipe[] = [
       { itemKey: "nails", quantity: 3 },
     ],
     outputs: [{ itemKey: "reinforced_wall", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 300,
+    requiredLevel: 2,
+    defaultUnlocked: false,
   },
 
   // ── 终极配方 ──
@@ -684,6 +926,10 @@ const recipes: Recipe[] = [
       { itemKey: "sculpture", quantity: 1 },
     ],
     outputs: [{ itemKey: "land_reclamation_badge", quantity: 1 }],
+    factorySubtypes: ["assembler"],
+    unlockCost: 2000,
+    requiredLevel: 3,
+    defaultUnlocked: false,
   },
 ];
 
@@ -700,4 +946,37 @@ export function listRecipesByCategory(category: RecipeCategory): Recipe[] {
 /** 根据配方 ID 查找配方，未找到时返回 null */
 export function getRecipeById(recipeId: string): Recipe | null {
   return recipes.find((recipe) => recipe.id === recipeId) ?? null;
+}
+
+/** 按工厂子类型筛选可用配方（包含通用配方） */
+export function listRecipesByFactorySubtype(subtype: string): Recipe[] {
+  return recipes.filter((recipe) => {
+    if (recipe.factorySubtypes === "*") return true;
+    return recipe.factorySubtypes.includes(subtype as FactorySubtype);
+  });
+}
+
+/** 按工厂子类型 + 等级筛选可用配方 */
+export function listRecipesByFactorySubtypeAndLevel(subtype: string, level: number): Recipe[] {
+  return recipes.filter((recipe) => {
+    if (recipe.factorySubtypes !== "*" && !recipe.factorySubtypes.includes(subtype as FactorySubtype)) {
+      return false;
+    }
+    return recipe.requiredLevel <= level;
+  });
+}
+
+/** 获取某工厂类型建成后自动解锁的默认配方 */
+export function listDefaultRecipes(subtype: string): Recipe[] {
+  return recipes.filter((recipe) => {
+    // 先检查该配方是否属于此工厂类型
+    if (recipe.factorySubtypes !== "*" && !recipe.factorySubtypes.includes(subtype as FactorySubtype)) {
+      return false;
+    }
+    // 检查是否默认解锁
+    if (recipe.defaultUnlocked === true) return true;
+    if (recipe.defaultUnlocked === false) return false;
+    // 数组形式：检查是否包含当前工厂类型
+    return recipe.defaultUnlocked.includes(subtype as FactorySubtype);
+  });
 }

@@ -9,18 +9,18 @@
 
 ### 0.1 plot_buildings 表加列
 
-- [ ] 在 `src/server/features/building/infrastructure/schema.ts` 中，为 `plot_buildings` 表新增 `subtype`（varchar(30), nullable）和 `level`（integer, default 1）两列
-- [ ] 运行 `drizzle:push` 确认 schema 推送成功
+- [x] 在 `src/server/features/building/infrastructure/schema.ts` 中，为 `plot_buildings` 表新增 `subtype`（varchar(30), nullable）和 `level`（integer, default 1）两列
+- [x] 运行 `drizzle:push` 确认 schema 推送成功
 
 ### 0.2 新建 factory_unlocked_recipes 表
 
-- [ ] 在 `src/server/features/factory/infrastructure/` 下新建 `unlocked-recipe-schema.ts`，定义 `factory_unlocked_recipes` 表（复合主键 building_id + recipe_id，FK 到 plot_buildings CASCADE DELETE，unlocked_at 时间戳）
-- [ ] 运行 `drizzle:push` 确认 schema 推送成功
+- [x] 在 `src/server/features/factory/infrastructure/` 下新建 `unlocked-recipe-schema.ts`，定义 `factory_unlocked_recipes` 表（复合主键 building_id + recipe_id，FK 到 plot_buildings CASCADE DELETE，unlocked_at 时间戳）
+- [x] 运行 `drizzle:push` 确认 schema 推送成功
 
 ### 0.3 清档迁移
 
-- [ ] 编写一次性脚本或 SQL：删除所有 `type = 'factory'` 的 plot_buildings 记录（关联的 factory_production_jobs 通过 CASCADE 自动清除）
-- [ ] 执行后确认非 factory 类型的建筑（residential、shop、purchasing_station）不受影响
+- [x] 编写一次性脚本或 SQL：删除所有 `type = 'factory'` 的 plot_buildings 记录（关联的 factory_production_jobs 通过 CASCADE 自动清除）
+- [x] 执行后确认非 factory 类型的建筑（residential、shop、purchasing_station）不受影响
 
 ---
 
@@ -28,47 +28,47 @@
 
 ### 1.1 先写测试
 
-- [ ] 创建 `src/server/features/recipe/application/__tests__/recipe-catalog.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/recipe/application/__tests__/recipe-catalog.test.ts`
+- [x] 测试用例：
   - `listRecipes()` 返回 55 条配方（54 现有 + 1 新增 buy_water_bulk）
   - 每条配方都有 `factorySubtypes`、`unlockCost`、`requiredLevel` 字段
   - `getRecipeById("buy_water_bulk")` 返回正确的高效产水配方数据
   - `buy_water` 的 `factorySubtypes` 为 `"*"`（通用）
   - `buy_water_bulk` 的 `factorySubtypes` 仅包含 `"waterworks"`
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 1.2 先写测试 — 按工厂类型筛选
 
-- [ ] 在同一测试文件中新增测试用例：
+- [x] 在同一测试文件中新增测试用例：
   - `listRecipesByFactorySubtype("mine")` 返回采矿场可用的配方列表（含通用配方 buy_water）
   - `listRecipesByFactorySubtype("waterworks")` 返回 buy_water + buy_water_bulk
   - `listRecipesByFactorySubtype("mine")` 不包含 `buy_wood`（伐木场独占）
   - `listRecipesByFactorySubtype("assembler")` 不包含任何 procurement 类别的采购配方（除 buy_water）
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 1.3 先写测试 — 按等级过滤
 
-- [ ] 在同一测试文件中新增测试用例：
+- [x] 在同一测试文件中新增测试用例：
   - `listRecipesByFactorySubtypeAndLevel("mine", 1)` 仅返回等级 1 的配方
   - `listRecipesByFactorySubtypeAndLevel("mine", 2)` 返回等级 1 + 等级 2 的配方
   - `listRecipesByFactorySubtypeAndLevel("mine", 3)` 返回全部该类型配方
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 1.4 再写实现
 
-- [ ] 在 `recipe-catalog.ts` 中：
+- [x] 在 `recipe-catalog.ts` 中：
   - 扩展 `Recipe` 类型，新增 `factorySubtypes`、`unlockCost`、`requiredLevel`、`defaultUnlocked` 字段
   - 为现有 54 条配方补充元数据（按 2-design.md 第四节映射表）
   - 新增 `buy_water_bulk` 配方
-- [ ] 新增查询函数：
+- [x] 新增查询函数：
   - `listRecipesByFactorySubtype(subtype)` — 按工厂子类型筛选
   - `listRecipesByFactorySubtypeAndLevel(subtype, level)` — 按子类型 + 等级筛选
   - `listDefaultRecipes(subtype)` — 返回某类型工厂建成后自动解锁的配方
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 1.5 收尾
 
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
