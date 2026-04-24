@@ -7,6 +7,7 @@
 import {
   bigint,
   check,
+  integer,
   pgTable,
   timestamp,
   varchar,
@@ -24,6 +25,8 @@ export const buildings = pgTable(
       .references(() => plots.id, { onDelete: "cascade" })
       .unique(),
     type: varchar("type", { length: 20 }).notNull(),
+    subtype: varchar("subtype", { length: 30 }),
+    level: integer("level").notNull().default(1),
     status: varchar("status", { length: 20 }).notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

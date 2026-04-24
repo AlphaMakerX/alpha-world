@@ -70,6 +70,8 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         id: buildings.id,
         plotId: buildings.plotId,
         type: buildings.type,
+        subtype: buildings.subtype,
+        level: buildings.level,
         status: buildings.status,
         createdAt: buildings.createdAt,
         updatedAt: buildings.updatedAt,
@@ -89,6 +91,8 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         .set({
           plotId: building.plotId,
           type: building.type,
+          subtype: (building as any).subtype ?? null,
+          level: (building as any).level ?? 1,
           status: building.status,
           updatedAt: new Date(),
         })
@@ -103,6 +107,8 @@ export class DrizzleBuildingRepository implements BuildingRepository {
       .values({
         plotId: building.plotId,
         type: building.type,
+        subtype: (building as any).subtype ?? null,
+        level: (building as any).level ?? 1,
         status: building.status,
         createdAt: building.createdAt,
         updatedAt: building.updatedAt,
