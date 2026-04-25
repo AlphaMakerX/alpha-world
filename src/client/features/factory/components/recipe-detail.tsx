@@ -14,7 +14,9 @@ type RecipeDetailProps = {
   recipe: FactoryRecipe | null;
   inventoryItems: InventoryItem[];
   productionLoading: boolean;
+  unlockLoading: boolean;
   onStartProduction: (recipeId: string, quantity: number) => void;
+  onUnlockRecipe: (recipeId: string) => void;
 };
 
 /** 将秒数格式化为人类可读的时长字符串（如"5 分 30 秒"） */
@@ -29,7 +31,7 @@ function formatDuration(seconds: number): string {
 }
 
 /** 配方详情组件，展示材料需求、产出预览并提供制造操作 */
-export function RecipeDetail({ recipe, inventoryItems, productionLoading, onStartProduction }: RecipeDetailProps) {
+export function RecipeDetail({ recipe, inventoryItems, productionLoading, unlockLoading, onStartProduction, onUnlockRecipe }: RecipeDetailProps) {
   const [quantity, setQuantity] = useState(1);
   // 将背包物品列表转为 Map，方便按 itemKey 快速查询数量
   const inventoryByItemKey = useMemo(() => {
@@ -46,6 +48,47 @@ export function RecipeDetail({ recipe, inventoryItems, productionLoading, onStar
 
   if (!recipe) {
     return <p className="text-xs text-slate-500">请选择一个配方以查看材料并制造</p>;
+  }
+
+  // 未解锁的配方：显示解锁面板
+  if (!recipe.unlocked) {
+    return (
+      <>
+        <div className="rounded-md border border-amber-200 bg-amber-50/80 p-2">
+          <p className="font-medium text-slate-800">{recipe.name}</p>
+          <p className="text-xs text-amber-700">此配方尚未解锁</p>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs text-slate-600">解锁后可使用此配方进行生产。</p>
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-amber-700">产出预览</p>
+            {recipe.outputs.length ? (
+              <div className="flex flex-wrap gap-2">
+                {recipe.outputs.map((output) => (
+                  <ItemTile
+                    key={`${recipe.id}-out-${output.itemKey}`}
+                    itemKey={output.itemKey}
+                    quantity={output.quantity}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <p className="text-sm font-medium text-amber-800">解锁费用：{recipe.unlockCost} 金币</p>
+        </div>
+        <Popconfirm
+          title={`确认花费 ${recipe.unlockCost} 金币解锁「${recipe.name}」吗？`}
+          okText="确认解锁"
+          cancelText="取消"
+          onConfirm={() => onUnlockRecipe(recipe.id)}
+          disabled={unlockLoading}
+        >
+          <Button type="primary" block loading={unlockLoading}>
+            解锁配方（{recipe.unlockCost} 金币）
+          </Button>
+        </Popconfirm>
+      </>
+    );
   }
 
   const totalDuration = recipe.durationSeconds * quantity; // 总制造时长 = 单次时长 * 数量

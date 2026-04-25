@@ -3,6 +3,7 @@ import {
   listRecipesByFactorySubtypeAndLevel,
   type Recipe,
 } from "@/server/features/recipe/application/recipe-catalog";
+import { getUpgradeCost } from "@/server/features/factory/application/upgrade-cost-catalog";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -14,9 +15,17 @@ export type ListFactoryRecipesQuery = {
 
 type RecipeWithUnlockStatus = Recipe & { unlocked: boolean };
 
+/** 升级预览信息 */
+type UpgradePreview = {
+  nextLevel: number;
+  cost: number;
+  newRecipes: Array<{ id: string; name: string; category: string }>;
+};
+
 type ListFactoryRecipesSuccessResult = {
   ok: true;
   recipes: RecipeWithUnlockStatus[];
+  upgradePreview: UpgradePreview | null;
 };
 type ListFactoryRecipesFailureResult = {
   ok: false;
@@ -48,6 +57,7 @@ export async function executeListFactoryRecipesUseCase(
     return {
       ok: true,
       recipes: allRecipes.map((r) => ({ ...r, unlocked: false })),
+      upgradePreview: null,
     };
   }
 
@@ -65,8 +75,25 @@ export async function executeListFactoryRecipesUseCase(
   const unlockedIds = await deps.unlockedRecipeRepository.findByBuildingId(query.buildingId);
   const unlockedSet = new Set(unlockedIds);
 
+  // 计算升级预览
+  const upgradeCost = getUpgradeCost(building.level);
+  let upgradePreview: UpgradePreview | null = null;
+  if (upgradeCost !== null) {
+    const currentIds = new Set(filtered.map((r) => r.id));
+    const nextLevelRecipes = listRecipesByFactorySubtypeAndLevel(subtype, building.level + 1);
+    const newRecipes = nextLevelRecipes
+      .filter((r) => !currentIds.has(r.id))
+      .map((r) => ({ id: r.id, name: r.name, category: r.category }));
+    upgradePreview = {
+      nextLevel: building.level + 1,
+      cost: upgradeCost,
+      newRecipes,
+    };
+  }
+
   return {
     ok: true,
     recipes: filtered.map((r) => ({ ...r, unlocked: unlockedSet.has(r.id) })),
+    upgradePreview,
   };
 }

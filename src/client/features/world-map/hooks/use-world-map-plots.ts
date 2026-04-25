@@ -108,9 +108,9 @@ export function useWorldMapPlots(options: {
     }
   }, [authStatus, messageApi, purchaseMutation, selectedPlot, setLoginModalOpen, trpcUtils]);
 
-  /** 在选中地块上建造指定类型的建筑 */
+  /** 在选中地块上建造指定类型的建筑，工厂类型需要指定子类型 */
   const handleBuild = useCallback(
-    async (buildingType: BuildingType) => {
+    async (buildingType: BuildingType, factorySubtype?: string) => {
       if (!selectedPlot) {
         return;
       }
@@ -123,6 +123,7 @@ export function useWorldMapPlots(options: {
         await buildMutation.mutateAsync({
           plotId: selectedPlot.id,
           buildingType,
+          factorySubtype,
         });
         await trpcUtils.plot.list.invalidate();
         messageApi.success("建造成功");

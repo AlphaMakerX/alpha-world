@@ -19,6 +19,20 @@ const buildingTypeLabelByValue: Record<BuildingType, string> = {
   purchasing_station: "收购站",
 };
 
+/** 工厂子类型到中文标签的映射 */
+const factorySubtypeLabelByValue: Record<string, string> = {
+  mine: "矿场",
+  lumber_mill: "伐木场",
+  textile_mill: "纺织厂",
+  ranch: "牧场",
+  apothecary: "药房",
+  waterworks: "水厂",
+  smelter: "冶炼厂",
+  carpentry: "木工坊",
+  paper_mill: "造纸厂",
+  assembler: "组装厂",
+};
+
 /** 建筑详情区组件，展示建筑 ID、类型和状态 */
 export function BuildingDetailSection({ building }: BuildingDetailSectionProps) {
   return (
@@ -28,6 +42,12 @@ export function BuildingDetailSection({ building }: BuildingDetailSectionProps) 
         <>
           <p>建筑 ID: {building.id}</p>
           <p>建筑类型: {buildingTypeLabelByValue[building.type]}</p>
+          {building.type === "factory" && building.subtype ? (
+            <>
+              <p>工厂类型: {factorySubtypeLabelByValue[building.subtype] ?? building.subtype}</p>
+              <p>工厂等级: Lv.{building.level}</p>
+            </>
+          ) : null}
           <p>建筑状态: {building.status}</p>
         </>
       ) : (

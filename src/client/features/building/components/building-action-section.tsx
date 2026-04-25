@@ -5,7 +5,7 @@
 
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 import type { BuildingCapabilities } from "@/client/features/building/model/building-capabilities";
-import type { FactoryOrders, FactoryRecipe } from "@/client/features/factory/types/factory-ui";
+import type { FactoryOrders, FactoryRecipe, FactoryUpgradePreview } from "@/client/features/factory/types/factory-ui";
 import type {
   BuyOrder,
   InventoryItem,
@@ -26,7 +26,12 @@ export type FactoryActionProps = {
   orders?: FactoryOrders;
   inventoryItems: InventoryItem[];
   productionLoading: boolean;
+  unlockLoading: boolean;
+  upgradeLoading: boolean;
+  upgradePreview: FactoryUpgradePreview;
   onStartProduction: (recipeId: string, quantity: number) => void;
+  onUnlockRecipe: (recipeId: string) => void;
+  onUpgradeFactory: () => void;
 };
 
 /** 商店操作相关的 Props */
@@ -82,7 +87,12 @@ export function BuildingActionSection({
       factoryOrders={factory.orders}
       inventoryItems={factory.inventoryItems}
       productionLoading={factory.productionLoading}
+      unlockLoading={factory.unlockLoading}
+      upgradeLoading={factory.upgradeLoading}
+      upgradePreview={factory.upgradePreview}
       onStartProduction={factory.onStartProduction}
+      onUnlockRecipe={factory.onUnlockRecipe}
+      onUpgradeFactory={factory.onUpgradeFactory}
     />
   ) : capabilities.isShop ? (
     <ShopSection

@@ -94,9 +94,9 @@ export function PlotDetailModal({
                       pendingBuildType={pendingBuildType}
                       onPurchase={onPurchase}
                       onToggleBuildOptions={() => setBuildOptionsOpen((prev) => !prev)}
-                      onBuild={(buildingType) => {
+                      onBuild={(buildingType, factorySubtype) => {
                         setPendingBuildType(buildingType);
-                        onBuild(buildingType);
+                        onBuild(buildingType, factorySubtype);
                       }}
                     />
                   </div>

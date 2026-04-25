@@ -96,7 +96,11 @@ export function WorldMap() {
     factoryOrdersData,
     isInitialFactoryRecipesLoading,
     startProductionMutation,
+    unlockRecipeMutation,
+    upgradeFactoryMutation,
     handleStartProduction,
+    handleUnlockRecipe,
+    handleUpgradeFactory,
   } = useWorldMapFactory({
     authStatus,
     selectedPlot,
@@ -227,14 +231,19 @@ export function WorldMap() {
         buildLoading={buildMutation.isPending}
         onClose={() => setSelectedPlotId(null)}
         onPurchase={() => void handlePurchase()}
-        onBuild={(buildingType) => void handleBuild(buildingType)}
+        onBuild={(buildingType, factorySubtype) => void handleBuild(buildingType, factorySubtype)}
         factory={{
           recipes: factoryRecipesData?.recipes ?? [],
           recipesLoading: isInitialFactoryRecipesLoading,
           orders: factoryOrdersData,
           inventoryItems: inventoryData?.items ?? [],
           productionLoading: startProductionMutation.isPending,
+          unlockLoading: unlockRecipeMutation.isPending,
+          upgradeLoading: upgradeFactoryMutation.isPending,
+          upgradePreview: factoryRecipesData?.upgradePreview ?? null,
           onStartProduction: (recipeId, quantity) => void handleStartProduction(recipeId, quantity),
+          onUnlockRecipe: (recipeId) => void handleUnlockRecipe(recipeId),
+          onUpgradeFactory: () => void handleUpgradeFactory(),
         }}
         shop={{
           listings: shopListingsData?.listings ?? [],

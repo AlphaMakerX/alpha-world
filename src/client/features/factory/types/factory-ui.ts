@@ -17,3 +17,5 @@ export type FactoryOrder = FactoryOrdersResponse["historyOrders"][number];
 export type FactoryOrderStatus = FactoryOrder["status"];
 /** 工厂订单集合（当前制造中订单 + 历史订单列表） */
 export type FactoryOrders = Pick<FactoryOrdersResponse, "focusOrder" | "historyOrders">;
+/** 升级预览信息 */
+export type FactoryUpgradePreview = RouterOutputs["factory"]["recipes"]["upgradePreview"];

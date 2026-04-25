@@ -57,6 +57,7 @@ export function RecipeList({
             const isActive = selectedCategory === tab.key;
             const count =
               tab.key === "all" ? allRecipes.length : categoryCounts[tab.key];
+            const isEmpty = tab.key !== "all" && count === 0;
             return (
               <button
                 key={tab.key}
@@ -64,11 +65,13 @@ export function RecipeList({
                 onClick={() => onSelectCategory(tab.key)}
                 className={[
                   "w-full rounded px-2 py-1.5 text-left text-xs transition",
-                  isActive
-                    ? "bg-blue-100 font-medium text-blue-700"
-                    : "text-slate-600 hover:bg-white hover:text-slate-800",
+                  isEmpty
+                    ? "cursor-not-allowed text-slate-300"
+                    : isActive
+                      ? "bg-blue-100 font-medium text-blue-700"
+                      : "text-slate-600 hover:bg-white hover:text-slate-800",
                 ].join(" ")}
-                disabled={disabled}
+                disabled={disabled || isEmpty}
               >
                 <span className="flex items-center justify-between gap-1">
                   <span>{tab.label}</span>
@@ -100,14 +103,18 @@ export function RecipeList({
                     disabled={disabled}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium text-slate-800">{recipe.name}</p>
+                      <p className={["font-medium", recipe.unlocked ? "text-slate-800" : "text-slate-400"].join(" ")}>
+                        {recipe.unlocked ? "" : "\uD83D\uDD12 "}{recipe.name}
+                      </p>
                       <span
                         className={[
                           "rounded-full px-2 py-0.5 text-[11px]",
-                          isSelected ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600",
+                          recipe.unlocked
+                            ? isSelected ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600"
+                            : "bg-amber-100 text-amber-700",
                         ].join(" ")}
                       >
-                        {recipe.durationSeconds}s
+                        {recipe.unlocked ? `${recipe.durationSeconds}s` : `${recipe.unlockCost} 金币`}
                       </span>
                     </div>
                   </button>

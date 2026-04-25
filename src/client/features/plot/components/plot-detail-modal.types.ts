@@ -20,7 +20,7 @@ export type PlotDetailModalProps = {
   buildLoading: boolean;
   onClose: () => void;
   onPurchase: () => void;
-  onBuild: (buildingType: BuildingType) => void;
+  onBuild: (buildingType: BuildingType, factorySubtype?: string) => void;
   factory: FactoryActionProps;
   shop: ShopActionProps;
   purchasingStation: PurchasingStationActionProps;

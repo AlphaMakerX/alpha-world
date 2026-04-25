@@ -82,7 +82,7 @@ describe("factory router — 新增接口", () => {
   });
 
   it("recipes query 接受可选 { buildingId }", async () => {
-    mockedRecipes.mockResolvedValue({ ok: true, recipes: [] });
+    mockedRecipes.mockResolvedValue({ ok: true, recipes: [], upgradePreview: null });
     const caller = makeCaller();
     await caller.factory.recipes({ buildingId: 100 });
     expect(mockedRecipes).toHaveBeenCalledWith(
@@ -91,7 +91,7 @@ describe("factory router — 新增接口", () => {
   });
 
   it("recipes query 不传 buildingId 也能调用", async () => {
-    mockedRecipes.mockResolvedValue({ ok: true, recipes: [] });
+    mockedRecipes.mockResolvedValue({ ok: true, recipes: [], upgradePreview: null });
     const caller = makeCaller();
     await caller.factory.recipes({});
     expect(mockedRecipes).toHaveBeenCalled();
