@@ -1,20 +1,16 @@
-/**
- * 建造建筑用例
- *
- * 处理用户在自己地块上建造建筑的业务流程，包括：
- * 1. 校验地块归属和可用性
- * 2. 查询建造费用并扣款
- * 3. 创建建筑实体并记录交易流水
- */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { Building } from "@/server/features/building/domain";
 import { getBuildingCost } from "@/server/features/building/application/building-cost-catalog";
+import { isValidFactorySubtype } from "@/server/features/building/domain/factory-subtype";
+import type { FactorySubtype } from "@/server/features/building/domain/factory-subtype";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
+import { autoUnlockDefaultRecipes } from "@/server/features/factory/application/auto-unlock-default-recipes";
 
 /** 建造成功的返回结果 */
 type BuildBuildingSuccessResult = {
@@ -23,6 +19,8 @@ type BuildBuildingSuccessResult = {
     id: number;
     plotId: number;
     type: "residential" | "factory" | "shop" | "purchasing_station";
+    subtype: FactorySubtype | null;
+    level: number;
     status: "active";
     createdAt: Date;
     updatedAt: Date;
@@ -44,6 +42,7 @@ export type BuildBuildingCommand = {
   ownerUserId: string;
   plotId: number;
   buildingType: "residential" | "factory" | "shop" | "purchasing_station";
+  factorySubtype?: string;
 };
 
 /** 建造建筑用例所需的外部依赖 */
@@ -52,6 +51,7 @@ export type BuildBuildingUseCaseDeps = {
   plotRepository: PlotRepository;
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
+  unlockedRecipeRepository: UnlockedRecipeRepository;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -59,12 +59,30 @@ export type BuildBuildingUseCaseDeps = {
 /**
  * 执行建造建筑用例
  *
- * 流程：校验地块 -> 检查是否已有建筑 -> 计算费用 -> 事务内扣款、建造、记录流水
+ * 流程：校验地块 -> 校验子类型 -> 检查是否已有建筑 -> 计算费用 -> 事务内扣款、建造、记录流水
  */
 export async function executeBuildBuildingUseCase(
   command: BuildBuildingCommand,
   deps: BuildBuildingUseCaseDeps,
 ): Promise<BuildBuildingResult> {
+  // 工厂类型校验：必须提供有效子类型
+  if (command.buildingType === "factory") {
+    if (!command.factorySubtype) {
+      return {
+        ok: false,
+        error: "工厂类型建筑必须指定子类型",
+        code: "CONFLICT",
+      };
+    }
+    if (!isValidFactorySubtype(command.factorySubtype)) {
+      return {
+        ok: false,
+        error: `无效的工厂子类型: ${command.factorySubtype}`,
+        code: "CONFLICT",
+      };
+    }
+  }
+
   const plot = await deps.plotRepository.findById(command.plotId);
   if (!plot) {
     return {
@@ -90,8 +108,8 @@ export async function executeBuildBuildingUseCase(
     };
   }
 
-  // 根据建筑类型查询建造费用
-  const cost = getBuildingCost(command.buildingType);
+  // 根据建筑类型和子类型查询建造费用
+  const cost = getBuildingCost(command.buildingType, command.factorySubtype);
 
   const owner = await deps.userRepository.findById(command.ownerUserId);
   if (!owner) {
@@ -114,6 +132,9 @@ export async function executeBuildBuildingUseCase(
         id: 0,
         plotId: command.plotId,
         type: command.buildingType,
+        subtype: command.buildingType === "factory"
+          ? (command.factorySubtype as FactorySubtype)
+          : undefined,
       });
 
       await deps.userRepository.save(owner);
@@ -130,6 +151,16 @@ export async function executeBuildBuildingUseCase(
           description: `建造${command.buildingType} @ 地块 ${command.plotId}`,
         });
       }
+
+      // 工厂建成后自动解锁默认配方
+      if (command.buildingType === "factory" && command.factorySubtype) {
+        await autoUnlockDefaultRecipes(
+          savedBuilding.id,
+          command.factorySubtype,
+          deps.unlockedRecipeRepository,
+        );
+      }
+
       return savedBuilding;
     });
 
@@ -139,6 +170,8 @@ export async function executeBuildBuildingUseCase(
         id: savedBuilding.id,
         plotId: savedBuilding.plotId,
         type: savedBuilding.type,
+        subtype: savedBuilding.subtype,
+        level: savedBuilding.level,
         status: savedBuilding.status,
         createdAt: savedBuilding.createdAt,
         updatedAt: savedBuilding.updatedAt,

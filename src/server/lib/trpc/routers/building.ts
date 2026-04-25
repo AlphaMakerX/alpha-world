@@ -26,6 +26,7 @@ export const buildingRouter = createTRPCRouter({
           ownerUserId: ctx.userId,
           plotId: input.plotId,
           buildingType: input.buildingType,
+          factorySubtype: input.factorySubtype,
         }),
       );
     }),

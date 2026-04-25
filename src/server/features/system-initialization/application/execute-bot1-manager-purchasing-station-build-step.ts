@@ -11,6 +11,7 @@ import type { PlotRepository } from "@/server/features/plot/domain/repositories/
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import { BOT1_MANAGER_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -21,6 +22,7 @@ type ExecuteBot1ManagerPurchasingStationBuildStepDeps = {
   buildingRepository: BuildingRepository;
   plotRepository: PlotRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
+  unlockedRecipeRepository: UnlockedRecipeRepository;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -105,6 +107,7 @@ export async function executeBot1ManagerPurchasingStationBuildStep(input: {
       plotRepository: input.deps.plotRepository,
       userRepository: input.deps.userRepository,
       transactionLedgerRepository: input.deps.transactionLedgerRepository,
+      unlockedRecipeRepository: input.deps.unlockedRecipeRepository,
       systemAccountService: input.deps.systemAccountService,
       transact: input.deps.transact,
     },

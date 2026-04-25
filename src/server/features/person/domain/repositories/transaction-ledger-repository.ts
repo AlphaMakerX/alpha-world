@@ -12,7 +12,9 @@ export type MoneyTransactionType =
   | "building_construction"
   | "factory_production"
   | "shop_purchase"
-  | "buy_order_fulfilled";
+  | "buy_order_fulfilled"
+  | "recipe_unlock"
+  | "factory_upgrade";
 
 /** 交易流水仓储接口 */
 export interface TransactionLedgerRepository {

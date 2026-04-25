@@ -16,6 +16,7 @@ import type { InventoryRepository } from "@/server/features/inventory/domain/rep
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
@@ -61,6 +62,7 @@ export type StartFactoryProductionUseCaseDeps = {
   plotRepository: PlotRepository;
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
+  unlockedRecipeRepository: UnlockedRecipeRepository;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -119,6 +121,16 @@ export async function executeStartFactoryProductionUseCase(
       };
     }
     building.ensureFactory();
+
+    // 校验配方是否已解锁
+    const isUnlocked = await deps.unlockedRecipeRepository.isUnlocked(building.id, command.recipeId);
+    if (!isUnlocked) {
+      return {
+        ok: false,
+        error: "该工厂尚未解锁此配方",
+        code: "CONFLICT",
+      };
+    }
 
     // 按制造数量等比缩放输入材料、输出产物和生产时长
     const qty = command.quantity;

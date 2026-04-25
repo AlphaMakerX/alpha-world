@@ -19,6 +19,7 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import {
   ADAM_PERSONA_CONFIG,
   BOT1_MANAGER_PERSONA_CONFIG,
@@ -80,6 +81,7 @@ export type InitializeSystemUseCaseDeps = {
   systemAccountService: SystemAccountService;
   plotRepository: PlotRepository;
   buyOrderRepository: BuyOrderRepository;
+  unlockedRecipeRepository: UnlockedRecipeRepository;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
   systemInitializationRepository: {
     hasMoneyTransfer(input: {

@@ -53,6 +53,8 @@ export async function executeListPlotsUseCase(deps: ListPlotsUseCaseDeps) {
           id: building.id,
           plotId: building.plotId,
           type: building.type,
+          subtype: building.subtype,
+          level: building.level,
           status: building.status,
           createdAt: building.createdAt,
           updatedAt: building.updatedAt,

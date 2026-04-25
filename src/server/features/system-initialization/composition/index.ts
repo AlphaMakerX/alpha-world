@@ -16,6 +16,7 @@ import { systemInitializationRepository } from "@/server/features/system-initial
 import { plotRepository } from "@/server/features/plot/infrastructure";
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { buyOrderRepository } from "@/server/features/purchasing-station/infrastructure";
+import { unlockedRecipeRepository } from "@/server/features/factory/infrastructure/unlocked-recipe-repository";
 import { transact } from "@/server/lib/db";
 
 /** 系统初始化接口的输入校验 schema */
@@ -56,6 +57,7 @@ export async function executeInitializeSystemUseCase(input?: unknown): Promise<I
     systemAccountService,
     plotRepository,
     buyOrderRepository,
+    unlockedRecipeRepository,
     transact,
     systemInitializationRepository,
   });

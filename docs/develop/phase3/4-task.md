@@ -76,17 +76,17 @@
 
 ### 2.1 先写测试 — FactorySubtype 枚举
 
-- [ ] 创建 `src/server/features/building/domain/__tests__/factory-subtype.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/building/domain/__tests__/factory-subtype.test.ts`
+- [x] 测试用例：
   - `FACTORY_SUBTYPES` 包含全部 10 种类型
   - `isValidFactorySubtype("mine")` 返回 true
   - `isValidFactorySubtype("invalid_type")` 返回 false
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 2.2 先写测试 — Building 实体扩展
 
-- [ ] 创建 `src/server/features/building/domain/__tests__/building.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/building/domain/__tests__/building.test.ts`
+- [x] 测试用例：
   - `Building.construct({ type: "factory", subtype: "mine" })` 创建的建筑 level 为 1、subtype 为 "mine"
   - `Building.construct({ type: "factory" })` 不传 subtype 时抛出错误
   - `Building.construct({ type: "residential" })` 不传 subtype 正常创建，subtype 为 null
@@ -95,85 +95,85 @@
   - `building.upgrade()` 在 level=3 时抛出「已达最高等级」错误
   - 非 factory 类型调用 `upgrade()` 抛出错误
   - `building.ensureFactory()` 成功时返回 subtype
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 2.3 再写实现 — FactorySubtype
 
-- [ ] 在 `src/server/features/building/domain/` 下新建 `factory-subtype.ts`
+- [x] 在 `src/server/features/building/domain/` 下新建 `factory-subtype.ts`
   - 定义 `FactorySubtype` 类型（10 种工厂类型的联合类型）
   - 导出 `FACTORY_SUBTYPES` 常量数组
   - 导出 `isValidFactorySubtype()` 校验函数
   - 导出 `MAX_FACTORY_LEVEL` 常量（值为 3）
-- [ ] 运行 factory-subtype 测试 → GREEN
+- [x] 运行 factory-subtype 测试 → GREEN
 
 ### 2.4 再写实现 — Building 实体
 
-- [ ] 修改 `src/server/features/building/domain/entities/building.ts`：
+- [x] 修改 `src/server/features/building/domain/entities/building.ts`：
   - `BuildingProps` 新增 `subtype: FactorySubtype | null` 和 `level: number`
   - `Building.construct()` 入参新增可选 `subtype`，当 type 为 factory 时校验 subtype 必填且有效
   - 新增 `upgrade()` 方法：校验是工厂 + 未达上限，然后 level + 1
   - `ensureFactory()` 改为返回 `FactorySubtype`（返回 subtype 值）
   - 新增 `subtype` 和 `level` getter
-- [ ] 运行 building 测试 → 全部 GREEN
+- [x] 运行 building 测试 → 全部 GREEN
 
 ### 2.5 先写测试 — 建造费用目录
 
-- [ ] 创建 `src/server/features/building/application/__tests__/building-cost-catalog.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/building/application/__tests__/building-cost-catalog.test.ts`
+- [x] 测试用例：
   - `getBuildingCost("factory", "mine")` 返回 800
   - `getBuildingCost("factory", "assembler")` 返回 1200
   - `getBuildingCost("factory", "waterworks")` 返回 600
   - `getBuildingCost("residential")` 返回 500（无 subtype）
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 2.6 再写实现 — 建造费用目录
 
-- [ ] 修改 `src/server/features/building/application/building-cost-catalog.ts`：
+- [x] 修改 `src/server/features/building/application/building-cost-catalog.ts`：
   - `getBuildingCost` 函数签名改为接受 `(type, subtype?)` 两个参数
   - 当 type 为 factory 时按 subtype 查表（10 种子类型各自的费用）
   - 非 factory 类型走原有逻辑
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 2.7 先写测试 — 建造建筑用例
 
-- [ ] 创建 `src/server/features/building/application/__tests__/build-building-use-case.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/building/application/__tests__/build-building-use-case.test.ts`
+- [x] 测试用例：
   - 建造工厂时传入 `factorySubtype: "mine"`，成功返回的 building 包含 subtype 和 level=1
   - 建造工厂时不传 `factorySubtype`，返回错误
   - 建造工厂时传入无效 subtype，返回错误
   - 建造 residential 时不传 subtype，正常成功
   - 建造 mine 扣费 800，建造 assembler 扣费 1200
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 2.8 再写实现 — 建造建筑用例
 
-- [ ] 修改 `src/server/features/building/application/build-building-use-case.ts`：
+- [x] 修改 `src/server/features/building/application/build-building-use-case.ts`：
   - `BuildBuildingCommand` 新增可选 `factorySubtype` 字段
   - 校验逻辑：type 为 factory 时 factorySubtype 必填且有效
   - 调用 `getBuildingCost(type, subtype)` 计算费用
   - 调用 `Building.construct()` 时传入 subtype
   - 成功返回结果中包含 subtype 和 level
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 2.9 先写测试 — Building Repository（持久化层）
 
-- [ ] 创建 `src/server/features/building/infrastructure/__tests__/building-repository.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/building/infrastructure/__tests__/building-repository.test.ts`
+- [x] 测试用例：
   - 保存带 subtype 和 level 的 factory 建筑后，findById 读取出正确的 subtype 和 level
   - 保存 residential 建筑（subtype=null），findById 读取出 subtype 为 null、level 为 1
   - 保存后修改 level（模拟升级），再次 save，findById 读取到更新后的 level
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 2.10 再写实现 — Building Repository
 
-- [ ] 修改 `src/server/features/building/infrastructure/building-repository.ts`：
+- [x] 修改 `src/server/features/building/infrastructure/building-repository.ts`：
   - 保存时写入 subtype 和 level 字段
   - 读取时映射 subtype 和 level 到 Building 实体
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 2.11 收尾
 
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -181,26 +181,26 @@
 
 ### 3.1 先写测试 — UnlockedRecipeRepository
 
-- [ ] 创建 `src/server/features/factory/infrastructure/__tests__/unlocked-recipe-repository.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/factory/infrastructure/__tests__/unlocked-recipe-repository.test.ts`
+- [x] 测试用例：
   - `save(buildingId, recipeId)` 写入后，`findByBuildingId(buildingId)` 包含该 recipeId
   - `isUnlocked(buildingId, recipeId)` 已解锁时返回 true，未解锁返回 false
   - `findByBuildingId(buildingId)` 返回该工厂全部已解锁配方的 recipeId 列表
   - 重复 save 同一 (buildingId, recipeId) 不报错（幂等）
   - `saveBatch(buildingId, recipeIds)` 批量写入多条记录
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 3.2 再写实现 — UnlockedRecipeRepository
 
-- [ ] 新建 `src/server/features/factory/domain/repositories/unlocked-recipe-repository.ts`（接口定义）
-- [ ] 新建 `src/server/features/factory/infrastructure/unlocked-recipe-repository.ts`（实现）
+- [x] 新建 `src/server/features/factory/domain/repositories/unlocked-recipe-repository.ts`（接口定义）
+- [x] 新建 `src/server/features/factory/infrastructure/unlocked-recipe-repository.ts`（实现）
   - 基于 `factory_unlocked_recipes` 表实现 save / saveBatch / isUnlocked / findByBuildingId
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 3.3 先写测试 — 解锁配方用例
 
-- [ ] 创建 `src/server/features/factory/application/__tests__/unlock-recipe-use-case.test.ts`
-- [ ] 测试用例（使用 mock deps）：
+- [x] 创建 `src/server/features/factory/application/__tests__/unlock-recipe-use-case.test.ts`
+- [x] 测试用例（使用 mock deps）：
   - **成功**：工厂 subtype=mine、level=1，解锁 buy_iron_ore（类型匹配、等级达标、金币充足）→ 返回 ok，扣款 50 金币
   - **类型不匹配**：mine 工厂尝试解锁 buy_wood → 返回错误「该工厂类型无法使用此配方」
   - **等级不足**：mine 工厂 level=1 尝试解锁 kiln_brick（需要 level 2）→ 返回错误「工厂等级不足」
@@ -211,19 +211,19 @@
   - **建筑不存在**：buildingId 无效 → 返回错误
   - **非工厂建筑**：建筑类型为 shop → 返回错误
   - **非所有者**：非地块拥有者操作 → 返回错误
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 3.4 再写实现 — 解锁配方用例
 
-- [ ] 新建 `src/server/features/factory/application/unlock-recipe-use-case.ts`
+- [x] 新建 `src/server/features/factory/application/unlock-recipe-use-case.ts`
   - 接收 `{ ownerUserId, buildingId, recipeId }` 命令
   - 依赖：buildingRepository, plotRepository, userRepository, unlockedRecipeRepository, transactionLedgerRepository, systemAccountService, transact
   - 实现流程：获取建筑 → ensureFactory → 获取配方元数据 → 校验类型匹配 → 校验等级 → 检查幂等 → 校验金币 → 事务扣款+写入解锁记录+记录流水
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 3.5 收尾
 
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -231,8 +231,8 @@
 
 ### 4.1 先写测试
 
-- [ ] 创建 `src/server/features/factory/application/__tests__/upgrade-factory-use-case.test.ts`
-- [ ] 测试用例（使用 mock deps）：
+- [x] 创建 `src/server/features/factory/application/__tests__/upgrade-factory-use-case.test.ts`
+- [x] 测试用例（使用 mock deps）：
   - **成功 1→2**：level=1 工厂，金币充足 → 返回 ok，扣款 1000，building.level 变为 2
   - **成功 2→3**：level=2 工厂，金币充足 → 返回 ok，扣款 3000，building.level 变为 3
   - **已达上限**：level=3 工厂 → 返回错误「已达最高等级」
@@ -240,19 +240,19 @@
   - **非工厂建筑**：建筑类型为 residential → 返回错误
   - **建筑不存在**：buildingId 无效 → 返回错误
   - **非所有者**：非地块拥有者操作 → 返回错误
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 4.2 再写实现
 
-- [ ] 新建 `src/server/features/factory/application/upgrade-factory-use-case.ts`
+- [x] 新建 `src/server/features/factory/application/upgrade-factory-use-case.ts`
   - 接收 `{ ownerUserId, buildingId }` 命令
   - 新建 `upgrade-cost-catalog.ts`：定义升级费用查表逻辑（level 1→2: 1000, 2→3: 3000）
   - 实现流程：获取建筑 → ensureFactory → 计算升级费用 → 校验金币 → 事务扣款+building.upgrade()+save+记录流水
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 4.3 收尾
 
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -260,25 +260,25 @@
 
 ### 5.1 先写测试
 
-- [ ] 创建 `src/server/features/factory/application/__tests__/start-factory-production-use-case.test.ts`（或扩展已有测试文件）
-- [ ] 新增测试用例：
+- [x] 创建 `src/server/features/factory/application/__tests__/start-factory-production-use-case.test.ts`（或扩展已有测试文件）
+- [x] 新增测试用例：
   - **已解锁配方**：工厂已解锁 buy_iron_ore → 生产正常启动（走完原有流程）
   - **未解锁配方**：工厂未解锁 buy_wood → 返回错误「该工厂尚未解锁此配方」
   - **原有测试保持通过**：确保已有的校验逻辑（建筑不存在、配方不存在、进行中任务、地块归属、余额不足、材料不足）不被破坏
-- [ ] 运行测试 → 新增用例失败，原有用例状态视实现而定（RED）
+- [x] 运行测试 → 新增用例失败，原有用例状态视实现而定（RED）
 
 ### 5.2 再写实现
 
-- [ ] 修改 `src/server/features/factory/application/start-factory-production-use-case.ts`：
+- [x] 修改 `src/server/features/factory/application/start-factory-production-use-case.ts`：
   - `StartFactoryProductionUseCaseDeps` 新增 `unlockedRecipeRepository` 依赖
   - 在 `building.ensureFactory()` 之后、缩放输入材料之前，新增校验步骤：
     - 调用 `unlockedRecipeRepository.isUnlocked(buildingId, recipeId)`
     - 未解锁则返回 `{ ok: false, error: "该工厂尚未解锁此配方", code: "CONFLICT" }`
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 5.3 收尾
 
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -286,26 +286,26 @@
 
 ### 6.1 先写测试
 
-- [ ] 创建 `src/server/features/factory/application/__tests__/list-factory-recipes-use-case.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/factory/application/__tests__/list-factory-recipes-use-case.test.ts`
+- [x] 测试用例：
   - **按工厂查询**：传入 buildingId（mine 工厂，level=2），返回 mine 类型 level≤2 的配方列表，每条标注 `unlocked: boolean`
   - **已解锁标注**：工厂已解锁 buy_iron_ore，该配方 unlocked=true；未解锁的 kiln_brick unlocked=false
   - **通用配方包含**：返回列表中包含 buy_water
   - **不含其他类型配方**：mine 工厂查询不返回 buy_wood
   - **无 buildingId 查询**：返回全量 55 条配方（兼容旧接口）
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 6.2 再写实现
 
-- [ ] 新建 `src/server/features/factory/application/list-factory-recipes-use-case.ts`
+- [x] 新建 `src/server/features/factory/application/list-factory-recipes-use-case.ts`
   - 接收 `{ buildingId?: number, ownerUserId: string }` 查询参数
   - 有 buildingId 时：获取建筑 → 读 subtype/level → 用 `listRecipesByFactorySubtypeAndLevel` 筛选 → 查 unlockedRecipeRepository 标注解锁状态
   - 无 buildingId 时：返回 `listRecipes()` 全量
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 6.3 收尾
 
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -313,27 +313,27 @@
 
 ### 7.1 先写测试
 
-- [ ] 创建 `src/server/features/factory/application/__tests__/auto-unlock-default-recipes.test.ts`
-- [ ] 测试用例：
+- [x] 创建 `src/server/features/factory/application/__tests__/auto-unlock-default-recipes.test.ts`
+- [x] 测试用例：
   - 调用 `autoUnlockDefaultRecipes(buildingId, "mine")` → unlockedRecipeRepository.saveBatch 被调用，参数包含 buy_iron_ore 和 buy_water
   - 调用 `autoUnlockDefaultRecipes(buildingId, "waterworks")` → saveBatch 参数包含 buy_water 和 buy_water_bulk
   - 调用 `autoUnlockDefaultRecipes(buildingId, "assembler")` → saveBatch 参数仅包含 buy_water
-- [ ] 运行测试 → 确认全部失败（RED）
+- [x] 运行测试 → 确认全部失败（RED）
 
 ### 7.2 再写实现
 
-- [ ] 新建 `src/server/features/factory/application/auto-unlock-default-recipes.ts`
+- [x] 新建 `src/server/features/factory/application/auto-unlock-default-recipes.ts`
   - 调用 `listDefaultRecipes(subtype)` 获取默认配方列表
   - 调用 `unlockedRecipeRepository.saveBatch(buildingId, recipeIds)` 写入
-- [ ] 运行测试 → 全部 GREEN
+- [x] 运行测试 → 全部 GREEN
 
 ### 7.3 集成到建造流程
 
-- [ ] 修改 `build-building-use-case.ts`：
+- [x] 修改 `build-building-use-case.ts`：
   - 新增依赖 `unlockedRecipeRepository`
   - 在建造 factory 类型的建筑成功后（事务内），调用 `autoUnlockDefaultRecipes`
-- [ ] 运行任务 2 的建造用例测试 → 确认不 break（可能需要补充 mock）
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行任务 2 的建造用例测试 → 确认不 break（可能需要补充 mock）
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -341,29 +341,29 @@
 
 ### 8.1 先写测试 — building 路由
 
-- [ ] 修改或新建 `src/server/lib/trpc/routers/__tests__/building.test.ts`
-- [ ] 测试用例：
+- [x] 修改或新建 `src/server/lib/trpc/routers/__tests__/building.test.ts`
+- [x] 测试用例：
   - `building.build` mutation 接受 `factorySubtype` 参数
   - type=factory 时 factorySubtype 必填，缺失则报 validation error
   - type=residential 时不需要 factorySubtype
 
 ### 8.2 再写实现 — building 路由
 
-- [ ] 修改 `src/server/lib/trpc/routers/building.ts`：
+- [x] 修改 `src/server/lib/trpc/routers/building.ts`：
   - `build` mutation 的 input schema 新增可选 `factorySubtype` 字段
   - 将 factorySubtype 透传给 `BuildBuildingCommand`
 
 ### 8.3 先写测试 — factory 路由
 
-- [ ] 修改或新建 `src/server/lib/trpc/routers/__tests__/factory.test.ts`
-- [ ] 测试用例：
+- [x] 修改或新建 `src/server/lib/trpc/routers/__tests__/factory.test.ts`
+- [x] 测试用例：
   - `factory.unlockRecipe` mutation 接受 `{ buildingId, recipeId }`
   - `factory.upgradeFactory` mutation 接受 `{ buildingId }`
   - `factory.recipes` query 接受可选 `{ buildingId }`
 
 ### 8.4 再写实现 — factory 路由
 
-- [ ] 修改 `src/server/lib/trpc/routers/factory.ts`：
+- [x] 修改 `src/server/lib/trpc/routers/factory.ts`：
   - 新增 `unlockRecipe` mutation → 调用 unlock-recipe-use-case
   - 新增 `upgradeFactory` mutation → 调用 upgrade-factory-use-case
   - 修改 `recipes` query → 支持可选 buildingId 参数，调用 list-factory-recipes-use-case
@@ -371,8 +371,8 @@
 
 ### 8.5 收尾
 
-- [ ] 运行全部路由测试 → GREEN
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行全部路由测试 → GREEN
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ---
 
@@ -380,8 +380,8 @@
 
 ### 9.1 全量测试
 
-- [ ] 运行 `npm test` → 全部测试通过
-- [ ] 运行 `tsc --noEmit` → 零错误
+- [x] 运行 `npm test` → 全部测试通过（186 tests, 22 files）
+- [x] 运行 `tsc --noEmit` → 零错误
 
 ### 9.2 手动冒烟验证（可选）
 
@@ -396,11 +396,11 @@
 
 ### 9.3 验收检查清单
 
-- [ ] 建造工厂必须选择子类型，10 种类型均可建造
-- [ ] 新建工厂自动解锁 1-2 个默认配方
-- [ ] 配方解锁校验：类型匹配 + 等级达标 + 金币充足
-- [ ] 解锁幂等：重复解锁不扣费
-- [ ] 工厂升级：level 1→2→3，费用递增，3 级封顶
-- [ ] 生产校验：未解锁配方无法启动生产
-- [ ] 配方查询：按工厂类型和等级筛选，标注解锁状态
-- [ ] 稀缺性：单一工厂无法生产所有物品
+- [x] 建造工厂必须选择子类型，10 种类型均可建造
+- [x] 新建工厂自动解锁 1-2 个默认配方
+- [x] 配方解锁校验：类型匹配 + 等级达标 + 金币充足
+- [x] 解锁幂等：重复解锁不扣费
+- [x] 工厂升级：level 1→2→3，费用递增，3 级封顶
+- [x] 生产校验：未解锁配方无法启动生产
+- [x] 配方查询：按工厂类型和等级筛选，标注解锁状态
+- [x] 稀缺性：单一工厂无法生产所有物品

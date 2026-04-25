@@ -1,13 +1,8 @@
-/**
- * 建筑仓储的 Drizzle ORM 实现
- *
- * 基于 Drizzle ORM 实现 BuildingRepository 接口，
- * 负责建筑实体与数据库记录之间的映射和持久化操作。
- */
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain";
+import type { FactorySubtype } from "@/server/features/building/domain/factory-subtype";
 import { buildings } from "@/server/features/building/infrastructure/schema";
 import { plots } from "@/server/features/plot/infrastructure/schema";
 
@@ -17,6 +12,8 @@ function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
     id: record.id,
     plotId: record.plotId,
     type: record.type as "residential" | "factory" | "shop" | "purchasing_station",
+    subtype: (record.subtype as FactorySubtype) ?? null,
+    level: record.level,
     status: record.status as "active",
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -64,7 +61,6 @@ export class DrizzleBuildingRepository implements BuildingRepository {
 
   /** 通过关联地块表查询某用户名下的所有建筑 */
   async findByOwnerUserId(ownerUserId: string): Promise<Building[]> {
-    // 通过 inner join plots 表，按地块归属筛选建筑
     const records = await getDbClient()
       .select({
         id: buildings.id,
@@ -91,8 +87,8 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         .set({
           plotId: building.plotId,
           type: building.type,
-          subtype: (building as any).subtype ?? null,
-          level: (building as any).level ?? 1,
+          subtype: building.subtype,
+          level: building.level,
           status: building.status,
           updatedAt: new Date(),
         })
@@ -107,8 +103,8 @@ export class DrizzleBuildingRepository implements BuildingRepository {
       .values({
         plotId: building.plotId,
         type: building.type,
-        subtype: (building as any).subtype ?? null,
-        level: (building as any).level ?? 1,
+        subtype: building.subtype,
+        level: building.level,
         status: building.status,
         createdAt: building.createdAt,
         updatedAt: building.updatedAt,

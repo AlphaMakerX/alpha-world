@@ -16,6 +16,7 @@ import {
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
 import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { unlockedRecipeRepository } from "@/server/features/factory/infrastructure/unlocked-recipe-repository";
 import { transact } from "@/server/lib/db";
 
 /** 建造建筑接口的参数校验 Schema */
@@ -23,6 +24,7 @@ export const buildBuildingSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   plotId: z.number().int().positive(),
   buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
+  factorySubtype: z.string().optional(),
 });
 
 /** 查询我的建筑列表接口的参数校验 Schema */
@@ -46,6 +48,7 @@ export async function executeBuildBuildingUseCase(input: unknown): Promise<Build
     plotRepository,
     userRepository,
     transactionLedgerRepository,
+    unlockedRecipeRepository,
     systemAccountService,
     transact,
   });
