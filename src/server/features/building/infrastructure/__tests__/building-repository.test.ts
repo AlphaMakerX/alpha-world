@@ -32,21 +32,4 @@ describe("Building rehydrate — subtype 与 level 映射", () => {
     expect(building.subtype).toBeNull();
     expect(building.level).toBe(1);
   });
-
-  it("rehydrate 后修改 level（模拟升级），升级后 level 正确", () => {
-    const building = Building.rehydrate({
-      id: 3,
-      plotId: 30,
-      type: "factory",
-      subtype: "smelter",
-      level: 1,
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    building.upgrade();
-    expect(building.level).toBe(2);
-    building.upgrade();
-    expect(building.level).toBe(3);
-  });
 });

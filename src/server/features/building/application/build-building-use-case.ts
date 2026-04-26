@@ -1,16 +1,12 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { Building } from "@/server/features/building/domain";
 import { getBuildingCost } from "@/server/features/building/application/building-cost-catalog";
-import { isValidFactorySubtype } from "@/server/features/building/domain/factory-subtype";
-import type { FactorySubtype } from "@/server/features/building/domain/factory-subtype";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
-import { autoUnlockDefaultRecipes } from "@/server/features/factory/application/auto-unlock-default-recipes";
 
 /** 建造成功的返回结果 */
 type BuildBuildingSuccessResult = {
@@ -19,7 +15,7 @@ type BuildBuildingSuccessResult = {
     id: number;
     plotId: number;
     type: "residential" | "factory" | "shop" | "purchasing_station";
-    subtype: FactorySubtype | null;
+    subtype: string | null;
     level: number;
     status: "active";
     createdAt: Date;
@@ -51,9 +47,10 @@ export type BuildBuildingUseCaseDeps = {
   plotRepository: PlotRepository;
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
-  unlockedRecipeRepository: UnlockedRecipeRepository;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
+  /** 建造完成后的回调钩子，由 composition root 注入跨模块逻辑 */
+  afterBuildHook?: (building: Building) => Promise<void>;
 };
 
 /**
@@ -65,22 +62,13 @@ export async function executeBuildBuildingUseCase(
   command: BuildBuildingCommand,
   deps: BuildBuildingUseCaseDeps,
 ): Promise<BuildBuildingResult> {
-  // 工厂类型校验：必须提供有效子类型
-  if (command.buildingType === "factory") {
-    if (!command.factorySubtype) {
-      return {
-        ok: false,
-        error: "工厂类型建筑必须指定子类型",
-        code: "CONFLICT",
-      };
-    }
-    if (!isValidFactorySubtype(command.factorySubtype)) {
-      return {
-        ok: false,
-        error: `无效的工厂子类型: ${command.factorySubtype}`,
-        code: "CONFLICT",
-      };
-    }
+  // 工厂类型校验：必须提供子类型
+  if (command.buildingType === "factory" && !command.factorySubtype) {
+    return {
+      ok: false,
+      error: "工厂类型建筑必须指定子类型",
+      code: "CONFLICT",
+    };
   }
 
   const plot = await deps.plotRepository.findById(command.plotId);
@@ -133,7 +121,7 @@ export async function executeBuildBuildingUseCase(
         plotId: command.plotId,
         type: command.buildingType,
         subtype: command.buildingType === "factory"
-          ? (command.factorySubtype as FactorySubtype)
+          ? command.factorySubtype
           : undefined,
       });
 
@@ -152,13 +140,9 @@ export async function executeBuildBuildingUseCase(
         });
       }
 
-      // 工厂建成后自动解锁默认配方
-      if (command.buildingType === "factory" && command.factorySubtype) {
-        await autoUnlockDefaultRecipes(
-          savedBuilding.id,
-          command.factorySubtype,
-          deps.unlockedRecipeRepository,
-        );
+      // 建造完成后触发钩子（如工厂自动解锁默认配方等跨模块逻辑）
+      if (deps.afterBuildHook) {
+        await deps.afterBuildHook(savedBuilding);
       }
 
       return savedBuilding;

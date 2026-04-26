@@ -4,7 +4,7 @@ import {
   type Recipe,
 } from "@/server/features/recipe";
 import { getUpgradeCost } from "@/server/features/factory/application/upgrade-cost-catalog";
-import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
@@ -38,7 +38,7 @@ export type ListFactoryRecipesResult =
 
 /** 用例所需的外部依赖 */
 export type ListFactoryRecipesUseCaseDeps = {
-  buildingRepository: BuildingRepository;
+  factoryRepository: FactoryRepository;
   unlockedRecipeRepository: UnlockedRecipeRepository;
 };
 
@@ -61,31 +61,26 @@ export async function executeListFactoryRecipesUseCase(
     };
   }
 
-  const building = await deps.buildingRepository.findById(query.buildingId);
-  if (!building) {
-    return { ok: false, error: "建筑不存在", code: "NOT_FOUND" };
+  const factory = await deps.factoryRepository.findByBuildingId(query.buildingId);
+  if (!factory) {
+    return { ok: false, error: "该建筑不是工厂", code: "NOT_FOUND" };
   }
 
-  const subtype = building.subtype;
-  if (!subtype) {
-    return { ok: false, error: "当前建筑不是工厂", code: "CONFLICT" };
-  }
-
-  const filtered = listRecipesByFactorySubtypeAndLevel(subtype, building.level);
+  const filtered = listRecipesByFactorySubtypeAndLevel(factory.subtype, factory.level);
   const unlockedIds = await deps.unlockedRecipeRepository.findByBuildingId(query.buildingId);
   const unlockedSet = new Set(unlockedIds);
 
   // 计算升级预览
-  const upgradeCost = getUpgradeCost(building.level);
+  const upgradeCost = getUpgradeCost(factory.level);
   let upgradePreview: UpgradePreview | null = null;
   if (upgradeCost !== null) {
     const currentIds = new Set(filtered.map((r) => r.id));
-    const nextLevelRecipes = listRecipesByFactorySubtypeAndLevel(subtype, building.level + 1);
+    const nextLevelRecipes = listRecipesByFactorySubtypeAndLevel(factory.subtype, factory.level + 1);
     const newRecipes = nextLevelRecipes
       .filter((r) => !currentIds.has(r.id))
       .map((r) => ({ id: r.id, name: r.name, category: r.category }));
     upgradePreview = {
-      nextLevel: building.level + 1,
+      nextLevel: factory.level + 1,
       cost: upgradeCost,
       newRecipes,
     };

@@ -2,7 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain";
-import type { FactorySubtype } from "@/server/features/building/domain/factory-subtype";
+import type { FactorySubtype } from "@/server/features/factory/domain/factory-subtype";
 import { buildings } from "@/server/features/building/infrastructure/schema";
 import { plots } from "@/server/features/plot/infrastructure/schema";
 

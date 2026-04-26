@@ -13,9 +13,12 @@ import {
   executeListMyBuildingsUseCase as executeListMyBuildingsUseCaseImpl,
   type ListMyBuildingsResult,
 } from "@/server/features/building/application/list-my-buildings-use-case";
+import type { Building } from "@/server/features/building/domain/entities/building";
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
 import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { isValidFactorySubtype } from "@/server/features/factory/domain/factory-subtype";
+import { autoUnlockDefaultRecipes } from "@/server/features/factory/application/auto-unlock-default-recipes";
 import { unlockedRecipeRepository } from "@/server/features/factory/infrastructure/unlocked-recipe-repository";
 import { transact } from "@/server/lib/db";
 
@@ -25,7 +28,22 @@ export const buildBuildingSchema = z.object({
   plotId: z.number().int().positive(),
   buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
   factorySubtype: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    if (data.buildingType === "factory" && data.factorySubtype) {
+      return isValidFactorySubtype(data.factorySubtype);
+    }
+    return true;
+  },
+  { message: "无效的工厂子类型" },
+);
+
+/** 建造完成后的回调钩子：工厂建成时自动解锁默认配方 */
+const afterBuildHook = async (building: Building) => {
+  if (building.type === "factory" && building.subtype) {
+    await autoUnlockDefaultRecipes(building.id, building.subtype, unlockedRecipeRepository);
+  }
+};
 
 /** 查询我的建筑列表接口的参数校验 Schema */
 export const listMyBuildingsSchema = z.object({
@@ -48,9 +66,9 @@ export async function executeBuildBuildingUseCase(input: unknown): Promise<Build
     plotRepository,
     userRepository,
     transactionLedgerRepository,
-    unlockedRecipeRepository,
     systemAccountService,
     transact,
+    afterBuildHook,
   });
 }
 

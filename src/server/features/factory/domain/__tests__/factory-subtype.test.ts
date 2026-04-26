@@ -3,7 +3,7 @@ import {
   FACTORY_SUBTYPES,
   isValidFactorySubtype,
   MAX_FACTORY_LEVEL,
-} from "@/server/features/building/domain/factory-subtype";
+} from "@/server/features/factory/domain/factory-subtype";
 
 describe("FactorySubtype", () => {
   it("FACTORY_SUBTYPES 应包含全部 10 种类型", () => {

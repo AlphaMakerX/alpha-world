@@ -1,4 +1,4 @@
-import type { FactorySubtype } from "@/server/features/building/domain/factory-subtype";
+import type { FactorySubtype } from "@/server/features/factory/domain/factory-subtype";
 
 /** 非工厂类型建筑的建造费用 */
 const baseBuildingCosts: Record<string, number> = {

@@ -25,7 +25,7 @@ import {
   executeListFactoryRecipesUseCase as executeListFactoryRecipesUseCaseImpl,
   type ListFactoryRecipesResult,
 } from "@/server/features/factory/application/list-factory-recipes-use-case";
-import { factoryProductionJobRepository } from "@/server/features/factory/infrastructure";
+import { factoryProductionJobRepository, factoryRepository } from "@/server/features/factory/infrastructure";
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { inventoryRepository } from "@/server/features/inventory/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
@@ -73,7 +73,7 @@ export async function executeListFactoryRecipesUseCase(input?: unknown): Promise
   }
   return executeListFactoryRecipesUseCaseImpl(
     { buildingId: parsed.data.buildingId },
-    { buildingRepository, unlockedRecipeRepository },
+    { factoryRepository, unlockedRecipeRepository },
   );
 }
 
@@ -85,6 +85,7 @@ export async function executeListFactoryOrdersUseCase(input: unknown): Promise<L
   }
   return executeListFactoryOrdersUseCaseImpl(parsed.data, {
     factoryProductionJobRepository,
+    factoryRepository,
     buildingRepository,
     inventoryRepository,
     plotRepository,
@@ -99,6 +100,7 @@ export async function executeStartFactoryProductionUseCase(input: unknown): Prom
   }
   return executeStartFactoryProductionUseCaseImpl(parsed.data, {
     factoryProductionJobRepository,
+    factoryRepository,
     buildingRepository,
     inventoryRepository,
     plotRepository,
@@ -117,7 +119,7 @@ export async function executeUnlockRecipeUseCase(input: unknown): Promise<Unlock
     return { ok: false, error: parsed.error.issues[0]?.message ?? "参数校验失败", code: "BAD_REQUEST" };
   }
   return executeUnlockRecipeUseCaseImpl(parsed.data, {
-    buildingRepository,
+    factoryRepository,
     plotRepository,
     userRepository,
     transactionLedgerRepository,
@@ -134,6 +136,7 @@ export async function executeUpgradeFactoryUseCase(input: unknown): Promise<Upgr
     return { ok: false, error: parsed.error.issues[0]?.message ?? "参数校验失败", code: "BAD_REQUEST" };
   }
   return executeUpgradeFactoryUseCaseImpl(parsed.data, {
+    factoryRepository,
     buildingRepository,
     plotRepository,
     userRepository,

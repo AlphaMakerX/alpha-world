@@ -11,6 +11,7 @@ import { DomainError } from "@/server/features/shared-kernel/domain/domain-error
 import { FactoryProductionJob } from "@/server/features/factory/domain";
 import { getRecipeById } from "@/server/features/recipe";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
@@ -57,6 +58,7 @@ export type StartFactoryProductionResult =
 /** 用例所需的外部依赖 */
 export type StartFactoryProductionUseCaseDeps = {
   factoryProductionJobRepository: FactoryProductionJobRepository;
+  factoryRepository: FactoryRepository;
   buildingRepository: BuildingRepository;
   inventoryRepository: InventoryRepository;
   plotRepository: PlotRepository;
@@ -77,11 +79,11 @@ export async function executeStartFactoryProductionUseCase(
   command: StartFactoryProductionCommand,
   deps: StartFactoryProductionUseCaseDeps,
 ): Promise<StartFactoryProductionResult> {
-  const building = await deps.buildingRepository.findById(command.buildingId);
-  if (!building) {
+  const factory = await deps.factoryRepository.findByBuildingId(command.buildingId);
+  if (!factory) {
     return {
       ok: false,
-      error: "建筑不存在",
+      error: "该建筑不是工厂",
       code: "NOT_FOUND",
     };
   }
@@ -95,7 +97,7 @@ export async function executeStartFactoryProductionUseCase(
     };
   }
 
-  const inProgressJob = await deps.factoryProductionJobRepository.findInProgressByBuildingId(building.id);
+  const inProgressJob = await deps.factoryProductionJobRepository.findInProgressByBuildingId(factory.id);
   if (inProgressJob) {
     return {
       ok: false,
@@ -105,7 +107,7 @@ export async function executeStartFactoryProductionUseCase(
   }
 
   try {
-    const plot = await deps.plotRepository.findById(building.plotId);
+    const plot = await deps.plotRepository.findById(factory.plotId);
     if (!plot) {
       return {
         ok: false,
@@ -120,10 +122,9 @@ export async function executeStartFactoryProductionUseCase(
         code: "CONFLICT",
       };
     }
-    building.ensureFactory();
 
     // 校验配方是否已解锁
-    const isUnlocked = await deps.unlockedRecipeRepository.isUnlocked(building.id, command.recipeId);
+    const isUnlocked = await deps.unlockedRecipeRepository.isUnlocked(factory.id, command.recipeId);
     if (!isUnlocked) {
       return {
         ok: false,
@@ -201,7 +202,7 @@ export async function executeStartFactoryProductionUseCase(
 
       const job = FactoryProductionJob.start({
         id: 0,
-        buildingId: building.id,
+        buildingId: factory.id,
         ownerUserId: command.ownerUserId,
         recipeId: recipe.id,
         inputs: scaledInputs,

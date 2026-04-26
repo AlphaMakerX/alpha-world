@@ -8,7 +8,6 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
-import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
 import { User } from "@/server/features/person/domain/entities/user";
 import { Building } from "@/server/features/building/domain/entities/building";
@@ -86,16 +85,11 @@ function createMockDeps(
     transactionLedgerRepository: {
       record: vi.fn(),
     } satisfies TransactionLedgerRepository,
-    unlockedRecipeRepository: {
-      save: vi.fn(),
-      saveBatch: vi.fn(),
-      isUnlocked: vi.fn(),
-      findByBuildingId: vi.fn(),
-    } satisfies UnlockedRecipeRepository,
     systemAccountService: {
       getSystemAccount: vi.fn().mockResolvedValue(createAdamUser()),
     },
     transact: (async <T>(fn: () => Promise<T>) => fn()) as BuildBuildingUseCaseDeps["transact"],
+    afterBuildHook: vi.fn(),
     ...overrides,
   };
 }
@@ -128,17 +122,7 @@ describe("建造建筑用例 — 工厂子类型", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("建造工厂时传入无效 subtype，返回错误", async () => {
-    const deps = createMockDeps();
-    const command: BuildBuildingCommand = {
-      ownerUserId: "user-1",
-      plotId: 10,
-      buildingType: "factory",
-      factorySubtype: "invalid_type" as any,
-    };
-    const result = await executeBuildBuildingUseCase(command, deps);
-    expect(result.ok).toBe(false);
-  });
+  // 注：无效 subtype 的校验已移至 composition 层的 zod schema（isValidFactorySubtype）
 
   it("建造 residential 时不传 subtype，正常成功", async () => {
     const deps = createMockDeps();

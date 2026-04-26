@@ -4,36 +4,22 @@ import {
   type UpgradeFactoryCommand,
   type UpgradeFactoryUseCaseDeps,
 } from "../upgrade-factory-use-case";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
-import { Building } from "@/server/features/building/domain/entities/building";
+import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
 import { User } from "@/server/features/person/domain/entities/user";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 function createFactory(level = 1) {
-  return Building.rehydrate({
+  return Factory.rehydrate({
     id: 100,
     plotId: 10,
-    type: "factory",
     subtype: "mine",
     level,
-    status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-}
-
-function createResidential() {
-  return Building.rehydrate({
-    id: 100,
-    plotId: 10,
-    type: "residential",
-    subtype: null,
-    level: 1,
-    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -87,12 +73,16 @@ function createMockDeps(
   overrides?: Partial<UpgradeFactoryUseCaseDeps>,
 ): UpgradeFactoryUseCaseDeps {
   return {
+    factoryRepository: {
+      findByBuildingId: vi.fn().mockResolvedValue(createFactory(1)),
+      save: vi.fn().mockImplementation((f: Factory) => Promise.resolve(f)),
+    } satisfies FactoryRepository,
     buildingRepository: {
-      findById: vi.fn().mockResolvedValue(createFactory(1)),
+      findById: vi.fn(),
       findByPlotId: vi.fn(),
       findByPlotIds: vi.fn(),
       findByOwnerUserId: vi.fn(),
-      save: vi.fn().mockImplementation((b: Building) => Promise.resolve(b)),
+      save: vi.fn(),
     } satisfies BuildingRepository,
     plotRepository: {
       findAll: vi.fn(),
@@ -136,12 +126,9 @@ describe("升级工厂用例", () => {
 
   it("成功 2→3：扣款 3000，level 变为 3", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(createFactory(2)),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
-        save: vi.fn().mockImplementation((b: Building) => Promise.resolve(b)),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(createFactory(2)),
+        save: vi.fn().mockImplementation((f: Factory) => Promise.resolve(f)),
       },
     });
     const result = await executeUpgradeFactoryUseCase(baseCommand, deps);
@@ -156,11 +143,8 @@ describe("升级工厂用例", () => {
 
   it("已达上限：level=3 → 错误「已达最高等级」", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(createFactory(3)),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(createFactory(3)),
         save: vi.fn(),
       },
     });
@@ -186,13 +170,10 @@ describe("升级工厂用例", () => {
     }
   });
 
-  it("非工厂建筑：residential → 错误", async () => {
+  it("非工厂建筑 → 错误", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(createResidential()),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(null),
         save: vi.fn(),
       },
     });
@@ -202,11 +183,8 @@ describe("升级工厂用例", () => {
 
   it("建筑不存在 → 错误", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(null),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(null),
         save: vi.fn(),
       },
     });

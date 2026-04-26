@@ -4,18 +4,16 @@ import {
   type ListFactoryRecipesQuery,
   type ListFactoryRecipesUseCaseDeps,
 } from "../list-factory-recipes-use-case";
-import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
-import { Building } from "@/server/features/building/domain/entities/building";
+import { Factory } from "@/server/features/factory/domain/entities/factory";
 
 function createMineFactory(level = 2) {
-  return Building.rehydrate({
+  return Factory.rehydrate({
     id: 100,
     plotId: 10,
-    type: "factory",
     subtype: "mine",
     level,
-    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -25,13 +23,10 @@ function createMockDeps(
   overrides?: Partial<ListFactoryRecipesUseCaseDeps>,
 ): ListFactoryRecipesUseCaseDeps {
   return {
-    buildingRepository: {
-      findById: vi.fn().mockResolvedValue(createMineFactory()),
-      findByPlotId: vi.fn(),
-      findByPlotIds: vi.fn(),
-      findByOwnerUserId: vi.fn(),
+    factoryRepository: {
+      findByBuildingId: vi.fn().mockResolvedValue(createMineFactory()),
       save: vi.fn(),
-    } satisfies BuildingRepository,
+    } satisfies FactoryRepository,
     unlockedRecipeRepository: {
       save: vi.fn(),
       saveBatch: vi.fn(),

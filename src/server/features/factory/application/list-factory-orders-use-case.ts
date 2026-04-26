@@ -8,6 +8,7 @@ import { DomainError } from "@/server/features/shared-kernel/domain/domain-error
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import { receiveFactoryOutputs } from "@/server/features/inventory/domain";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
@@ -48,6 +49,7 @@ export type ListFactoryOrdersCommand = {
 /** 用例所需的外部依赖 */
 export type ListFactoryOrdersUseCaseDeps = {
   factoryProductionJobRepository: FactoryProductionJobRepository;
+  factoryRepository: FactoryRepository;
   buildingRepository: BuildingRepository;
   inventoryRepository: InventoryRepository;
   plotRepository: PlotRepository;
@@ -79,16 +81,16 @@ export async function executeListFactoryOrdersUseCase(
   command: ListFactoryOrdersCommand,
   deps: ListFactoryOrdersUseCaseDeps,
 ): Promise<ListFactoryOrdersResult> {
-  const building = await deps.buildingRepository.findById(command.buildingId);
-  if (!building) {
+  const factory = await deps.factoryRepository.findByBuildingId(command.buildingId);
+  if (!factory) {
     return {
       ok: false,
-      error: "建筑不存在",
+      error: "该建筑不是工厂",
       code: "NOT_FOUND",
     };
   }
 
-  const plot = await deps.plotRepository.findById(building.plotId);
+  const plot = await deps.plotRepository.findById(factory.plotId);
   if (!plot) {
     return {
       ok: false,
@@ -105,8 +107,6 @@ export async function executeListFactoryOrdersUseCase(
   }
 
   try {
-    // 防御性校验：确保该建筑仍然是工厂，避免后续按工厂订单处理时出现领域错误。
-    building.ensureFactory();
     const now = new Date();
     const jobs = await deps.factoryProductionJobRepository.findByBuildingId(command.buildingId);
 

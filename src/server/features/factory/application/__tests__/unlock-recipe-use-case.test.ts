@@ -4,37 +4,22 @@ import {
   type UnlockRecipeCommand,
   type UnlockRecipeUseCaseDeps,
 } from "../unlock-recipe-use-case";
-import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
-import { Building } from "@/server/features/building/domain/entities/building";
+import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
 import { User } from "@/server/features/person/domain/entities/user";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 function createMineFactory(level = 1) {
-  return Building.rehydrate({
+  return Factory.rehydrate({
     id: 100,
     plotId: 10,
-    type: "factory",
     subtype: "mine",
     level,
-    status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-}
-
-function createShopBuilding() {
-  return Building.rehydrate({
-    id: 100,
-    plotId: 10,
-    type: "shop",
-    subtype: null,
-    level: 1,
-    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -88,13 +73,10 @@ function createMockDeps(
   overrides?: Partial<UnlockRecipeUseCaseDeps>,
 ): UnlockRecipeUseCaseDeps {
   return {
-    buildingRepository: {
-      findById: vi.fn().mockResolvedValue(createMineFactory()),
-      findByPlotId: vi.fn(),
-      findByPlotIds: vi.fn(),
-      findByOwnerUserId: vi.fn(),
+    factoryRepository: {
+      findByBuildingId: vi.fn().mockResolvedValue(createMineFactory()),
       save: vi.fn(),
-    } satisfies BuildingRepository,
+    } satisfies FactoryRepository,
     plotRepository: {
       findAll: vi.fn(),
       findById: vi.fn().mockResolvedValue(createPlot("user-1")),
@@ -216,11 +198,8 @@ describe("解锁配方用例", () => {
 
   it("建筑不存在：buildingId 无效 → 错误", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(null),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(null),
         save: vi.fn(),
       },
     });
@@ -231,13 +210,10 @@ describe("解锁配方用例", () => {
     }
   });
 
-  it("非工厂建筑：建筑类型为 shop → 错误", async () => {
+  it("非工厂建筑 → 错误", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(createShopBuilding()),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(null),
         save: vi.fn(),
       },
     });

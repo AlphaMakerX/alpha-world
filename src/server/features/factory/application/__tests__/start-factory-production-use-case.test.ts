@@ -4,6 +4,7 @@ import {
   type StartFactoryProductionCommand,
   type StartFactoryProductionUseCaseDeps,
 } from "../start-factory-production-use-case";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
@@ -11,20 +12,18 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain/repositories/factory-production-job-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
-import { Building } from "@/server/features/building/domain/entities/building";
+import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { FactoryProductionJob } from "@/server/features/factory/domain/entities/factory-production-job";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
 import { User } from "@/server/features/person/domain/entities/user";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 function createFactory() {
-  return Building.rehydrate({
+  return Factory.rehydrate({
     id: 100,
     plotId: 10,
-    type: "factory",
     subtype: "mine",
     level: 1,
-    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -78,8 +77,12 @@ function createMockDeps(
   overrides?: Partial<StartFactoryProductionUseCaseDeps>,
 ): StartFactoryProductionUseCaseDeps {
   return {
+    factoryRepository: {
+      findByBuildingId: vi.fn().mockResolvedValue(createFactory()),
+      save: vi.fn(),
+    } satisfies FactoryRepository,
     buildingRepository: {
-      findById: vi.fn().mockResolvedValue(createFactory()),
+      findById: vi.fn(),
       findByPlotId: vi.fn(),
       findByPlotIds: vi.fn(),
       findByOwnerUserId: vi.fn(),
@@ -162,11 +165,8 @@ describe("启动生产用例 — 配方解锁校验", () => {
 
   it("建筑不存在 → 错误", async () => {
     const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(null),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
+      factoryRepository: {
+        findByBuildingId: vi.fn().mockResolvedValue(null),
         save: vi.fn(),
       },
     });

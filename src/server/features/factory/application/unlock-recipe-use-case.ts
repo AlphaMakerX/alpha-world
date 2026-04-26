@@ -1,6 +1,5 @@
-import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { getRecipeById } from "@/server/features/recipe";
-import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
@@ -21,7 +20,7 @@ export type UnlockRecipeResult = UnlockRecipeSuccessResult | UnlockRecipeFailure
 
 /** 解锁配方用例所需的外部依赖 */
 export type UnlockRecipeUseCaseDeps = {
-  buildingRepository: BuildingRepository;
+  factoryRepository: FactoryRepository;
   plotRepository: PlotRepository;
   userRepository: UserRepository;
   transactionLedgerRepository: TransactionLedgerRepository;
@@ -33,32 +32,21 @@ export type UnlockRecipeUseCaseDeps = {
 /**
  * 执行解锁配方用例
  *
- * 流程：获取建筑 → ensureFactory → 获取配方 → 校验类型匹配 → 校验等级 →
+ * 流程：获取工厂 → 校验地块归属 → 获取配方 → 校验类型匹配 → 校验等级 →
  *       检查幂等 → 校验金币 → 事务扣款+写入解锁记录+记录流水
  */
 export async function executeUnlockRecipeUseCase(
   command: UnlockRecipeCommand,
   deps: UnlockRecipeUseCaseDeps,
 ): Promise<UnlockRecipeResult> {
-  // 获取建筑
-  const building = await deps.buildingRepository.findById(command.buildingId);
-  if (!building) {
-    return { ok: false, error: "建筑不存在", code: "NOT_FOUND" };
-  }
-
-  // 校验是工厂
-  let subtype: string;
-  try {
-    subtype = building.ensureFactory();
-  } catch (error) {
-    if (error instanceof DomainError) {
-      return { ok: false, error: error.message, code: "CONFLICT" };
-    }
-    throw error;
+  // 获取工厂
+  const factory = await deps.factoryRepository.findByBuildingId(command.buildingId);
+  if (!factory) {
+    return { ok: false, error: "该建筑不是工厂", code: "NOT_FOUND" };
   }
 
   // 校验地块归属
-  const plot = await deps.plotRepository.findById(building.plotId);
+  const plot = await deps.plotRepository.findById(factory.plotId);
   if (!plot) {
     return { ok: false, error: "地块不存在", code: "NOT_FOUND" };
   }
@@ -73,12 +61,12 @@ export async function executeUnlockRecipeUseCase(
   }
 
   // 校验工厂类型匹配
-  if (recipe.factorySubtypes !== "*" && !recipe.factorySubtypes.includes(subtype as any)) {
+  if (recipe.factorySubtypes !== "*" && !recipe.factorySubtypes.includes(factory.subtype as any)) {
     return { ok: false, error: "该工厂类型无法使用此配方", code: "CONFLICT" };
   }
 
   // 校验工厂等级
-  if (building.level < recipe.requiredLevel) {
+  if (factory.level < recipe.requiredLevel) {
     return { ok: false, error: "工厂等级不足", code: "CONFLICT" };
   }
 
