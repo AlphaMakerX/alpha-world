@@ -7,6 +7,7 @@
 
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
+import type { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
@@ -63,6 +64,61 @@ export type CreateShopListingUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/** 校验通过后传递给业务逻辑的上下文 */
+type ValidatedContext = { building: Building; normalizedItemKey: string };
+
+async function validate(
+  command: CreateShopListingCommand,
+  deps: CreateShopListingUseCaseDeps,
+): Promise<ValidatedContext | CreateShopListingFailureResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
+  if (!building) {
+    return {
+      ok: false,
+      error: "建筑不存在",
+      code: "NOT_FOUND",
+    };
+  }
+
+  // 校验地块存在且归属于卖家
+  const plot = await deps.plotRepository.findById(building.plotId);
+  if (!plot) {
+    return {
+      ok: false,
+      error: "地块不存在",
+      code: "NOT_FOUND",
+    };
+  }
+  if (plot.ownerUserId !== command.sellerUserId) {
+    return {
+      ok: false,
+      error: "只能操作自己地块上的商店",
+      code: "CONFLICT",
+    };
+  }
+  // 确认该建筑是商店类型，否则抛出 DomainError
+  building.ensureShop();
+
+  // 标准化物品键并检查卖家库存
+  const normalizedItemKey = normalizeItemKey(command.itemKey);
+  const quantity = await deps.inventoryRepository.getItemQuantity(command.sellerUserId, normalizedItemKey);
+  if (quantity < command.quantity) {
+    return {
+      ok: false,
+      error: "库存不足，无法上架",
+      code: "CONFLICT",
+    };
+  }
+
+  return { building, normalizedItemKey };
+}
+
+function isFailure(
+  result: ValidatedContext | CreateShopListingFailureResult,
+): result is CreateShopListingFailureResult {
+  return "ok" in result;
+}
+
 /**
  * 执行创建商店上架商品用例
  *
@@ -73,45 +129,10 @@ export async function executeCreateShopListingUseCase(
   command: CreateShopListingCommand,
   deps: CreateShopListingUseCaseDeps,
 ): Promise<CreateShopListingResult> {
-  const building = await deps.buildingRepository.findById(command.buildingId);
-  if (!building) {
-    return {
-      ok: false,
-      error: "建筑不存在",
-      code: "NOT_FOUND",
-    };
-  }
-
   try {
-    // 校验地块存在且归属于卖家
-    const plot = await deps.plotRepository.findById(building.plotId);
-    if (!plot) {
-      return {
-        ok: false,
-        error: "地块不存在",
-        code: "NOT_FOUND",
-      };
-    }
-    if (plot.ownerUserId !== command.sellerUserId) {
-      return {
-        ok: false,
-        error: "只能操作自己地块上的商店",
-        code: "CONFLICT",
-      };
-    }
-    // 确认该建筑是商店类型，否则抛出 DomainError
-    building.ensureShop();
-
-    // 标准化物品键并检查卖家库存
-    const normalizedItemKey = normalizeItemKey(command.itemKey);
-    const quantity = await deps.inventoryRepository.getItemQuantity(command.sellerUserId, normalizedItemKey);
-    if (quantity < command.quantity) {
-      return {
-        ok: false,
-        error: "库存不足，无法上架",
-        code: "CONFLICT",
-      };
-    }
+    const validated = await validate(command, deps);
+    if (isFailure(validated)) return validated;
+    const { building, normalizedItemKey } = validated;
 
     // 事务：从卖家库存扣除物品 + 创建上架记录
     const listing = await deps.transact(async () => {

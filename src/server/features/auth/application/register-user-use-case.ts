@@ -53,16 +53,22 @@ export type RegisterUserUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/** 校验通过后传递给业务逻辑的上下文 */
+type ValidatedContext = {
+  username: Username;
+  adam: User;
+};
+
 /**
- * 执行用户注册用例
- * @param command 注册命令（用户名 + 密码）
+ * 校验注册命令的合法性
+ * @param command 注册命令
  * @param deps   外部依赖
- * @returns 注册结果，成功时返回用户信息，失败时返回错误提示和错误码
+ * @returns 校验通过返回 ValidatedContext，失败返回 RegisterUserFailureResult
  */
-export async function executeRegisterUserUseCase(
+async function validate(
   command: RegisterUserCommand,
   deps: RegisterUserUseCaseDeps,
-): Promise<RegisterUserResult> {
+): Promise<ValidatedContext | RegisterUserFailureResult> {
   // 检查是否使用了系统保留用户名（如 Adam）
   if (command.username.trim().toLowerCase() === ADAM_PERSONA_CONFIG.username) {
     return {
@@ -85,6 +91,29 @@ export async function executeRegisterUserUseCase(
 
   // 获取系统账户（Adam），作为初始资金的来源
   const adam = await deps.systemAccountService.getSystemAccount();
+
+  return { username, adam };
+}
+
+function isFailure(
+  result: ValidatedContext | RegisterUserFailureResult,
+): result is RegisterUserFailureResult {
+  return "ok" in result;
+}
+
+/**
+ * 执行用户注册用例
+ * @param command 注册命令（用户名 + 密码）
+ * @param deps   外部依赖
+ * @returns 注册结果，成功时返回用户信息，失败时返回错误提示和错误码
+ */
+export async function executeRegisterUserUseCase(
+  command: RegisterUserCommand,
+  deps: RegisterUserUseCaseDeps,
+): Promise<RegisterUserResult> {
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
+  const { username, adam } = validated;
 
   // 新用户初始资金金额
   const initialMoney = 10000;

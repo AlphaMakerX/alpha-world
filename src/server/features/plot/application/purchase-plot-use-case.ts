@@ -7,7 +7,9 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
+import type { Plot } from "@/server/features/plot/domain/entities/plot";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { User } from "@/server/features/person/domain/entities/user";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 
@@ -50,11 +52,18 @@ export type PurchasePlotUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
-/** 执行购买地块用例：校验 -> 扣款/收款 -> 更新归属 -> 记录流水（事务内） */
-export async function executePurchasePlotUseCase(
+/** 校验通过后，后续逻辑需要的"已验证上下文" */
+type ValidatedContext = {
+  plot: Plot;
+  buyer: User;
+  adam: User;
+};
+
+/** 校验购买地块前置条件，通过则返回已验证上下文，失败则返回错误结果 */
+async function validate(
   command: PurchasePlotCommand,
   deps: PurchasePlotUseCaseDeps,
-): Promise<PurchasePlotResult> {
+): Promise<ValidatedContext | PurchasePlotFailureResult> {
   const plot = await deps.plotRepository.findById(command.plotId);
   if (!plot) {
     return { ok: false, error: "地块不存在", code: "NOT_FOUND" };
@@ -66,6 +75,23 @@ export async function executePurchasePlotUseCase(
   }
 
   const adam = await deps.systemAccountService.getSystemAccount();
+
+  return { plot, buyer, adam };
+}
+
+function isFailure(result: ValidatedContext | PurchasePlotFailureResult): result is PurchasePlotFailureResult {
+  return "ok" in result;
+}
+
+/** 执行购买地块用例：校验 -> 扣款/收款 -> 更新归属 -> 记录流水（事务内） */
+export async function executePurchasePlotUseCase(
+  command: PurchasePlotCommand,
+  deps: PurchasePlotUseCaseDeps,
+): Promise<PurchasePlotResult> {
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
+
+  const { plot, buyer, adam } = validated;
 
   // 执行领域操作：买家扣款、系统账户收款、地块变更归属
   try {

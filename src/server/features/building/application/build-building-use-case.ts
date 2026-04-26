@@ -6,6 +6,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
+import type { User } from "@/server/features/person/domain/entities/user";
 
 /** 建造成功的返回结果 */
 type BuildBuildingSuccessResult = {
@@ -52,6 +53,53 @@ export type BuildBuildingUseCaseDeps = {
   afterBuildHook?: (building: Building) => Promise<void>;
 };
 
+/** 校验通过后，后续逻辑需要的"已验证上下文" */
+type ValidatedContext = {
+  owner: User;
+  adam: User;
+  cost: number;
+};
+
+/** 校验建造前置条件，通过则返回已验证上下文，失败则返回错误结果 */
+async function validate(
+  command: BuildBuildingCommand,
+  deps: BuildBuildingUseCaseDeps,
+): Promise<ValidatedContext | BuildBuildingFailureResult> {
+  // 工厂类型校验：必须提供子类型
+  if (command.buildingType === "factory" && !command.factorySubtype) {
+    return { ok: false, error: "工厂类型建筑必须指定子类型", code: "CONFLICT" };
+  }
+
+  const plot = await deps.plotRepository.findById(command.plotId);
+  if (!plot) {
+    return { ok: false, error: "地块不存在", code: "NOT_FOUND" };
+  }
+  if (plot.ownerUserId !== command.ownerUserId) {
+    return { ok: false, error: "只能在自己的地块建造", code: "CONFLICT" };
+  }
+
+  const existingBuilding = await deps.buildingRepository.findByPlotId(command.plotId);
+  if (existingBuilding) {
+    return { ok: false, error: "该地块已有建筑", code: "CONFLICT" };
+  }
+
+  const owner = await deps.userRepository.findById(command.ownerUserId);
+  if (!owner) {
+    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
+  }
+
+  // 获取系统账户（用于接收建造费用）
+  const adam = await deps.systemAccountService.getSystemAccount();
+  // 根据建筑类型和子类型查询建造费用
+  const cost = Building.getCost(command.buildingType, command.factorySubtype);
+
+  return { owner, adam, cost };
+}
+
+function isFailure(result: ValidatedContext | BuildBuildingFailureResult): result is BuildBuildingFailureResult {
+  return "ok" in result;
+}
+
 /**
  * 执行建造建筑用例
  *
@@ -61,50 +109,10 @@ export async function executeBuildBuildingUseCase(
   command: BuildBuildingCommand,
   deps: BuildBuildingUseCaseDeps,
 ): Promise<BuildBuildingResult> {
-  // 工厂类型校验：必须提供子类型
-  if (command.buildingType === "factory" && !command.factorySubtype) {
-    return {
-      ok: false,
-      error: "工厂类型建筑必须指定子类型",
-      code: "CONFLICT",
-    };
-  }
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
 
-  const plot = await deps.plotRepository.findById(command.plotId);
-  if (!plot) {
-    return {
-      ok: false,
-      error: "地块不存在",
-      code: "NOT_FOUND",
-    };
-  }
-  if (plot.ownerUserId !== command.ownerUserId) {
-    return {
-      ok: false,
-      error: "只能在自己的地块建造",
-      code: "CONFLICT",
-    };
-  }
-
-  const existingBuilding = await deps.buildingRepository.findByPlotId(command.plotId);
-  if (existingBuilding) {
-    return {
-      ok: false,
-      error: "该地块已有建筑",
-      code: "CONFLICT",
-    };
-  }
-
-  // 根据建筑类型和子类型查询建造费用
-  const cost = Building.getCost(command.buildingType, command.factorySubtype);
-
-  const owner = await deps.userRepository.findById(command.ownerUserId);
-  if (!owner) {
-    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
-  }
-
-  // 获取系统账户（用于接收建造费用）
-  const adam = await deps.systemAccountService.getSystemAccount();
+  const { owner, adam, cost } = validated;
 
   try {
     // 在事务中完成扣款、建造和交易记录

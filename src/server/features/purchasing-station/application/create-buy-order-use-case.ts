@@ -8,8 +8,10 @@
 
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
+import type { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -64,6 +66,52 @@ export type CreateBuyOrderUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
+/** validate 返回的已校验上下文，包含业务逻辑所需的数据 */
+type ValidatedContext = {
+  building: Building;
+  buyer: User;
+  totalCost: number;
+  normalizedItemKey: string;
+};
+
+async function validate(
+  command: CreateBuyOrderCommand,
+  deps: CreateBuyOrderUseCaseDeps,
+): Promise<ValidatedContext | CreateBuyOrderFailureResult> {
+  const building = await deps.buildingRepository.findById(command.buildingId);
+  if (!building) {
+    return { ok: false, error: "建筑不存在", code: "NOT_FOUND" };
+  }
+
+  // 校验地块存在且归属于收购方
+  const plot = await deps.plotRepository.findById(building.plotId);
+  if (!plot) {
+    return { ok: false, error: "地块不存在", code: "NOT_FOUND" };
+  }
+  if (plot.ownerUserId !== command.buyerUserId) {
+    return { ok: false, error: "只能操作自己地块上的收购站", code: "CONFLICT" };
+  }
+  // 确认该建筑是收购站类型，否则抛出 DomainError
+  building.ensurePurchasingStation();
+
+  const buyer = await deps.userRepository.findById(command.buyerUserId);
+  if (!buyer) {
+    return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
+  }
+
+  // 计算总冻结金额并标准化物品键
+  const totalCost = command.unitPrice * command.quantity;
+  const normalizedItemKey = normalizeItemKey(command.itemKey);
+
+  return { building, buyer, totalCost, normalizedItemKey };
+}
+
+function isFailure(
+  result: ValidatedContext | CreateBuyOrderFailureResult,
+): result is CreateBuyOrderFailureResult {
+  return "ok" in result;
+}
+
 /**
  * 执行创建收购订单用例
  *
@@ -74,31 +122,11 @@ export async function executeCreateBuyOrderUseCase(
   command: CreateBuyOrderCommand,
   deps: CreateBuyOrderUseCaseDeps,
 ): Promise<CreateBuyOrderResult> {
-  const building = await deps.buildingRepository.findById(command.buildingId);
-  if (!building) {
-    return { ok: false, error: "建筑不存在", code: "NOT_FOUND" };
-  }
-
   try {
-    // 校验地块存在且归属于收购方
-    const plot = await deps.plotRepository.findById(building.plotId);
-    if (!plot) {
-      return { ok: false, error: "地块不存在", code: "NOT_FOUND" };
-    }
-    if (plot.ownerUserId !== command.buyerUserId) {
-      return { ok: false, error: "只能操作自己地块上的收购站", code: "CONFLICT" };
-    }
-    // 确认该建筑是收购站类型，否则抛出 DomainError
-    building.ensurePurchasingStation();
+    const validated = await validate(command, deps);
+    if (isFailure(validated)) return validated;
+    const { building, buyer, totalCost, normalizedItemKey } = validated;
 
-    const buyer = await deps.userRepository.findById(command.buyerUserId);
-    if (!buyer) {
-      return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
-    }
-
-    // 计算总冻结金额并标准化物品键
-    const totalCost = command.unitPrice * command.quantity;
-    const normalizedItemKey = normalizeItemKey(command.itemKey);
     // 事务：从收购方扣除总金额 + 创建收购订单
     const order = await deps.transact(async () => {
       buyer.spendMoney(totalCost);

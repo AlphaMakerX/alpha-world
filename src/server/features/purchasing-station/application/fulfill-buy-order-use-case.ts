@@ -8,8 +8,9 @@
 
 import { getItemName } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { BuyOrder, BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
+import type { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -57,16 +58,18 @@ export type FulfillBuyOrderUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
-/**
- * 执行履行收购订单用例
- *
- * 流程：校验订单存在且进行中 -> 禁止自卖 -> 校验出售数量 -> 校验卖家库存
- * -> 卖家收款 -> 事务中扣除/添加库存、更新订单状态、记录交易流水
- */
-export async function executeFulfillBuyOrderUseCase(
+/** validate 返回的已校验上下文，包含业务逻辑所需的数据 */
+type ValidatedContext = {
+  order: BuyOrder;
+  seller: User;
+  sellQuantity: number;
+  totalIncome: number;
+};
+
+async function validate(
   command: FulfillBuyOrderCommand,
   deps: FulfillBuyOrderUseCaseDeps,
-): Promise<FulfillBuyOrderResult> {
+): Promise<ValidatedContext | FulfillBuyOrderFailureResult> {
   const order = await deps.buyOrderRepository.findById(command.orderId);
   if (!order) {
     return { ok: false, error: "收购订单不存在", code: "NOT_FOUND" };
@@ -101,6 +104,29 @@ export async function executeFulfillBuyOrderUseCase(
   }
 
   const totalIncome = order.unitPrice * sellQuantity;
+
+  return { order, seller, sellQuantity, totalIncome };
+}
+
+function isFailure(
+  result: ValidatedContext | FulfillBuyOrderFailureResult,
+): result is FulfillBuyOrderFailureResult {
+  return "ok" in result;
+}
+
+/**
+ * 执行履行收购订单用例
+ *
+ * 流程：校验订单存在且进行中 -> 禁止自卖 -> 校验出售数量 -> 校验卖家库存
+ * -> 卖家收款 -> 事务中扣除/添加库存、更新订单状态、记录交易流水
+ */
+export async function executeFulfillBuyOrderUseCase(
+  command: FulfillBuyOrderCommand,
+  deps: FulfillBuyOrderUseCaseDeps,
+): Promise<FulfillBuyOrderResult> {
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
+  const { order, seller, sellQuantity, totalIncome } = validated;
 
   try {
     // 在领域模型层执行卖家收款（收购方的资金已在创建订单时预冻结）

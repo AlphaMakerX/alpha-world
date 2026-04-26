@@ -10,6 +10,8 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
 import { getRecipeById } from "@/server/features/recipe";
+import type { Recipe } from "@/server/features/recipe";
+import type { Factory } from "@/server/features/factory/domain/entities/factory";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
@@ -20,6 +22,7 @@ import type { TransactionLedgerRepository } from "@/server/features/person/domai
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
+import type { User } from "@/server/features/person/domain/entities/user";
 
 /** 开始生产的命令参数 */
 export type StartFactoryProductionCommand = {
@@ -69,16 +72,23 @@ export type StartFactoryProductionUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
-/**
- * 执行开始工厂生产用例
- *
- * 流程：校验建筑与配方 -> 检查无进行中任务 -> 按数量缩放材料与时长 ->
- *       校验材料充足 -> 事务内扣除材料、创建任务、记录流水
- */
-export async function executeStartFactoryProductionUseCase(
+/** 校验通过后的上下文，包含业务逻辑所需的已验证数据 */
+type ValidatedContext = {
+  factory: Factory;
+  recipe: Recipe;
+  scaledInputs: { itemKey: string; quantity: number }[];
+  scaledOutputs: { itemKey: string; quantity: number }[];
+  scaledDuration: number;
+  moneyCost: number;
+  ownerUser: User | null;
+  adam: User | null;
+};
+
+/** 校验开始生产的前置条件 */
+async function validate(
   command: StartFactoryProductionCommand,
   deps: StartFactoryProductionUseCaseDeps,
-): Promise<StartFactoryProductionResult> {
+): Promise<ValidatedContext | StartFactoryProductionFailureResult> {
   const factory = await deps.factoryRepository.findByBuildingId(command.buildingId);
   if (!factory) {
     return {
@@ -106,82 +116,106 @@ export async function executeStartFactoryProductionUseCase(
     };
   }
 
-  try {
-    const plot = await deps.plotRepository.findById(factory.plotId);
-    if (!plot) {
-      return {
-        ok: false,
-        error: "地块不存在",
-        code: "NOT_FOUND",
-      };
-    }
-    if (plot.ownerUserId !== command.ownerUserId) {
-      return {
-        ok: false,
-        error: "只能操作自己地块上的工厂",
-        code: "CONFLICT",
-      };
-    }
+  const plot = await deps.plotRepository.findById(factory.plotId);
+  if (!plot) {
+    return {
+      ok: false,
+      error: "地块不存在",
+      code: "NOT_FOUND",
+    };
+  }
+  if (plot.ownerUserId !== command.ownerUserId) {
+    return {
+      ok: false,
+      error: "只能操作自己地块上的工厂",
+      code: "CONFLICT",
+    };
+  }
 
-    // 校验配方是否已解锁
-    const isUnlocked = await deps.unlockedRecipeRepository.isUnlocked(factory.id, command.recipeId);
-    if (!isUnlocked) {
-      return {
-        ok: false,
-        error: "该工厂尚未解锁此配方",
-        code: "CONFLICT",
-      };
-    }
+  // 校验配方是否已解锁
+  const isUnlocked = await deps.unlockedRecipeRepository.isUnlocked(factory.id, command.recipeId);
+  if (!isUnlocked) {
+    return {
+      ok: false,
+      error: "该工厂尚未解锁此配方",
+      code: "CONFLICT",
+    };
+  }
 
-    // 按制造数量等比缩放输入材料、输出产物和生产时长
-    const qty = command.quantity;
-    const scaledInputs = recipe.inputs.map((item) => ({
-      itemKey: item.itemKey,
-      quantity: item.quantity * qty,
-    }));
-    const scaledOutputs = recipe.outputs.map((item) => ({
-      itemKey: item.itemKey,
-      quantity: item.quantity * qty,
-    }));
-    const scaledDuration = recipe.durationSeconds * qty;
+  // 按制造数量等比缩放输入材料、输出产物和生产时长
+  const qty = command.quantity;
+  const scaledInputs = recipe.inputs.map((item) => ({
+    itemKey: item.itemKey,
+    quantity: item.quantity * qty,
+  }));
+  const scaledOutputs = recipe.outputs.map((item) => ({
+    itemKey: item.itemKey,
+    quantity: item.quantity * qty,
+  }));
+  const scaledDuration = recipe.durationSeconds * qty;
 
-    // 从输入材料中提取金钱成本（itemKey 为 "money" 的条目）
-    const moneyCost = scaledInputs
-      .filter((inputItem) => inputItem.itemKey === "money")
-      .reduce((sum, inputItem) => sum + inputItem.quantity, 0);
-    const ownerUser = moneyCost > 0 ? await deps.userRepository.findById(command.ownerUserId) : null;
-    if (moneyCost > 0 && !ownerUser) {
-      return {
-        ok: false,
-        error: "用户不存在",
-        code: "NOT_FOUND",
-      };
-    }
+  // 从输入材料中提取金钱成本（itemKey 为 "money" 的条目）
+  const moneyCost = scaledInputs
+    .filter((inputItem) => inputItem.itemKey === "money")
+    .reduce((sum, inputItem) => sum + inputItem.quantity, 0);
+  const ownerUser = moneyCost > 0 ? await deps.userRepository.findById(command.ownerUserId) : null;
+  if (moneyCost > 0 && !ownerUser) {
+    return {
+      ok: false,
+      error: "用户不存在",
+      code: "NOT_FOUND",
+    };
+  }
 
-    const adam = moneyCost > 0 ? await deps.systemAccountService.getSystemAccount() : null;
+  const adam = moneyCost > 0 ? await deps.systemAccountService.getSystemAccount() : null;
 
-    // 逐项检查材料是否充足（金钱检查余额，物品检查库存）
-    for (const inputItem of scaledInputs) {
-      if (inputItem.itemKey === "money") {
-        if ((ownerUser?.money ?? 0) < inputItem.quantity) {
-          return {
-            ok: false,
-            error: "余额不足，无法开始生产",
-            code: "CONFLICT",
-          };
-        }
-        continue;
-      }
-      const quantity = await deps.inventoryRepository.getItemQuantity(command.ownerUserId, inputItem.itemKey);
-      if (quantity < inputItem.quantity) {
+  // 逐项检查材料是否充足（金钱检查余额，物品检查库存）
+  for (const inputItem of scaledInputs) {
+    if (inputItem.itemKey === "money") {
+      if ((ownerUser?.money ?? 0) < inputItem.quantity) {
         return {
           ok: false,
-          error: `材料不足: ${inputItem.itemKey}`,
+          error: "余额不足，无法开始生产",
           code: "CONFLICT",
         };
       }
+      continue;
     }
+    const quantity = await deps.inventoryRepository.getItemQuantity(command.ownerUserId, inputItem.itemKey);
+    if (quantity < inputItem.quantity) {
+      return {
+        ok: false,
+        error: `材料不足: ${inputItem.itemKey}`,
+        code: "CONFLICT",
+      };
+    }
+  }
 
+  return { factory, recipe, scaledInputs, scaledOutputs, scaledDuration, moneyCost, ownerUser, adam };
+}
+
+/** 判断校验结果是否为失败 */
+function isFailure(
+  result: ValidatedContext | StartFactoryProductionFailureResult,
+): result is StartFactoryProductionFailureResult {
+  return "ok" in result;
+}
+
+/**
+ * 执行开始工厂生产用例
+ *
+ * 流程：校验建筑与配方 -> 检查无进行中任务 -> 按数量缩放材料与时长 ->
+ *       校验材料充足 -> 事务内扣除材料、创建任务、记录流水
+ */
+export async function executeStartFactoryProductionUseCase(
+  command: StartFactoryProductionCommand,
+  deps: StartFactoryProductionUseCaseDeps,
+): Promise<StartFactoryProductionResult> {
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
+  const { factory, recipe, scaledInputs, scaledOutputs, scaledDuration, moneyCost, ownerUser, adam } = validated;
+
+  try {
     // 在事务中完成：扣除库存物品、扣款、创建生产任务、记录交易流水
     const savedJob = await deps.transact(async () => {
       // 扣除非金钱类的输入材料
@@ -200,6 +234,7 @@ export async function executeStartFactoryProductionUseCase(
         await deps.userRepository.save(adam);
       }
 
+      const qty = command.quantity;
       const job = FactoryProductionJob.start({
         id: 0,
         buildingId: factory.id,

@@ -7,7 +7,8 @@
 
 import { getItemName } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
+import type { User } from "@/server/features/person/domain/entities/user";
+import type { ShopListing, ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
@@ -58,16 +59,19 @@ export type PurchaseShopListingUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
-/**
- * 执行购买商店上架商品用例
- *
- * 流程：校验商品存在且在售 -> 禁止自买 -> 校验购买数量 -> 查找买卖双方用户
- * -> 资金扣款/收款 -> 事务中持久化所有变更并记录交易流水
- */
-export async function executePurchaseShopListingUseCase(
+/** 校验通过后传递给业务逻辑的上下文 */
+type ValidatedContext = {
+  listing: ShopListing;
+  buyer: User;
+  seller: User;
+  purchaseQuantity: number;
+  totalCost: number;
+};
+
+async function validate(
   command: PurchaseShopListingCommand,
   deps: PurchaseShopListingUseCaseDeps,
-): Promise<PurchaseShopListingResult> {
+): Promise<ValidatedContext | PurchaseShopListingFailureResult> {
   const listing = await deps.shopListingRepository.findById(command.listingId);
   if (!listing) {
     return { ok: false, error: "商品不存在", code: "NOT_FOUND" };
@@ -98,6 +102,29 @@ export async function executePurchaseShopListingUseCase(
   }
 
   const totalCost = listing.unitPrice * purchaseQuantity;
+
+  return { listing, buyer, seller, purchaseQuantity, totalCost };
+}
+
+function isFailure(
+  result: ValidatedContext | PurchaseShopListingFailureResult,
+): result is PurchaseShopListingFailureResult {
+  return "ok" in result;
+}
+
+/**
+ * 执行购买商店上架商品用例
+ *
+ * 流程：校验商品存在且在售 -> 禁止自买 -> 校验购买数量 -> 查找买卖双方用户
+ * -> 资金扣款/收款 -> 事务中持久化所有变更并记录交易流水
+ */
+export async function executePurchaseShopListingUseCase(
+  command: PurchaseShopListingCommand,
+  deps: PurchaseShopListingUseCaseDeps,
+): Promise<PurchaseShopListingResult> {
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
+  const { listing, buyer, seller, purchaseQuantity, totalCost } = validated;
 
   try {
     // 在领域模型层执行资金变动（余额不足时会抛出 DomainError）

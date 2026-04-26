@@ -5,8 +5,9 @@
  * 并将预冻结的资金退还给收购方。整个操作在事务中执行以保证数据一致性。
  */
 
-import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
+import type { BuyOrderRepository, BuyOrder } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { User } from "@/server/features/person/domain/entities/user";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 取消收购订单成功的返回结果 */
@@ -41,16 +42,17 @@ export type CancelBuyOrderUseCaseDeps = {
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
-/**
- * 执行取消收购订单用例
- *
- * 流程：校验订单存在 -> 校验订单状态为进行中 -> 校验操作者为收购方本人
- * -> 计算退款金额 -> 事务中退款并标记订单为已取消
- */
-export async function executeCancelBuyOrderUseCase(
+/** 校验通过后，后续逻辑需要的"已验证上下文" */
+type ValidatedContext = {
+  order: BuyOrder;
+  buyer: User;
+};
+
+/** 校验取消收购订单前置条件，通过则返回已验证上下文，失败则返回错误结果 */
+async function validate(
   command: CancelBuyOrderCommand,
   deps: CancelBuyOrderUseCaseDeps,
-): Promise<CancelBuyOrderResult> {
+): Promise<ValidatedContext | CancelBuyOrderFailureResult> {
   const order = await deps.buyOrderRepository.findById(command.orderId);
   if (!order) {
     return { ok: false, error: "收购订单不存在", code: "NOT_FOUND" };
@@ -69,6 +71,28 @@ export async function executeCancelBuyOrderUseCase(
   if (!buyer) {
     return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
+
+  return { order, buyer };
+}
+
+function isFailure(result: ValidatedContext | CancelBuyOrderFailureResult): result is CancelBuyOrderFailureResult {
+  return "ok" in result;
+}
+
+/**
+ * 执行取消收购订单用例
+ *
+ * 流程：校验订单存在 -> 校验订单状态为进行中 -> 校验操作者为收购方本人
+ * -> 计算退款金额 -> 事务中退款并标记订单为已取消
+ */
+export async function executeCancelBuyOrderUseCase(
+  command: CancelBuyOrderCommand,
+  deps: CancelBuyOrderUseCaseDeps,
+): Promise<CancelBuyOrderResult> {
+  const validated = await validate(command, deps);
+  if (isFailure(validated)) return validated;
+
+  const { order, buyer } = validated;
 
   // 计算应退还金额 = 单价 * 剩余需求数量
   const refundAmount = order.unitPrice * order.quantity;
