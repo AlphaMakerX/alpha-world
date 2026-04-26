@@ -12,7 +12,7 @@ import type { BuyOrder, BuyOrderRepository } from "@/server/features/purchasing-
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 履行收购订单成功的返回结果 */
@@ -53,7 +53,7 @@ export type FulfillBuyOrderUseCaseDeps = {
   buyOrderRepository: BuyOrderRepository;
   inventoryRepository: InventoryRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   /** 事务执行器，确保库存转移、资金转移和流水记录的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -128,48 +128,44 @@ export async function executeFulfillBuyOrderUseCase(
   if (isFailure(validated)) return validated;
   const { order, seller, sellQuantity, totalIncome } = validated;
 
+  // 事务：扣除卖家库存 + 添加收购方库存 + 释放冻结资金给卖家 + 更新订单状态
   try {
-    // 在领域模型层执行卖家收款（收购方的资金已在创建订单时预冻结）
-    seller.receiveMoney(totalIncome);
+    await deps.transact(async () => {
+      await deps.inventoryRepository.consumeItem(
+        command.sellerUserId,
+        order.itemKey,
+        sellQuantity,
+      );
+      await deps.inventoryRepository.addItem(
+        order.buyerUserId,
+        order.itemKey,
+        sellQuantity,
+      );
+
+      // 释放收购方预冻结的资金给卖家
+      await deps.financeService.release({
+        recipient: seller,
+        frozenByUserId: order.buyerUserId,
+        amount: totalIncome,
+        type: "buy_order_fulfilled",
+        referenceId: String(order.id),
+        description: `收购订单成交: ${getItemName(order.itemKey)} x${sellQuantity}`,
+      });
+
+      // 若全部成交则标记为 fulfilled，否则仅减少剩余需求数量
+      const remainingQuantity = order.quantity - sellQuantity;
+      if (remainingQuantity === 0) {
+        await deps.buyOrderRepository.updateStatus(order.id, "fulfilled");
+      } else {
+        await deps.buyOrderRepository.updateQuantity(order.id, remainingQuantity);
+      }
+    });
   } catch (error) {
     if (error instanceof DomainError) {
       return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
-
-  // 事务：扣除卖家库存 + 添加收购方库存 + 保存卖家余额 + 更新订单状态 + 记录流水
-  await deps.transact(async () => {
-    await deps.inventoryRepository.consumeItem(
-      command.sellerUserId,
-      order.itemKey,
-      sellQuantity,
-    );
-    await deps.inventoryRepository.addItem(
-      order.buyerUserId,
-      order.itemKey,
-      sellQuantity,
-    );
-    await deps.userRepository.save(seller);
-
-    // 若全部成交则标记为 fulfilled，否则仅减少剩余需求数量
-    const remainingQuantity = order.quantity - sellQuantity;
-    if (remainingQuantity === 0) {
-      await deps.buyOrderRepository.updateStatus(order.id, "fulfilled");
-    } else {
-      await deps.buyOrderRepository.updateQuantity(order.id, remainingQuantity);
-    }
-
-    // 记录交易流水
-    await deps.transactionLedgerRepository.record({
-      fromUserId: order.buyerUserId,
-      toUserId: command.sellerUserId,
-      amount: totalIncome,
-      type: "buy_order_fulfilled",
-      referenceId: String(order.id),
-      description: `收购订单成交: ${getItemName(order.itemKey)} x${sellQuantity}`,
-    });
-  });
 
   return {
     ok: true,

@@ -5,8 +5,8 @@ import type { FactoryRepository } from "@/server/features/factory/domain/reposit
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
 
@@ -29,7 +29,7 @@ export type UpgradeFactoryUseCaseDeps = {
   buildingRepository: BuildingRepository;
   plotRepository: PlotRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -98,15 +98,11 @@ export async function executeUpgradeFactoryUseCase(
   const { factory, owner, adam, cost } = validated;
 
   await deps.transact(async () => {
-    owner.spendMoney(cost);
-    adam.receiveMoney(cost);
     factory.upgrade();
-    await deps.userRepository.save(owner);
-    await deps.userRepository.save(adam);
     await deps.factoryRepository.save(factory);
-    await deps.transactionLedgerRepository.record({
-      fromUserId: command.ownerUserId,
-      toUserId: adam.id,
+    await deps.financeService.transfer({
+      payer: owner,
+      receiver: adam,
       amount: cost,
       type: "factory_upgrade",
       referenceId: String(factory.id),

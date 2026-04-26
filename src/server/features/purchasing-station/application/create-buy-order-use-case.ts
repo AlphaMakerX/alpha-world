@@ -13,6 +13,7 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
@@ -61,6 +62,7 @@ export type CreateBuyOrderUseCaseDeps = {
   buildingRepository: BuildingRepository;
   buyOrderRepository: BuyOrderRepository;
   userRepository: UserRepository;
+  financeService: FinanceService;
   plotRepository: PlotRepository;
   /** 事务执行器，确保扣款和创建订单的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
@@ -127,10 +129,9 @@ export async function executeCreateBuyOrderUseCase(
     if (isFailure(validated)) return validated;
     const { building, buyer, totalCost, normalizedItemKey } = validated;
 
-    // 事务：从收购方扣除总金额 + 创建收购订单
+    // 事务：从收购方冻结总金额 + 创建收购订单
     const order = await deps.transact(async () => {
-      buyer.spendMoney(totalCost);
-      await deps.userRepository.save(buyer);
+      await deps.financeService.freeze({ payer: buyer, amount: totalCost });
 
       return deps.buyOrderRepository.create({
         buildingId: building.id,

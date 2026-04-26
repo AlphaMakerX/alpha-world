@@ -8,9 +8,9 @@
 import { randomUUID } from "crypto";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import {
   ADAM_PERSONA_CONFIG,
@@ -21,7 +21,7 @@ import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/us
 /** 步骤所需的外部依赖 */
 type ExecuteBot1ManagerStepDeps = {
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   passwordHasher: PasswordHasher;
   systemAccountService: SystemAccountService;
   systemInitializationRepository: {
@@ -115,20 +115,14 @@ export async function executeBot1ManagerStep(input: {
 
   // 从 Adam（系统账户）向 bot 转账初始运营资金
   const adamSystemAccount = await input.deps.systemAccountService.getSystemAccount();
-  const latestBot = bot;
 
-  adamSystemAccount.spendMoney(BOT1_MANAGER_PERSONA_CONFIG.transferAmount);
-  latestBot.receiveMoney(BOT1_MANAGER_PERSONA_CONFIG.transferAmount);
-  await input.deps.userRepository.save(adamSystemAccount);
-  await input.deps.userRepository.save(latestBot);
-
-  await input.deps.transactionLedgerRepository.record({
-    fromUserId: adamSystemAccount.id,
-    toUserId: latestBot.id,
+  await input.deps.financeService.transfer({
+    payer: adamSystemAccount,
+    receiver: bot,
     amount: BOT1_MANAGER_PERSONA_CONFIG.transferAmount,
     type: "system_init_transfer",
     referenceId: BOT1_MANAGER_PERSONA_CONFIG.transferReferenceId,
-    description: `系统初始化预算拨付 -> ${latestBot.username.getValue()}`,
+    description: `系统初始化预算拨付 -> ${bot.username.getValue()}`,
   });
 
   return { transferSkipped };

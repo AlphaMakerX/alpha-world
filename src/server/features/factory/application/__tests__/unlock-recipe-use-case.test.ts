@@ -7,7 +7,7 @@ import {
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
@@ -88,9 +88,12 @@ function createMockDeps(
       findByUsername: vi.fn(),
       save: vi.fn(),
     } satisfies UserRepository,
-    transactionLedgerRepository: {
-      record: vi.fn(),
-    } satisfies TransactionLedgerRepository,
+    financeService: {
+      transfer: vi.fn(),
+      freeze: vi.fn(),
+      refund: vi.fn(),
+      release: vi.fn(),
+    } satisfies FinanceService,
     unlockedRecipeRepository: {
       save: vi.fn(),
       saveBatch: vi.fn(),
@@ -117,7 +120,7 @@ describe("解锁配方用例", () => {
     const result = await executeUnlockRecipeUseCase(baseCommand, deps);
     expect(result.ok).toBe(true);
     expect(deps.unlockedRecipeRepository.save).toHaveBeenCalledWith(100, "buy_iron_ore");
-    expect(deps.transactionLedgerRepository.record).toHaveBeenCalledWith(
+    expect(deps.financeService.transfer).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 50 }),
     );
   });
@@ -172,7 +175,7 @@ describe("解锁配方用例", () => {
     });
     const result = await executeUnlockRecipeUseCase(baseCommand, deps);
     expect(result.ok).toBe(true);
-    expect(deps.transactionLedgerRepository.record).not.toHaveBeenCalled();
+    expect(deps.financeService.transfer).not.toHaveBeenCalled();
   });
 
   it("通用配方：mine 工厂解锁 buy_water → 成功", async () => {

@@ -7,8 +7,8 @@
 
 import { executePurchasePlotUseCase } from "@/server/features/plot/application/purchase-plot-use-case";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import { BOT1_MANAGER_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
@@ -21,7 +21,7 @@ const BOT1_MANAGER_TARGET_PLOT_COUNT = 8;
 type ExecuteBot1ManagerPlotPurchaseStepDeps = {
   userRepository: UserRepository;
   plotRepository: PlotRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -92,7 +92,7 @@ export async function executeBot1ManagerPlotPurchaseStep(input: {
       {
         plotRepository: input.deps.plotRepository,
         userRepository: input.deps.userRepository,
-        transactionLedgerRepository: input.deps.transactionLedgerRepository,
+        financeService: input.deps.financeService,
         systemAccountService: input.deps.systemAccountService,
         transact: input.deps.transact,
       },

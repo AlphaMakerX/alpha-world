@@ -30,7 +30,8 @@ import {
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { inventoryRepository } from "@/server/features/inventory/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
+import { userRepository } from "@/server/features/person/infrastructure";
+import { financeService } from "@/server/features/finance";
 import { shopListingRepository, shopTransactionQueryRepository } from "@/server/features/shop/infrastructure";
 import { transact } from "@/server/lib/db";
 
@@ -118,7 +119,7 @@ export async function executePurchaseShopListingUseCase(input: unknown): Promise
     shopListingRepository,
     inventoryRepository,
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     transact,
   });
 }

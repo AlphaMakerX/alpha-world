@@ -5,7 +5,7 @@ import {
   type RegisterUserUseCaseDeps,
 } from "../register-user-use-case";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
@@ -25,9 +25,12 @@ function createMockDeps(
       findByUsername: vi.fn().mockResolvedValue(null),
       save: vi.fn(),
     } satisfies UserRepository,
-    transactionLedgerRepository: {
-      record: vi.fn(),
-    } satisfies TransactionLedgerRepository,
+    financeService: {
+      transfer: vi.fn(),
+      freeze: vi.fn(),
+      refund: vi.fn(),
+      release: vi.fn(),
+    } satisfies FinanceService,
     systemAccountService: {
       getSystemAccount: vi.fn().mockResolvedValue(createAdamUser()),
     },
@@ -170,10 +173,9 @@ describe("executeRegisterUserUseCase", () => {
 
   // -------- 副作用验证：资金转移 --------
 
-  it("注册成功后，Adam 被扣除 10000 赠金", async () => {
+  it("注册成功后，financeService.transfer 被调用转账 10000 赠金", async () => {
     // 新用户注册时，系统从 Adam 账户转出 10000 作为初始资金
     const adam = createAdamUser();
-    const originalMoney = adam.money;
     const deps = createMockDeps({
       systemAccountService: {
         getSystemAccount: vi.fn().mockResolvedValue(adam),
@@ -182,14 +184,20 @@ describe("executeRegisterUserUseCase", () => {
 
     await executeRegisterUserUseCase(validCommand, deps);
 
-    // Assert: Adam 的余额减少了 10000
-    expect(adam.money).toBe(originalMoney - 10000);
+    // Assert: financeService.transfer 被调用，金额为 10000
+    expect(deps.financeService.transfer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payer: adam,
+        amount: 10000,
+        type: "registration_grant",
+      }),
+    );
   });
 
   // -------- 副作用验证：持久化 --------
 
-  it("注册成功后，save 被调用两次（Adam + 新用户）", async () => {
-    // 需要持久化两个实体：扣款后的 Adam 和新创建的用户
+  it("注册成功后，save 被调用一次（新用户），支付由 financeService 处理", async () => {
+    // 新用户通过 userRepository.save 持久化，Adam 的扣款由 financeService.transfer 处理
     const adam = createAdamUser();
     const deps = createMockDeps({
       systemAccountService: {
@@ -199,14 +207,12 @@ describe("executeRegisterUserUseCase", () => {
 
     await executeRegisterUserUseCase(validCommand, deps);
 
-    expect(deps.userRepository.save).toHaveBeenCalledTimes(2);
-    // 第一次 save 的是 Adam（扣款后）
-    expect(deps.userRepository.save).toHaveBeenCalledWith(adam);
+    expect(deps.userRepository.save).toHaveBeenCalledTimes(1);
   });
 
   // -------- 副作用验证：交易流水 --------
 
-  it("注册成功后，记录了正确的交易流水", async () => {
+  it("注册成功后，financeService.transfer 包含正确的转账信息", async () => {
     const adam = createAdamUser();
     const deps = createMockDeps({
       systemAccountService: {
@@ -216,19 +222,21 @@ describe("executeRegisterUserUseCase", () => {
 
     const result = await executeRegisterUserUseCase(validCommand, deps);
 
-    // Assert: 交易记录包含正确的转账方、金额和类型
-    expect(deps.transactionLedgerRepository.record).toHaveBeenCalledWith(
+    // Assert: transfer 包含正确的 payer、金额和类型
+    expect(deps.financeService.transfer).toHaveBeenCalledWith(
       expect.objectContaining({
-        fromUserId: ADAM_PERSONA_CONFIG.userId,
+        payer: adam,
         amount: 10000,
         type: "registration_grant",
       }),
     );
 
-    // Assert: 交易记录的收款方是新注册的用户
+    // Assert: transfer 的 receiver 是新注册的用户
     if (result.ok) {
-      expect(deps.transactionLedgerRepository.record).toHaveBeenCalledWith(
-        expect.objectContaining({ toUserId: result.user.id }),
+      expect(deps.financeService.transfer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          receiver: expect.objectContaining({ id: result.user.id }),
+        }),
       );
     }
   });

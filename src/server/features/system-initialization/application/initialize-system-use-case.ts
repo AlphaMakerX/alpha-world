@@ -15,9 +15,9 @@ import { executeBot1ManagerBuyOrdersStep } from "./execute-bot1-manager-buy-orde
 import { executePlotStep } from "./execute-plot-step";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import {
   ADAM_PERSONA_CONFIG,
@@ -75,7 +75,7 @@ export type InitializeSystemResult = InitializeSystemSuccessResult | InitializeS
 export type InitializeSystemUseCaseDeps = {
   userRepository: UserRepository;
   buildingRepository: BuildingRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   passwordHasher: PasswordHasher;
   systemAccountService: SystemAccountService;
   plotRepository: PlotRepository;

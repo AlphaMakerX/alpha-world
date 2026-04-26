@@ -8,8 +8,8 @@
 import { executeBuildBuildingUseCase } from "@/server/features/building/application/build-building-use-case";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 import { BOT1_MANAGER_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import { Username } from "@/server/features/person/domain/value-objects/username";
@@ -20,7 +20,7 @@ type ExecuteBot1ManagerPurchasingStationBuildStepDeps = {
   userRepository: UserRepository;
   buildingRepository: BuildingRepository;
   plotRepository: PlotRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -104,7 +104,7 @@ export async function executeBot1ManagerPurchasingStationBuildStep(input: {
       buildingRepository: input.deps.buildingRepository,
       plotRepository: input.deps.plotRepository,
       userRepository: input.deps.userRepository,
-      transactionLedgerRepository: input.deps.transactionLedgerRepository,
+      financeService: input.deps.financeService,
       systemAccountService: input.deps.systemAccountService,
       transact: input.deps.transact,
     },

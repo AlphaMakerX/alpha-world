@@ -18,9 +18,9 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
 
@@ -66,7 +66,7 @@ export type StartFactoryProductionUseCaseDeps = {
   inventoryRepository: InventoryRepository;
   plotRepository: PlotRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   unlockedRecipeRepository: UnlockedRecipeRepository;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
@@ -226,14 +226,6 @@ export async function executeStartFactoryProductionUseCase(
         await deps.inventoryRepository.consumeItem(command.ownerUserId, inputItem.itemKey, inputItem.quantity);
       }
 
-      // 金钱类成本：从用户扣款并转入系统账户
-      if (ownerUser && adam && moneyCost > 0) {
-        ownerUser.spendMoney(moneyCost);
-        adam.receiveMoney(moneyCost);
-        await deps.userRepository.save(ownerUser);
-        await deps.userRepository.save(adam);
-      }
-
       const qty = command.quantity;
       const job = FactoryProductionJob.start({
         id: 0,
@@ -246,10 +238,11 @@ export async function executeStartFactoryProductionUseCase(
       });
       const savedJob = await deps.factoryProductionJobRepository.save(job);
 
-      if (moneyCost > 0) {
-        await deps.transactionLedgerRepository.record({
-          fromUserId: command.ownerUserId,
-          toUserId: adam!.id,
+      // 金钱类成本：从用户扣款并转入系统账户
+      if (ownerUser && adam) {
+        await deps.financeService.transfer({
+          payer: ownerUser,
+          receiver: adam,
           amount: moneyCost,
           type: "factory_production",
           referenceId: String(savedJob.id),

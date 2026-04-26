@@ -17,7 +17,8 @@ import {
   type RegisterUserResult,
 } from "@/server/features/auth/application/register-user-use-case";
 import { passwordHasher } from "@/server/features/auth/infrastructure";
-import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { financeService } from "@/server/features/finance";
 import { transact } from "@/server/lib/db";
 
 /** 登录输入校验 Schema */
@@ -60,7 +61,7 @@ export async function executeRegisterUserUseCase(input: unknown): Promise<Regist
 
   return executeRegisterUserUseCaseImpl(parsed.data, {
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     systemAccountService,
     passwordHasher,
     transact,

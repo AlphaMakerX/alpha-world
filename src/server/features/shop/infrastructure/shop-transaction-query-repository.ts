@@ -9,7 +9,8 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/server/lib/db";
 import type { ShopTransactionQueryRepository, ShopTransactionRecord } from "@/server/features/shop/domain/repositories/shop-transaction-query-repository";
 import { shopListings } from "@/server/features/shop/infrastructure/schema";
-import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
+import { users } from "@/server/features/person/infrastructure/schema";
+import { moneyTransactions } from "@/server/features/finance/infrastructure/schema";
 
 /** ShopTransactionQueryRepository 的 Drizzle ORM 实现 */
 class DrizzleShopTransactionQueryRepository

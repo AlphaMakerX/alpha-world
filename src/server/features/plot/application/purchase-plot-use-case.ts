@@ -10,7 +10,7 @@ import type { PlotRepository } from "@/server/features/plot/domain/repositories/
 import type { Plot } from "@/server/features/plot/domain/entities/plot";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 
 /** 购买地块命令参数 */
@@ -47,7 +47,7 @@ export type PurchasePlotResult = PurchasePlotSuccessResult | PurchasePlotFailure
 export type PurchasePlotUseCaseDeps = {
   plotRepository: PlotRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -93,10 +93,8 @@ export async function executePurchasePlotUseCase(
 
   const { plot, buyer, adam } = validated;
 
-  // 执行领域操作：买家扣款、系统账户收款、地块变更归属
+  // 执行领域操作：地块变更归属
   try {
-    buyer.spendMoney(plot.price);
-    adam.receiveMoney(plot.price);
     plot.purchaseBy(command.buyerUserId);
   } catch (error) {
     if (error instanceof DomainError) {
@@ -107,12 +105,10 @@ export async function executePurchasePlotUseCase(
 
   // 在事务中持久化所有变更
   await deps.transact(async () => {
-    await deps.userRepository.save(buyer);
-    await deps.userRepository.save(adam);
     await deps.plotRepository.save(plot);
-    await deps.transactionLedgerRepository.record({
-      fromUserId: command.buyerUserId,
-      toUserId: adam.id,
+    await deps.financeService.transfer({
+      payer: buyer,
+      receiver: adam,
       amount: plot.price,
       type: "plot_purchase",
       referenceId: String(plot.id),

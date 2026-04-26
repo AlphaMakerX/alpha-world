@@ -4,9 +4,9 @@ import type { Factory } from "@/server/features/factory/domain/entities/factory"
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
 
@@ -26,7 +26,7 @@ export type UnlockRecipeUseCaseDeps = {
   factoryRepository: FactoryRepository;
   plotRepository: PlotRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   unlockedRecipeRepository: UnlockedRecipeRepository;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
@@ -120,14 +120,10 @@ export async function executeUnlockRecipeUseCase(
 
   // 事务：扣款 + 写入解锁记录 + 记录流水
   await deps.transact(async () => {
-    owner.spendMoney(recipe.unlockCost);
-    adam.receiveMoney(recipe.unlockCost);
-    await deps.userRepository.save(owner);
-    await deps.userRepository.save(adam);
     await deps.unlockedRecipeRepository.save(command.buildingId, command.recipeId);
-    await deps.transactionLedgerRepository.record({
-      fromUserId: command.ownerUserId,
-      toUserId: adam.id,
+    await deps.financeService.transfer({
+      payer: owner,
+      receiver: adam,
       amount: recipe.unlockCost,
       type: "recipe_unlock",
       referenceId: `${command.buildingId}:${command.recipeId}`,

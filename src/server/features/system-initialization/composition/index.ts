@@ -11,7 +11,8 @@ import {
   type InitializeSystemResult,
 } from "@/server/features/system-initialization/application/initialize-system-use-case";
 import { passwordHasher } from "@/server/features/auth/infrastructure";
-import { systemAccountService, transactionLedgerRepository, userRepository } from "@/server/features/person/infrastructure";
+import { systemAccountService, userRepository } from "@/server/features/person/infrastructure";
+import { financeService } from "@/server/features/finance";
 import { systemInitializationRepository } from "@/server/features/system-initialization/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
 import { buildingRepository } from "@/server/features/building/infrastructure";
@@ -51,7 +52,7 @@ export async function executeInitializeSystemUseCase(input?: unknown): Promise<I
   return executeInitializeSystemUseCaseImpl(parsed.data, {
     userRepository,
     buildingRepository,
-    transactionLedgerRepository,
+    financeService,
     passwordHasher,
     systemAccountService,
     plotRepository,

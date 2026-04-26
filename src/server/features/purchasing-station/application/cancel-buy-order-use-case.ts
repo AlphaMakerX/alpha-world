@@ -8,6 +8,7 @@
 import type { BuyOrderRepository, BuyOrder } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 取消收购订单成功的返回结果 */
@@ -38,6 +39,7 @@ export type CancelBuyOrderCommand = {
 export type CancelBuyOrderUseCaseDeps = {
   buyOrderRepository: BuyOrderRepository;
   userRepository: UserRepository;
+  financeService: FinanceService;
   /** 事务执行器，确保退款和状态更新的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -96,10 +98,9 @@ export async function executeCancelBuyOrderUseCase(
 
   // 计算应退还金额 = 单价 * 剩余需求数量
   const refundAmount = order.unitPrice * order.quantity;
-  // 事务：退还资金 + 将订单标记为已取消
+  // 事务：退还冻结资金 + 将订单标记为已取消
   await deps.transact(async () => {
-    buyer.receiveMoney(refundAmount);
-    await deps.userRepository.save(buyer);
+    await deps.financeService.refund({ recipient: buyer, amount: refundAmount });
     await deps.buyOrderRepository.updateStatus(order.id, "cancelled");
   });
 

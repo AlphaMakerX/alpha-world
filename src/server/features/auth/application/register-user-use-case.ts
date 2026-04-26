@@ -12,8 +12,8 @@ import { randomUUID } from "crypto";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -46,7 +46,7 @@ export type RegisterUserResult = RegisterUserSuccessResult | RegisterUserFailure
 /** 注册用例所需的外部依赖 */
 export type RegisterUserUseCaseDeps = {
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   systemAccountService: SystemAccountService;
   passwordHasher: PasswordHasher;
   /** 事务执行器，确保多步数据库操作的原子性 */
@@ -125,14 +125,12 @@ export async function executeRegisterUserUseCase(
     initialMoney,
   });
 
-  // 在事务中完成：系统账户扣款 → 保存用户 → 记录转账流水
+  // 在事务中完成：保存用户 → 系统账户转账赠金
   await deps.transact(async () => {
-    adam.spendMoney(initialMoney);
-    await deps.userRepository.save(adam);
     await deps.userRepository.save(user);
-    await deps.transactionLedgerRepository.record({
-      fromUserId: adam.id,
-      toUserId: user.id,
+    await deps.financeService.transfer({
+      payer: adam,
+      receiver: user,
       amount: initialMoney,
       type: "registration_grant",
       description: `注册赠金 → ${user.username.getValue()}`,

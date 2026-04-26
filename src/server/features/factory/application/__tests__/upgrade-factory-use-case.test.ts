@@ -8,7 +8,7 @@ import type { FactoryRepository } from "@/server/features/factory/domain/reposit
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
 import { User } from "@/server/features/person/domain/entities/user";
@@ -95,9 +95,12 @@ function createMockDeps(
       findByUsername: vi.fn(),
       save: vi.fn(),
     } satisfies UserRepository,
-    transactionLedgerRepository: {
-      record: vi.fn(),
-    } satisfies TransactionLedgerRepository,
+    financeService: {
+      transfer: vi.fn(),
+      freeze: vi.fn(),
+      refund: vi.fn(),
+      release: vi.fn(),
+    } satisfies FinanceService,
     systemAccountService: {
       getSystemAccount: vi.fn().mockResolvedValue(createAdamUser()),
     },
@@ -119,7 +122,7 @@ describe("升级工厂用例", () => {
     if (result.ok) {
       expect(result.building.level).toBe(2);
     }
-    expect(deps.transactionLedgerRepository.record).toHaveBeenCalledWith(
+    expect(deps.financeService.transfer).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 1000 }),
     );
   });
@@ -136,7 +139,7 @@ describe("升级工厂用例", () => {
     if (result.ok) {
       expect(result.building.level).toBe(3);
     }
-    expect(deps.transactionLedgerRepository.record).toHaveBeenCalledWith(
+    expect(deps.financeService.transfer).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 3000 }),
     );
   });

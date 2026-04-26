@@ -3,8 +3,8 @@ import { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
 
@@ -46,7 +46,7 @@ export type BuildBuildingUseCaseDeps = {
   buildingRepository: BuildingRepository;
   plotRepository: PlotRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
   /** 建造完成后的回调钩子，由 composition root 注入跨模块逻辑 */
@@ -117,12 +117,6 @@ export async function executeBuildBuildingUseCase(
   try {
     // 在事务中完成扣款、建造和交易记录
     const savedBuilding = await deps.transact(async () => {
-      // 从用户扣款并转入系统账户
-      if (cost > 0) {
-        owner.spendMoney(cost);
-        adam.receiveMoney(cost);
-      }
-
       const building = Building.construct({
         id: 0,
         plotId: command.plotId,
@@ -132,20 +126,17 @@ export async function executeBuildBuildingUseCase(
           : undefined,
       });
 
-      await deps.userRepository.save(owner);
-      await deps.userRepository.save(adam);
       const savedBuilding = await deps.buildingRepository.save(building);
 
-      if (cost > 0) {
-        await deps.transactionLedgerRepository.record({
-          fromUserId: command.ownerUserId,
-          toUserId: adam.id,
-          amount: cost,
-          type: "building_construction",
-          referenceId: String(savedBuilding.id),
-          description: `建造${command.buildingType} @ 地块 ${command.plotId}`,
-        });
-      }
+      // 从用户扣款并转入系统账户
+      await deps.financeService.transfer({
+        payer: owner,
+        receiver: adam,
+        amount: cost,
+        type: "building_construction",
+        referenceId: String(savedBuilding.id),
+        description: `建造${command.buildingType} @ 地块 ${command.plotId}`,
+      });
 
       // 建造完成后触发钩子（如工厂自动解锁默认配方等跨模块逻辑）
       if (deps.afterBuildHook) {

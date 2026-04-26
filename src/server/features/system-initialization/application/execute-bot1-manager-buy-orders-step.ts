@@ -9,6 +9,7 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
 import { BOT1_MANAGER_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { executeCreateBuyOrderUseCase } from "@/server/features/purchasing-station/application/create-buy-order-use-case";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
@@ -26,6 +27,7 @@ type ExecuteBot1ManagerBuyOrdersStepDeps = {
   userRepository: UserRepository;
   buildingRepository: BuildingRepository;
   buyOrderRepository: BuyOrderRepository;
+  financeService: FinanceService;
   plotRepository: PlotRepository;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -209,6 +211,7 @@ export async function executeBot1ManagerBuyOrdersStep(input: {
         buildingRepository: input.deps.buildingRepository,
         buyOrderRepository: input.deps.buyOrderRepository,
         userRepository: input.deps.userRepository,
+        financeService: input.deps.financeService,
         plotRepository: input.deps.plotRepository,
         transact: input.deps.transact,
       },

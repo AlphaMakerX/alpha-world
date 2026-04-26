@@ -10,7 +10,8 @@ import type {
   PersonQueryRepository,
   WealthLeaderboardItem,
 } from "@/server/features/person/domain/repositories/person-query-repository";
-import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
+import { users } from "@/server/features/person/infrastructure/schema";
+import { moneyTransactions } from "@/server/features/finance/infrastructure/schema";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 
 /** 基于 Drizzle ORM 的人员查询仓储实现 */

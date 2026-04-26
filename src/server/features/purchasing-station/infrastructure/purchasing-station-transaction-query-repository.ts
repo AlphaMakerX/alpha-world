@@ -12,7 +12,8 @@ import type {
   PurchasingStationTransactionRecord,
 } from "@/server/features/purchasing-station/domain/repositories/purchasing-station-transaction-query-repository";
 import { buyOrders } from "@/server/features/purchasing-station/infrastructure/schema";
-import { moneyTransactions, users } from "@/server/features/person/infrastructure/schema";
+import { users } from "@/server/features/person/infrastructure/schema";
+import { moneyTransactions } from "@/server/features/finance/infrastructure/schema";
 
 /** PurchasingStationTransactionQueryRepository 的 Drizzle ORM 实现 */
 class DrizzlePurchasingStationTransactionQueryRepository

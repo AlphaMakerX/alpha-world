@@ -5,7 +5,7 @@
  */
 
 import { and, eq, sql } from "drizzle-orm";
-import { moneyTransactions } from "@/server/features/person/infrastructure/schema";
+import { moneyTransactions } from "@/server/features/finance/infrastructure/schema";
 import { plots } from "@/server/features/plot/infrastructure/schema";
 import { getDbClient } from "@/server/lib/db";
 

@@ -16,9 +16,10 @@ import {
 import type { Building } from "@/server/features/building/domain/entities/building";
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { financeService } from "@/server/features/finance";
 import { isValidFactorySubtype } from "@/server/features/factory/domain/factory-subtype";
-import { autoUnlockDefaultRecipes } from "@/server/features/factory/application/auto-unlock-default-recipes";
+import { autoUnlockDefaultRecipes } from "@/server/features/factory/application/services/auto-unlock-default-recipes";
 import { unlockedRecipeRepository } from "@/server/features/factory/infrastructure/unlocked-recipe-repository";
 import { transact } from "@/server/lib/db";
 
@@ -65,7 +66,7 @@ export async function executeBuildBuildingUseCase(input: unknown): Promise<Build
     buildingRepository,
     plotRepository,
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     systemAccountService,
     transact,
     afterBuildHook,

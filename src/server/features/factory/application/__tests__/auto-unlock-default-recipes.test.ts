@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { autoUnlockDefaultRecipes } from "../auto-unlock-default-recipes";
+import { autoUnlockDefaultRecipes } from "../services/auto-unlock-default-recipes";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 
 function createMockRepo(): UnlockedRecipeRepository {

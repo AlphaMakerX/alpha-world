@@ -29,7 +29,8 @@ import { factoryProductionJobRepository, factoryRepository } from "@/server/feat
 import { buildingRepository } from "@/server/features/building/infrastructure";
 import { inventoryRepository } from "@/server/features/inventory/infrastructure";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { financeService } from "@/server/features/finance";
 import { unlockedRecipeRepository } from "@/server/features/factory/infrastructure/unlocked-recipe-repository";
 import { transact } from "@/server/lib/db";
 
@@ -105,7 +106,7 @@ export async function executeStartFactoryProductionUseCase(input: unknown): Prom
     inventoryRepository,
     plotRepository,
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     unlockedRecipeRepository,
     systemAccountService,
     transact,
@@ -122,7 +123,7 @@ export async function executeUnlockRecipeUseCase(input: unknown): Promise<Unlock
     factoryRepository,
     plotRepository,
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     unlockedRecipeRepository,
     systemAccountService,
     transact,
@@ -140,7 +141,7 @@ export async function executeUpgradeFactoryUseCase(input: unknown): Promise<Upgr
     buildingRepository,
     plotRepository,
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     systemAccountService,
     transact,
   });

@@ -14,7 +14,8 @@ import {
 } from "@/server/features/plot/application/purchase-plot-use-case";
 import { transact } from "@/server/lib/db";
 import { plotRepository } from "@/server/features/plot/infrastructure";
-import { transactionLedgerRepository, userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { userRepository, systemAccountService } from "@/server/features/person/infrastructure";
+import { financeService } from "@/server/features/finance";
 
 /** 购买地块的入参校验 Schema */
 export const purchasePlotSchema = z.object({
@@ -45,7 +46,7 @@ export async function executePurchasePlotUseCase(input: unknown): Promise<Purcha
   return executePurchasePlotUseCaseImpl(parsed.data, {
     plotRepository,
     userRepository,
-    transactionLedgerRepository,
+    financeService,
     systemAccountService,
     transact,
   });

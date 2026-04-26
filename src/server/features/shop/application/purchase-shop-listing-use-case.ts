@@ -11,7 +11,7 @@ import type { User } from "@/server/features/person/domain/entities/user";
 import type { ShopListing, ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { TransactionLedgerRepository } from "@/server/features/person/domain/repositories/transaction-ledger-repository";
+import type { FinanceService } from "@/server/features/finance/domain/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 购买成功的返回结果 */
@@ -54,7 +54,7 @@ export type PurchaseShopListingUseCaseDeps = {
   shopListingRepository: ShopListingRepository;
   inventoryRepository: InventoryRepository;
   userRepository: UserRepository;
-  transactionLedgerRepository: TransactionLedgerRepository;
+  financeService: FinanceService;
   /** 事务执行器，确保资金转移、库存变更和流水记录的原子性 */
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
 };
@@ -126,46 +126,38 @@ export async function executePurchaseShopListingUseCase(
   if (isFailure(validated)) return validated;
   const { listing, buyer, seller, purchaseQuantity, totalCost } = validated;
 
+  // 事务：转账 + 更新商品状态/数量 + 添加买家库存
   try {
-    // 在领域模型层执行资金变动（余额不足时会抛出 DomainError）
-    buyer.spendMoney(totalCost);
-    seller.receiveMoney(totalCost);
+    await deps.transact(async () => {
+      await deps.financeService.transfer({
+        payer: buyer,
+        receiver: seller,
+        amount: totalCost,
+        type: "shop_purchase",
+        referenceId: String(listing.id),
+        description: `购买商品: ${getItemName(listing.itemKey)} x${purchaseQuantity}`,
+      });
+
+      // 若全部售出则标记为 sold，否则仅减少数量
+      const remainingQuantity = listing.quantity - purchaseQuantity;
+      if (remainingQuantity === 0) {
+        await deps.shopListingRepository.updateStatus(listing.id, "sold");
+      } else {
+        await deps.shopListingRepository.updateQuantity(listing.id, remainingQuantity);
+      }
+
+      await deps.inventoryRepository.addItem(
+        command.buyerUserId,
+        listing.itemKey,
+        purchaseQuantity,
+      );
+    });
   } catch (error) {
     if (error instanceof DomainError) {
       return { ok: false, error: error.message, code: "CONFLICT" };
     }
     throw error;
   }
-
-  // 事务：保存买卖双方余额 + 更新商品状态/数量 + 添加买家库存 + 记录交易流水
-  await deps.transact(async () => {
-    await deps.userRepository.save(buyer);
-    await deps.userRepository.save(seller);
-
-    // 若全部售出则标记为 sold，否则仅减少数量
-    const remainingQuantity = listing.quantity - purchaseQuantity;
-    if (remainingQuantity === 0) {
-      await deps.shopListingRepository.updateStatus(listing.id, "sold");
-    } else {
-      await deps.shopListingRepository.updateQuantity(listing.id, remainingQuantity);
-    }
-
-    await deps.inventoryRepository.addItem(
-      command.buyerUserId,
-      listing.itemKey,
-      purchaseQuantity,
-    );
-
-    // 记录交易流水
-    await deps.transactionLedgerRepository.record({
-      fromUserId: command.buyerUserId,
-      toUserId: listing.sellerUserId,
-      amount: totalCost,
-      type: "shop_purchase",
-      referenceId: String(listing.id),
-      description: `购买商品: ${getItemName(listing.itemKey)} x${purchaseQuantity}`,
-    });
-  });
 
   return {
     ok: true,
