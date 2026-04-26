@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { Building } from "@/server/features/building/domain";
-import type { BuildingRepository } from "@/server/features/building/domain";
+import type { BuildingRepository, BuildingType, BuildingStatus } from "@/server/features/building/domain";
 import type { FactorySubtype } from "@/server/features/factory/domain/factory-subtype";
 import { buildings } from "@/server/features/building/infrastructure/schema";
 import { plots } from "@/server/features/plot/infrastructure/schema";
@@ -11,10 +11,10 @@ function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
   return Building.rehydrate({
     id: record.id,
     plotId: record.plotId,
-    type: record.type as "residential" | "factory" | "shop" | "purchasing_station",
+    type: record.type as BuildingType,
     subtype: (record.subtype as FactorySubtype) ?? null,
     level: record.level,
-    status: record.status as "active",
+    status: record.status as BuildingStatus,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
