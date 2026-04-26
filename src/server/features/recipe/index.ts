@@ -1,6 +1,9 @@
 // domain 层：类型
 export type { Recipe, RecipeCategory, FactorySubtype } from "./domain/value-objects/recipe";
-// domain 层：查询
+// domain 层：原始数据
+export { getAllRecipes } from "./domain/recipe-queries";
+
+// application 层：查询服务
 export {
   listRecipes,
   listRecipesByCategory,
@@ -8,7 +11,4 @@ export {
   listRecipesByFactorySubtype,
   listRecipesByFactorySubtypeAndLevel,
   listDefaultRecipes,
-} from "./domain/recipe-queries";
-
-// application 层：use case
-export { executeListFactoryRecipesUseCase } from "./application/list-factory-recipes-use-case";
+} from "./application/recipe-query-service";
