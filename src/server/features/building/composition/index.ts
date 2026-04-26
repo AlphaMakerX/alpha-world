@@ -39,11 +39,12 @@ export const buildBuildingSchema = z.object({
   { message: "无效的工厂子类型" },
 );
 
-/** 建造完成后的回调钩子：工厂建成时自动解锁默认配方 */
-const afterBuildHook = async (building: Building) => {
-  if (building.type === "factory" && building.subtype) {
-    await autoUnlockDefaultRecipes(building.id, building.subtype, unlockedRecipeRepository);
+/** 工厂建成时自动解锁默认配方 */
+const unlockDefaultRecipes = async (building: Building) => {
+  if (building.type !== "factory" || !building.subtype) {
+    throw new Error(`unlockDefaultRecipes 只能用于工厂建筑，收到: type=${building.type}, subtype=${building.subtype}`);
   }
+  await autoUnlockDefaultRecipes(building.id, building.subtype, unlockedRecipeRepository);
 };
 
 /** 查询我的建筑列表接口的参数校验 Schema */
@@ -69,7 +70,7 @@ export async function executeBuildBuildingUseCase(input: unknown): Promise<Build
     financeService,
     systemAccountService,
     transact,
-    afterBuildHook,
+    unlockDefaultRecipes,
   });
 }
 

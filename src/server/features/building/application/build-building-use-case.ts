@@ -48,8 +48,8 @@ export type BuildBuildingUseCaseDeps = {
   financeService: FinanceService;
   systemAccountService: SystemAccountService;
   transact: <T>(fn: () => Promise<T>) => Promise<T>;
-  /** 建造完成后的回调钩子，由 composition root 注入跨模块逻辑 */
-  afterBuildHook?: (building: Building) => Promise<void>;
+  /** 工厂建成后自动解锁默认配方，由 composition root 注入 */
+  unlockDefaultRecipes?: (building: Building) => Promise<void>;
 };
 
 /** 校验建造前置条件，失败则返回错误结果 */
@@ -114,8 +114,8 @@ export async function executeBuildBuildingUseCase(
         description: `建造${command.buildingType} @ 地块 ${command.plotId}`,
       });
 
-      if (deps.afterBuildHook) {
-        await deps.afterBuildHook(saved);
+      if (saved.type === "factory" && deps.unlockDefaultRecipes) {
+        await deps.unlockDefaultRecipes(saved);
       }
 
       return saved;

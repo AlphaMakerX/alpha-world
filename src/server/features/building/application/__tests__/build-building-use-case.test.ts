@@ -92,7 +92,7 @@ function createMockDeps(
       getSystemAccount: vi.fn().mockResolvedValue(createAdamUser()),
     },
     transact: (async <T>(fn: () => Promise<T>) => fn()) as BuildBuildingUseCaseDeps["transact"],
-    afterBuildHook: vi.fn(),
+    unlockDefaultRecipes: vi.fn(),
     ...overrides,
   };
 }
