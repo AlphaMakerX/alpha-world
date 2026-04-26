@@ -49,4 +49,12 @@ describe("建造费用目录", () => {
   it("Building.getCost('shop') 返回 600", () => {
     expect(Building.getCost("shop")).toBe(600);
   });
+
+  it("未知工厂子类型应抛出领域错误", () => {
+    expect(() => Building.getCost("factory", "unknown")).toThrow("未知的工厂子类型");
+  });
+
+  it("工厂类型未提供子类型应抛出领域错误", () => {
+    expect(() => Building.getCost("factory")).toThrow("未知的工厂子类型");
+  });
 });

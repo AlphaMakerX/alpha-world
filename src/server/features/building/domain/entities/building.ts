@@ -56,12 +56,15 @@ export class Building {
     type: BuildingType;
     subtype?: string;
   }): Building {
+    if (input.type === "factory" && !input.subtype) {
+      throw new DomainError("工厂类型建筑必须指定子类型");
+    }
     const now = new Date();
     return new Building({
       id: input.id,
       plotId: input.plotId,
       type: input.type,
-      subtype: input.subtype ?? null,
+      subtype: input.type === "factory" ? (input.subtype ?? null) : null,
       level: 1,
       status: "active",
       createdAt: now,
@@ -69,12 +72,20 @@ export class Building {
     });
   }
 
-  /** 根据建筑类型（和可选子类型）获取建造费用，未知类型返回 0 */
-  static getCost(type: string, subtype?: string): number {
-    if (type === "factory" && subtype) {
-      return FACTORY_COSTS[subtype] ?? 0;
+  /** 根据建筑类型（和可选子类型）获取建造费用 */
+  static getCost(type: BuildingType, subtype?: string): number {
+    if (type === "factory") {
+      const cost = subtype ? FACTORY_COSTS[subtype] : undefined;
+      if (cost === undefined) {
+        throw new DomainError(`未知的工厂子类型: ${subtype}`);
+      }
+      return cost;
     }
-    return BUILDING_COSTS[type] ?? 0;
+    const cost = BUILDING_COSTS[type];
+    if (cost === undefined) {
+      throw new DomainError(`未知的建筑类型: ${type}`);
+    }
+    return cost;
   }
 
   /** 从持久化数据恢复建筑实体（不执行业务校验） */
