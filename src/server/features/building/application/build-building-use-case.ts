@@ -1,6 +1,5 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { Building } from "@/server/features/building/domain";
-import { getBuildingCost } from "@/server/features/building/application/building-cost-catalog";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
@@ -97,7 +96,7 @@ export async function executeBuildBuildingUseCase(
   }
 
   // 根据建筑类型和子类型查询建造费用
-  const cost = getBuildingCost(command.buildingType, command.factorySubtype);
+  const cost = Building.getCost(command.buildingType, command.factorySubtype);
 
   const owner = await deps.userRepository.findById(command.ownerUserId);
   if (!owner) {

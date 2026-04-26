@@ -3,6 +3,27 @@ import { DomainError } from "@/server/features/shared-kernel/domain/domain-error
 /** 建筑类型：住宅 | 工厂 | 商店 | 收购站 */
 export type BuildingType = "residential" | "factory" | "shop" | "purchasing_station";
 
+/** 各建筑类型的建造费用 */
+const BUILDING_COSTS: Record<string, number> = {
+  residential: 500,
+  shop: 600,
+  purchasing_station: 700,
+};
+
+/** 各工厂子类型的建造费用 */
+const FACTORY_COSTS: Record<string, number> = {
+  mine: 800,
+  lumber_mill: 800,
+  textile_mill: 900,
+  ranch: 900,
+  apothecary: 900,
+  waterworks: 600,
+  smelter: 1000,
+  carpentry: 1000,
+  paper_mill: 1000,
+  assembler: 1200,
+};
+
 /** 建筑状态（目前仅有 active） */
 export type BuildingStatus = "active";
 
@@ -46,6 +67,14 @@ export class Building {
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  /** 根据建筑类型（和可选子类型）获取建造费用，未知类型返回 0 */
+  static getCost(type: string, subtype?: string): number {
+    if (type === "factory" && subtype) {
+      return FACTORY_COSTS[subtype] ?? 0;
+    }
+    return BUILDING_COSTS[type] ?? 0;
   }
 
   /** 从持久化数据恢复建筑实体（不执行业务校验） */
