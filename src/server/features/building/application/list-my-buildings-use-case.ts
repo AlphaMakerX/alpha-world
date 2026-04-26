@@ -4,6 +4,7 @@
  * 根据用户 ID 查询其名下所有建筑并返回。
  */
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { Building } from "@/server/features/building/domain/entities/building";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 查询命令参数 */
@@ -14,14 +15,7 @@ export type ListMyBuildingsCommand = {
 /** 查询成功的返回结果 */
 type ListMyBuildingsSuccessResult = {
   ok: true;
-  buildings: Array<{
-    id: number;
-    plotId: number;
-    type: "residential" | "factory" | "shop" | "purchasing_station";
-    status: "active";
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
+  buildings: Array<ReturnType<Building["toSnapshot"]>>;
 };
 
 /** 查询失败的返回结果 */
@@ -49,13 +43,6 @@ export async function executeListMyBuildingsUseCase(
   const buildings = await deps.buildingRepository.findByOwnerUserId(command.ownerUserId);
   return {
     ok: true,
-    buildings: buildings.map((building) => ({
-      id: building.id,
-      plotId: building.plotId,
-      type: building.type,
-      status: building.status,
-      createdAt: building.createdAt,
-      updatedAt: building.updatedAt,
-    })),
+    buildings: buildings.map((building) => building.toSnapshot()),
   };
 }

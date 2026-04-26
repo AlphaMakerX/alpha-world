@@ -1,17 +1,21 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
+import type { FactorySubtype } from "@/server/features/factory/domain/factory-subtype";
 
 /** 建筑类型：住宅 | 工厂 | 商店 | 收购站 */
 export type BuildingType = "residential" | "factory" | "shop" | "purchasing_station";
 
+/** 非工厂建筑类型 */
+type NonFactoryBuildingType = Exclude<BuildingType, "factory">;
+
 /** 各建筑类型的建造费用 */
-const BUILDING_COSTS: Record<string, number> = {
+const BUILDING_COSTS: Record<NonFactoryBuildingType, number> = {
   residential: 500,
   shop: 600,
   purchasing_station: 700,
 };
 
 /** 各工厂子类型的建造费用 */
-const FACTORY_COSTS: Record<string, number> = {
+const FACTORY_COSTS: Record<FactorySubtype, number> = {
   mine: 800,
   lumber_mill: 800,
   textile_mill: 900,
@@ -51,7 +55,6 @@ export class Building {
 
   /** 创建新建筑实例，自动设置状态为 active 并记录当前时间 */
   static construct(input: {
-    id: number;
     plotId: number;
     type: BuildingType;
     subtype?: string;
@@ -61,7 +64,7 @@ export class Building {
     }
     const now = new Date();
     return new Building({
-      id: input.id,
+      id: 0,
       plotId: input.plotId,
       type: input.type,
       subtype: input.type === "factory" ? (input.subtype ?? null) : null,
@@ -75,17 +78,12 @@ export class Building {
   /** 根据建筑类型（和可选子类型）获取建造费用 */
   static getCost(type: BuildingType, subtype?: string): number {
     if (type === "factory") {
-      const cost = subtype ? FACTORY_COSTS[subtype] : undefined;
-      if (cost === undefined) {
+      if (!subtype || !(subtype in FACTORY_COSTS)) {
         throw new DomainError(`未知的工厂子类型: ${subtype}`);
       }
-      return cost;
+      return FACTORY_COSTS[subtype as FactorySubtype];
     }
-    const cost = BUILDING_COSTS[type];
-    if (cost === undefined) {
-      throw new DomainError(`未知的建筑类型: ${type}`);
-    }
-    return cost;
+    return BUILDING_COSTS[type];
   }
 
   /** 从持久化数据恢复建筑实体（不执行业务校验） */
@@ -105,6 +103,11 @@ export class Building {
     if (this.props.type !== "purchasing_station") {
       throw new DomainError("当前建筑不是收购站");
     }
+  }
+
+  /** 导出实体快照，用于 use case 返回值 */
+  toSnapshot() {
+    return { ...this.props };
   }
 
   get id() {
