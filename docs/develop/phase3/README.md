@@ -1,6 +1,6 @@
 # Phase 3：制造稀缺性 — 工厂配方解锁与专业化分工
 
-> 规格与实现：[1-proposal.md](./1-proposal.md) · `2-design.md`（待写） · `3-test.md`（待写） · `4-task.md`（待写） · `5-conclusion.md`（待写）
+> 规格与实现：[1-proposal.md](./1-proposal.md) · [2-design.md](./2-design.md) · `3-test.md`（测试文件见 test/ 目录） · [4-task.md](./4-task.md) · `5-conclusion.md`（待写）
 
 当前每个玩家可独立完成全部生产链（采购 → 加工 → 组装），缺乏交易动机。本阶段从机制上制造"我有你没有"的依赖关系，让玩家**必须通过交易**才能获取自身无法生产的物品，从而激活商店和收购站。
 

@@ -1,4 +1,4 @@
-import { listDefaultRecipes } from "@/server/features/recipe/application/recipe-catalog";
+import { listDefaultRecipes } from "@/server/features/recipe";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 
 /** 为新建工厂自动解锁默认配方 */

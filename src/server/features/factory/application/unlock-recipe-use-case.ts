@@ -1,5 +1,5 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { getRecipeById } from "@/server/features/recipe/application/recipe-catalog";
+import { getRecipeById } from "@/server/features/recipe";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";

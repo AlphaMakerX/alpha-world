@@ -2,7 +2,7 @@ import {
   listRecipes,
   listRecipesByFactorySubtypeAndLevel,
   type Recipe,
-} from "@/server/features/recipe/application/recipe-catalog";
+} from "@/server/features/recipe";
 import { getUpgradeCost } from "@/server/features/factory/application/upgrade-cost-catalog";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";

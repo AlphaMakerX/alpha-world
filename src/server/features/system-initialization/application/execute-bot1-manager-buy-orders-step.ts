@@ -12,7 +12,7 @@ import type { UserRepository } from "@/server/features/person/domain/repositorie
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { executeCreateBuyOrderUseCase } from "@/server/features/purchasing-station/application/create-buy-order-use-case";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
-import { listRecipes } from "@/server/features/recipe/application/recipe-catalog";
+import { listRecipes } from "@/server/features/recipe";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 

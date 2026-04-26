@@ -5,7 +5,7 @@ import {
   listRecipesByFactorySubtype,
   listRecipesByFactorySubtypeAndLevel,
   listDefaultRecipes,
-} from "@/server/features/recipe/application/recipe-catalog";
+} from "../../domain/recipe-queries";
 
 describe("配方数据完整性", () => {
   it("listRecipes() 应返回 55 条配方", () => {

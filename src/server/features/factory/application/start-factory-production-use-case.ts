@@ -9,7 +9,7 @@
  */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
-import { getRecipeById } from "@/server/features/recipe/application/recipe-catalog";
+import { getRecipeById } from "@/server/features/recipe";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
