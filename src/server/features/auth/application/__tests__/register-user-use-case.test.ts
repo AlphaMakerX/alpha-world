@@ -5,7 +5,7 @@ import {
   type RegisterUserUseCaseDeps,
 } from "../register-user-use-case";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { PasswordHasher } from "@/server/features/auth/domain/services/password-hasher";
 import { User } from "@/server/features/person/domain/entities/user";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";

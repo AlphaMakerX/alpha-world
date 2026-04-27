@@ -13,7 +13,7 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 

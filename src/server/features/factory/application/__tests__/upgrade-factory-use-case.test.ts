@@ -8,7 +8,7 @@ import type { FactoryRepository } from "@/server/features/factory/domain/reposit
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { Plot } from "@/server/features/plot/domain/entities/plot";
 import { User } from "@/server/features/person/domain/entities/user";

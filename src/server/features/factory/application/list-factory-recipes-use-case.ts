@@ -3,7 +3,6 @@ import {
   listRecipesByFactorySubtypeAndLevel,
   type Recipe,
 } from "@/server/features/recipe";
-import { getUpgradeCost } from "@/server/features/factory/application/upgrade-cost-catalog";
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -71,7 +70,7 @@ export async function executeListFactoryRecipesUseCase(
   const unlockedSet = new Set(unlockedIds);
 
   // 计算升级预览
-  const upgradeCost = getUpgradeCost(factory.level);
+  const upgradeCost = factory.getUpgradeCost();
   let upgradePreview: UpgradePreview | null = null;
   if (upgradeCost !== null) {
     const currentIds = new Set(filtered.map((r) => r.id));

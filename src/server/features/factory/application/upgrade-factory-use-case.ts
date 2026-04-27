@@ -1,12 +1,11 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
-import { getUpgradeCost } from "@/server/features/factory/application/upgrade-cost-catalog";
 import type { Factory } from "@/server/features/factory/domain/entities/factory";
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
 
@@ -38,8 +37,6 @@ export type UpgradeFactoryUseCaseDeps = {
 type ValidatedContext = {
   factory: Factory;
   owner: User;
-  adam: User;
-  cost: number;
 };
 
 /** 校验升级工厂的前置条件 */
@@ -60,22 +57,12 @@ async function validate(
     return { ok: false, error: "只能操作自己地块上的工厂", code: "CONFLICT" };
   }
 
-  const cost = getUpgradeCost(factory.level);
-  if (cost === null) {
-    return { ok: false, error: "已达最高等级", code: "CONFLICT" };
-  }
-
   const owner = await deps.userRepository.findById(command.ownerUserId);
   if (!owner) {
     return { ok: false, error: "用户不存在", code: "NOT_FOUND" };
   }
-  if (owner.money < cost) {
-    return { ok: false, error: "金币不足", code: "CONFLICT" };
-  }
 
-  const adam = await deps.systemAccountService.getSystemAccount();
-
-  return { factory, owner, adam, cost };
+  return { factory, owner };
 }
 
 /** 判断校验结果是否为失败（或成功的早返回） */
@@ -95,7 +82,17 @@ export async function executeUpgradeFactoryUseCase(
 ): Promise<UpgradeFactoryResult> {
   const validated = await validate(command, deps);
   if (isFailure(validated)) return validated;
-  const { factory, owner, adam, cost } = validated;
+  const { factory, owner } = validated;
+
+  const cost = factory.getUpgradeCost();
+  if (cost === null) {
+    return { ok: false, error: "已达最高等级", code: "CONFLICT" };
+  }
+  if (owner.money < cost) {
+    return { ok: false, error: "金币不足", code: "CONFLICT" };
+  }
+
+  const adam = await deps.systemAccountService.getSystemAccount();
 
   await deps.transact(async () => {
     factory.upgrade();

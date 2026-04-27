@@ -17,7 +17,7 @@ import type { BuildingRepository } from "@/server/features/building/domain/repos
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import {
   ADAM_PERSONA_CONFIG,

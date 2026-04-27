@@ -7,6 +7,12 @@
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { type FactorySubtype, MAX_FACTORY_LEVEL } from "@/server/features/factory/domain/factory-subtype";
 
+/** 工厂升级费用表：key 为当前等级，value 为升级到下一级的费用 */
+const UPGRADE_COSTS: Record<number, number> = {
+  1: 1000,
+  2: 3000,
+};
+
 /** 工厂实体的内部属性 */
 type FactoryProps = {
   id: number;          // 即 building.id
@@ -29,6 +35,11 @@ export class Factory {
   /** 从持久化数据恢复工厂实体（不执行业务校验） */
   static rehydrate(props: FactoryProps): Factory {
     return new Factory(props);
+  }
+
+  /** 根据当前等级获取升级费用，无对应等级返回 null（已达上限） */
+  getUpgradeCost(): number | null {
+    return UPGRADE_COSTS[this.props.level] ?? null;
   }
 
   /** 升级工厂等级 */

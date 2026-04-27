@@ -12,7 +12,7 @@ import type { BuyOrder, BuyOrderRepository } from "@/server/features/purchasing-
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 履行收购订单成功的返回结果 */

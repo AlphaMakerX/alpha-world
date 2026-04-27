@@ -20,7 +20,7 @@ import type { PlotRepository } from "@/server/features/plot/domain/repositories/
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
 

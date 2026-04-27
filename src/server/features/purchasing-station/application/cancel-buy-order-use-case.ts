@@ -8,7 +8,7 @@
 import type { BuyOrderRepository, BuyOrder } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 
 /** 取消收购订单成功的返回结果 */

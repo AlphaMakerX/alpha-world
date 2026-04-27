@@ -13,7 +13,7 @@ import type { PasswordHasher } from "@/server/features/auth/domain/services/pass
 import { User } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { ADAM_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";

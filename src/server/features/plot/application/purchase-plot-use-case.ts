@@ -10,7 +10,7 @@ import type { PlotRepository } from "@/server/features/plot/domain/repositories/
 import type { Plot } from "@/server/features/plot/domain/entities/plot";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
 
 /** 购买地块命令参数 */

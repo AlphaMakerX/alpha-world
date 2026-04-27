@@ -7,7 +7,7 @@ import {
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import { Factory } from "@/server/features/factory/domain/entities/factory";
 import { Plot } from "@/server/features/plot/domain/entities/plot";

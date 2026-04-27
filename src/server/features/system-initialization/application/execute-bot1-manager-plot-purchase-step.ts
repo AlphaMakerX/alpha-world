@@ -8,7 +8,7 @@
 import { executePurchasePlotUseCase } from "@/server/features/plot/application/purchase-plot-use-case";
 import type { PlotRepository } from "@/server/features/plot/domain/repositories/plot-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
-import type { FinanceService } from "@/server/features/finance/domain/finance-service";
+import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import { BOT1_MANAGER_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import type { SystemAccountService } from "@/server/features/person/domain/services/system-account-service";
