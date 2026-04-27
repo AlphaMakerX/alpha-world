@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import type { InventoryRepository } from "@/server/features/inventory/domain";
 import type { ItemStack } from "@/server/features/item/domain/value-objects/item-stack";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import { createItemStack, normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
 import { inventories } from "@/server/features/inventory/infrastructure/schema";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
@@ -20,11 +21,14 @@ export class DrizzleInventoryRepository implements InventoryRepository {
       where: eq(inventories.ownerUserId, ownerUserId),
     });
     // 过滤掉数量为 0 的记录，并将数据库行转换为领域值对象
-    return rows.filter((row) => row.quantity > 0).map((row) => createItemStack(row));
+    return rows.filter((row) => row.quantity > 0).map((row) => createItemStack({
+      itemKey: row.itemKey as ItemKey,
+      quantity: row.quantity,
+    }));
   }
 
   /** 查询指定用户某个物品的当前库存数量 */
-  async getItemQuantity(ownerUserId: string, itemKey: string): Promise<number> {
+  async getItemQuantity(ownerUserId: string, itemKey: ItemKey): Promise<number> {
     const normalizedItemKey = normalizeItemKey(itemKey);
     const row = await getDbClient().query.inventories.findFirst({
       where: and(
@@ -36,7 +40,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
   }
 
   /** 向指定用户的库存中增加物品，若记录已存在则累加数量（upsert） */
-  async addItem(ownerUserId: string, itemKey: string, quantity: number): Promise<void> {
+  async addItem(ownerUserId: string, itemKey: ItemKey, quantity: number): Promise<void> {
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new DomainError("增加库存数量必须是正整数");
     }
@@ -66,7 +70,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
   }
 
   /** 从指定用户的库存中消耗物品，库存不足时抛出领域错误 */
-  async consumeItem(ownerUserId: string, itemKey: string, quantity: number): Promise<void> {
+  async consumeItem(ownerUserId: string, itemKey: ItemKey, quantity: number): Promise<void> {
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new DomainError("消耗库存数量必须是正整数");
     }

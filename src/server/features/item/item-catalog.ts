@@ -4,8 +4,76 @@
  * 提供按阶级筛选、按标识查询名称等工具函数。
  */
 
-/** 物品阶级：原材料 | 加工件 | 精制品 | 成品 */
+/** 全量物品标识常量数组，作为 ItemKey 类型的唯一来源 */
+const ITEM_KEYS = [
+  // ── 货币 ──
+  "money",
+  // ── 原材料 (raw_material) ──
+  "wood",
+  "iron_ore",
+  "copper_ore",
+  "coal",
+  "stone",
+  "sand",
+  "clay",
+  "cotton",
+  "flax",
+  "raw_hide",
+  "herbs",
+  "water",
+  "animal_fat",
+  // ── 加工件 (component) ──
+  "wood_plank",
+  "charcoal",
+  "iron_ingot",
+  "copper_ingot",
+  "nails",
+  "thread",
+  "cloth",
+  "linen",
+  "rope",
+  "leather",
+  "dye",
+  "brick",
+  "glass",
+  "lime",
+  "paper",
+  "tallow",
+  // ── 精制品 (refined_goods) ──
+  "steel",
+  "bronze",
+  "fine_cloth",
+  "porcelain",
+  "ink",
+  "plaster",
+  "candle",
+  "pottery",
+  // ── 成品 (end_product) ──
+  "furniture",
+  "tools",
+  "machine_parts",
+  "barrel",
+  "window",
+  "backpack",
+  "armor",
+  "saddle",
+  "lantern",
+  "compass",
+  "medicine",
+  "books",
+  "reinforced_wall",
+  "sculpture",
+  "telescope",
+  "clock",
+  "land_reclamation_badge",
+] as const;
+
+/** 物品标识联合类型，由 ITEM_KEYS 推导而来 */
+export type ItemKey = (typeof ITEM_KEYS)[number];
+
+/** 物品阶级：货币 | 原材料 | 加工件 | 精制品 | 成品 */
 export type ItemTier =
+  | "currency"
   | "raw_material"
   | "component"
   | "refined_goods"
@@ -13,13 +81,16 @@ export type ItemTier =
 
 /** 物品定义：描述单个物品的元数据 */
 export type ItemDefinition = {
-  key: string;
+  key: ItemKey;
   name: string;
   tier: ItemTier;
 };
 
 /** 全量物品定义列表 */
 const ITEM_DEFINITIONS: ItemDefinition[] = [
+  // ── 货币 (currency) ──
+  { key: "money", name: "金币", tier: "currency" },
+
   // ── 原材料 (raw_material) ── 直接采购获取的自然资源
   { key: "wood", name: "木材", tier: "raw_material" },
   { key: "iron_ore", name: "铁矿石", tier: "raw_material" },
@@ -94,11 +165,11 @@ export function listItemDefinitionsByTier(tier: ItemTier): ItemDefinition[] {
 }
 
 /** 根据物品标识获取物品名称，未找到时返回标识本身 */
-export function getItemName(itemKey: string): string {
+export function getItemName(itemKey: ItemKey): string {
   return ITEM_DEFINITIONS.find((item) => item.key === itemKey)?.name ?? itemKey;
 }
 
-/** 判断给定的物品标识是否在目录中 */
-export function isKnownItemKey(itemKey: string): boolean {
-  return ITEM_DEFINITIONS.some((item) => item.key === itemKey);
+/** 判断给定的物品标识是否在目录中（类型守卫） */
+export function isKnownItemKey(itemKey: string): itemKey is ItemKey {
+  return (ITEM_KEYS as readonly string[]).includes(itemKey);
 }

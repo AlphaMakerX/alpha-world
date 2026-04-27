@@ -6,7 +6,7 @@
  */
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
-import { receiveFactoryOutputs } from "@/server/features/inventory/domain";
+import { receiveFactoryOutputs } from "@/server/features/inventory/application";
 import type { FactoryProductionJobRepository } from "@/server/features/factory/domain";
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
