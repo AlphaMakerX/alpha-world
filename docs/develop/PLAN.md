@@ -1,6 +1,54 @@
-# 开发计划（摘要）
+# 开发计划
 
-1. **Phase 1 — API Access Token**（已完成）：提供一个凭「用户名 + 密码」幂等生成 API 访问令牌的接口（再次生成即作废旧的），使无 Cookie 场景（脚本、自动化、后续 Skill）能以该用户身份调用后端业务能力。规格见 [Phase 1 总览：README](./phase1/README.md)，实现总结见 [Phase 1 收尾：5-conclusion.md](./phase1/5-conclusion.md)。
-2. **Phase 2 — 对外 Skill**（待开规格）：基于 Phase 1 的令牌，提供可复用的接口说明与调用指引。Phase 1 已经把「生成令牌 + 携带 Bearer 调用 tRPC」端到端打通（详见 [phase1/README.md](./phase1/README.md) 的「如何携带 Bearer 调用 tRPC」一节），Phase 2 不再需要对服务端做改动，只需以此为前置条件撰写文案与调用样例。
-3. **Phase 3 — 制造稀缺性：工厂配方解锁与专业化分工**（已完成）：通过工厂类型化（10 种子类型）、配方付费解锁、工厂三级升级系统，打破「一座工厂生产一切」的自给自足局面，制造结构性的资源不对称，迫使玩家通过交易协作。新增 `factory_unlocked_recipes` 表、building 表新增 `subtype`/`level` 字段、配方元数据扩展（factorySubtypes/unlockCost/requiredLevel）。186 项单元测试全部通过。规格见 [Phase 3 总览：README](./phase3/README.md)。
-4. **Phase 4 — 代码重构：可读性与解耦**（待实施）：Phase 3 引入大量业务复杂度后，代码库出现了大文件（recipe-catalog 982 行）、跨模块耦合（building → factory 自动解锁）、重复模式（transaction 记录分散）、臃肿的依赖注入等问题。本阶段聚焦于在不改变外部行为的前提下，拆分大文件、消除跨边界副作用、统一重复模式、简化组合层。规格见 [Phase 4 总览：README](./phase4/README.md)。
+> 最后更新: 2026-04-29
+
+## 已完成阶段
+
+### Phase 1 — API Access Token
+
+提供凭「用户名 + 密码」幂等生成 API 访问令牌的接口，使无 Cookie 场景（脚本、自动化）能以该用户身份调用后端业务能力。详见 [phase1/README.md](./phase1/README.md)。
+
+### Phase 3 — 制造稀缺性：工厂配方解锁与专业化分工
+
+通过工厂类型化（10 种子类型）、配方付费解锁、工厂三级升级系统，打破「一座工厂生产一切」的自给自足局面，迫使玩家通过交易协作。186 项单元测试全部通过。详见 [phase3/README.md](./phase3/README.md)。
+
+## 待实施阶段
+
+### Phase 2 — 对外 Skill
+
+基于 Phase 1 的令牌，产出一份给第三方 AI Agent 看的 API 玩法手册（单文件 Markdown），不改服务端代码。详见 [phase2/README.md](./phase2/README.md)。
+
+### Phase 4 — 代码重构：可读性与解耦
+
+Phase 3 引入大量业务复杂度后，代码库出现大文件、跨模块耦合、重复模式、臃肿依赖注入等问题。本阶段聚焦在不改变外部行为的前提下进行结构优化。详见 [phase4/README.md](./phase4/README.md)。
+
+### Phase 5 — 完善体力系统
+
+让体力成为有意义的游戏资源：生产消耗体力（按配方时长 × 0.1），住宅新增「休息」功能恢复体力（花费金币 + 等待时间），前端展示体力条。详见 [phase5/README.md](./phase5/README.md)。
+
+## 未来路线图
+
+按优先级排列：
+
+### P0 — Bug 修复与部署
+
+- **位置同步 Bug**：玩家坐标 2s 同步导致刷新后回到旧坐标。方案：关键操作前立即同步 + beforeunload 发送最终坐标
+- **页面状态刷新**：金钱和背包在操作后不能及时刷新。方案：mutation onSuccess 精确 invalidate
+- **生产环境部署**：Vercel / 自建 + 云 PostgreSQL + CI/CD
+
+### P1 — 核心玩法增强
+
+- **邮箱系统**：统一物品/金钱流转中转，新增 mailbox bounded context
+
+### P2 — 游戏体验优化
+
+- **世界地图组件重构**：拆分子组件，抽取 hooks，Phaser 与 React 解耦
+- **UI 体验提升**：背包网格化、配方树展示、移动端适配
+- **Loading 与错误处理**：全局 loading skeleton、tRPC error boundary
+
+### P3 — 社交与经济深化
+
+- 多人实时交互（WebSocket/SSE）
+- 聊天系统
+- 排行榜与成就
+- 动态市场价格、税收系统、拍卖行

@@ -1,16 +1,13 @@
 # 开发文档索引
 
-各类型内容请写入对应文件，避免在 README 里堆叠长文。
-
 | 类型 | 文件 | 说明 |
 |------|------|------|
-| 准备开发的主线 / 阶段规划 | [PLAN.md](./PLAN.md) | 已定主线阶段（如 Phase 1/2） |
-| 小需求、小修改、体验优化 | [inbox/ui-imporve.feat.md](./inbox/ui-imporve.feat.md) | UI、loading、局部优化等 |
-| 待评审、未拍板 | [inbox/not-sure-feat.md](./inbox/not-sure-feat.md) | 需求是否要做、方案待定 |
-| Bug 记录与修复跟踪 | [inbox/bug-fix.md](./inbox/bug-fix.md) | 复现与修复说明 |
-
-小需求、待评审与 Bug 也可统一看作「收件箱」，目录为 [inbox/](./inbox/)。
-
-其他专题（如 Adam 系统玩家）可单独使用 `*.feat.md` 文件，并在 [PLAN.md](./PLAN.md) 中引用。
-
-Phase 1 规格与任务见目录 [phase1/](./phase1/)。
+| 开发计划与路线图 | [PLAN.md](./PLAN.md) | 已完成阶段 + 待实施 + 未来路线图 |
+| Phase 1 — API Token | [phase1/README.md](./phase1/README.md) | 已完成 |
+| Phase 2 — Agent Skill | [phase2/README.md](./phase2/README.md) | 待实施 |
+| Phase 3 — 工厂配方解锁 | [phase3/README.md](./phase3/README.md) | 已完成 |
+| Phase 4 — 代码重构 | [phase4/README.md](./phase4/README.md) | 待实施 |
+| Phase 5 — 体力系统 | [phase5/README.md](./phase5/README.md) | 待实施 |
+| 待评审需求 | [inbox/not-sure-feat.md](./inbox/not-sure-feat.md) | 体力、住宅、邮箱 |
+| Bug 记录 | [inbox/bug-fix.md](./inbox/bug-fix.md) | 位置同步、状态刷新 |
+| 玩法改进分析 | [gameplay-improvement.md](./gameplay-improvement.md) | 设计参考 |
