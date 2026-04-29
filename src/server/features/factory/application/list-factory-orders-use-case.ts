@@ -4,6 +4,7 @@
  * 查询指定工厂建筑的生产订单，同时自动结算已到期的订单（将产出物品入库）。
  * 返回一个"焦点订单"（当前进行中）和历史订单列表。
  */
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import { receiveFactoryOutputs } from "@/server/features/inventory/application";
@@ -23,8 +24,8 @@ function toOrderDto(job: {
   startedAt: Date;
   finishAt: Date;
   collectedAt: Date | null;
-  inputs: Array<{ itemKey: string; quantity: number }>;
-  outputs: Array<{ itemKey: string; quantity: number }>;
+  inputs: Array<{ itemKey: ItemKey; quantity: number }>;
+  outputs: Array<{ itemKey: ItemKey; quantity: number }>;
 }) {
   return {
     id: job.id,

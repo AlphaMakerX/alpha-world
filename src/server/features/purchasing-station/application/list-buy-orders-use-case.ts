@@ -5,6 +5,7 @@
  */
 
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -16,7 +17,7 @@ type ListBuyOrdersSuccessResult = {
     id: number;
     buildingId: number;
     buyerUserId: string;
-    itemKey: string;
+    itemKey: ItemKey;
     quantity: number;
     unitPrice: number;
     status: "active" | "fulfilled" | "cancelled";

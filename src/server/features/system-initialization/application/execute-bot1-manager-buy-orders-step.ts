@@ -6,6 +6,7 @@
  */
 
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
 import { BOT1_MANAGER_PERSONA_CONFIG } from "@/server/features/person/domain/personas";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
@@ -59,9 +60,9 @@ export type ExecuteBot1ManagerBuyOrdersStepResult =
  * @returns 单位生产成本，无法计算时返回 null
  */
 function calculateUnitProductionCost(
-  itemKey: string,
-  cache: Map<string, number>,
-  visiting: Set<string>,
+  itemKey: ItemKey,
+  cache: Map<ItemKey, number>,
+  visiting: Set<ItemKey>,
 ): number | null {
   const normalizedItemKey = normalizeItemKey(itemKey);
   // 货币的成本恒为 1（基准单位）
@@ -160,13 +161,13 @@ export async function executeBot1ManagerBuyOrdersStep(input: {
 
   // 汇总收购站现有活跃订单的数量，按物品分组
   const activeOrders = await input.deps.buyOrderRepository.findActiveByBuildingId(purchasingStation.id);
-  const activeOrderQuantityByItem = new Map<string, number>();
+  const activeOrderQuantityByItem = new Map<ItemKey, number>();
   for (const order of activeOrders) {
     const key = normalizeItemKey(order.itemKey);
     activeOrderQuantityByItem.set(key, (activeOrderQuantityByItem.get(key) ?? 0) + order.quantity);
   }
 
-  const costCache = new Map<string, number>();
+  const costCache = new Map<ItemKey, number>();
   let budget = bot.money; // 剩余预算，每次下单后扣减
   let createdOrdersCount = 0;
   let orderedItemsCount = 0;
@@ -187,7 +188,7 @@ export async function executeBot1ManagerBuyOrdersStep(input: {
     }
 
     // 计算单位生产成本并加价，确定收购单价
-    const unitProductionCost = calculateUnitProductionCost(itemKey, costCache, new Set<string>());
+    const unitProductionCost = calculateUnitProductionCost(itemKey, costCache, new Set<ItemKey>());
     if (unitProductionCost === null) {
       continue;
     }

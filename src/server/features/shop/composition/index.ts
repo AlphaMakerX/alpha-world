@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import {
   executeCreateShopListingUseCase as executeCreateShopListingUseCaseImpl,
   type CreateShopListingResult,
@@ -78,7 +79,7 @@ export async function executeCreateShopListingUseCase(input: unknown): Promise<C
     };
   }
 
-  return executeCreateShopListingUseCaseImpl(parsed.data, {
+  return executeCreateShopListingUseCaseImpl({ ...parsed.data, itemKey: parsed.data.itemKey as ItemKey }, {
     buildingRepository,
     shopListingRepository,
     inventoryRepository,

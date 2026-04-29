@@ -7,6 +7,7 @@
  */
 
 import { getItemName } from "@/server/features/item/item-catalog";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { BuyOrder, BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
@@ -20,7 +21,7 @@ type FulfillBuyOrderSuccessResult = {
   ok: true;
   order: {
     id: number;
-    itemKey: string;
+    itemKey: ItemKey;
     quantity: number;
     unitPrice: number;
     /** 卖家总收入 = 单价 * 出售数量 */

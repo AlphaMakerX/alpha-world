@@ -5,6 +5,7 @@
  * 并将预冻结的资金退还给收购方。整个操作在事务中执行以保证数据一致性。
  */
 
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { BuyOrderRepository, BuyOrder } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import type { User } from "@/server/features/person/domain/entities/user";
@@ -14,7 +15,7 @@ import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/us
 /** 取消收购订单成功的返回结果 */
 type CancelBuyOrderSuccessResult = {
   ok: true;
-  order: { id: number; itemKey: string; quantity: number };
+  order: { id: number; itemKey: ItemKey; quantity: number };
 };
 
 /** 取消收购订单失败的返回结果 */

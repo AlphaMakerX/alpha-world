@@ -7,6 +7,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { ShopListing, ShopListingRepository, ShopListingStatus } from "@/server/features/shop/domain";
 import { shopListings } from "@/server/features/shop/infrastructure/schema";
 
@@ -16,7 +17,7 @@ function toShopListing(record: typeof shopListings.$inferSelect): ShopListing {
     id: record.id,
     buildingId: record.buildingId,
     sellerUserId: record.sellerUserId,
-    itemKey: record.itemKey,
+    itemKey: record.itemKey as ItemKey,
     quantity: record.quantity,
     unitPrice: Number(record.unitPrice),
     status: record.status as ShopListingStatus,

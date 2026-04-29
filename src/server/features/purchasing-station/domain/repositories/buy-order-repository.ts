@@ -5,6 +5,8 @@
  * 用于对收购站中的收购订单进行增删改查操作。
  */
 
+import type { ItemKey } from "@/server/features/item/item-catalog";
+
 /** 收购订单状态：active-进行中 | fulfilled-已完成 | cancelled-已取消 */
 export type BuyOrderStatus = "active" | "fulfilled" | "cancelled";
 
@@ -16,7 +18,7 @@ export type BuyOrder = {
   /** 收购方用户 ID */
   buyerUserId: string;
   /** 物品标识键 */
-  itemKey: string;
+  itemKey: ItemKey;
   /** 收购数量 */
   quantity: number;
   /** 单价 */

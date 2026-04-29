@@ -7,6 +7,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { BuyOrder, BuyOrderRepository, BuyOrderStatus } from "@/server/features/purchasing-station/domain";
 import { buyOrders } from "@/server/features/purchasing-station/infrastructure/schema";
 
@@ -16,7 +17,7 @@ function toBuyOrder(record: typeof buyOrders.$inferSelect): BuyOrder {
     id: record.id,
     buildingId: record.buildingId,
     buyerUserId: record.buyerUserId,
-    itemKey: record.itemKey,
+    itemKey: record.itemKey as ItemKey,
     quantity: record.quantity,
     unitPrice: Number(record.unitPrice),
     status: record.status as BuyOrderStatus,

@@ -5,6 +5,8 @@
  * 用于对商店中的上架商品进行增删改查操作。
  */
 
+import type { ItemKey } from "@/server/features/item/item-catalog";
+
 /** 商品上架状态：active-在售 | sold-已售出 | cancelled-已取消 */
 export type ShopListingStatus = "active" | "sold" | "cancelled";
 
@@ -16,7 +18,7 @@ export type ShopListing = {
   /** 卖家用户 ID */
   sellerUserId: string;
   /** 物品标识键 */
-  itemKey: string;
+  itemKey: ItemKey;
   /** 上架数量 */
   quantity: number;
   /** 单价 */

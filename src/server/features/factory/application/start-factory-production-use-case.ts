@@ -7,6 +7,7 @@
  * 3. 检查并扣除材料（物品和/或金钱）
  * 4. 创建生产任务并记录交易流水
  */
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { FactoryProductionJob } from "@/server/features/factory/domain";
 import { getRecipeById } from "@/server/features/recipe";
@@ -76,8 +77,8 @@ export type StartFactoryProductionUseCaseDeps = {
 type ValidatedContext = {
   factory: Factory;
   recipe: Recipe;
-  scaledInputs: { itemKey: string; quantity: number }[];
-  scaledOutputs: { itemKey: string; quantity: number }[];
+  scaledInputs: { itemKey: ItemKey; quantity: number }[];
+  scaledOutputs: { itemKey: ItemKey; quantity: number }[];
   scaledDuration: number;
   moneyCost: number;
   ownerUser: User | null;

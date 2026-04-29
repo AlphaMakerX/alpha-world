@@ -8,6 +8,7 @@
 
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { BuyOrderRepository } from "@/server/features/purchasing-station/domain/repositories/buy-order-repository";
@@ -24,7 +25,7 @@ type CreateBuyOrderSuccessResult = {
     id: number;
     buildingId: number;
     buyerUserId: string;
-    itemKey: string;
+    itemKey: ItemKey;
     quantity: number;
     unitPrice: number;
     status: "active" | "fulfilled" | "cancelled";
@@ -50,7 +51,7 @@ export type CreateBuyOrderCommand = {
   /** 目标收购站建筑 ID */
   buildingId: number;
   /** 物品标识键 */
-  itemKey: string;
+  itemKey: ItemKey;
   /** 收购数量 */
   quantity: number;
   /** 单价 */
@@ -73,7 +74,7 @@ type ValidatedContext = {
   building: Building;
   buyer: User;
   totalCost: number;
-  normalizedItemKey: string;
+  normalizedItemKey: ItemKey;
 };
 
 async function validate(

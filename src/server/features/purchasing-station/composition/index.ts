@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import {
   executeCreateBuyOrderUseCase as executeCreateBuyOrderUseCaseImpl,
   type CreateBuyOrderResult,
@@ -78,7 +79,7 @@ export async function executeCreateBuyOrderUseCase(input: unknown): Promise<Crea
     };
   }
 
-  return executeCreateBuyOrderUseCaseImpl(parsed.data, {
+  return executeCreateBuyOrderUseCaseImpl({ ...parsed.data, itemKey: parsed.data.itemKey as ItemKey }, {
     buildingRepository,
     buyOrderRepository,
     userRepository,

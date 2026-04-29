@@ -6,6 +6,7 @@
  */
 
 import { getItemName } from "@/server/features/item/item-catalog";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import type { User } from "@/server/features/person/domain/entities/user";
 import type { ShopListing, ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
@@ -19,7 +20,7 @@ type PurchaseShopListingSuccessResult = {
   ok: true;
   listing: {
     id: number;
-    itemKey: string;
+    itemKey: ItemKey;
     quantity: number;
     unitPrice: number;
     /** 总花费 = 单价 * 购买数量 */

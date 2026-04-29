@@ -5,6 +5,7 @@
  * 并将库存退还给卖家。整个操作在事务中执行以保证数据一致性。
  */
 
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { ShopListing, ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
 import type { InventoryRepository } from "@/server/features/inventory/domain/repositories/inventory-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
@@ -12,7 +13,7 @@ import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/us
 /** 取消上架成功的返回结果 */
 type CancelShopListingSuccessResult = {
   ok: true;
-  listing: { id: number; itemKey: string; quantity: number };
+  listing: { id: number; itemKey: ItemKey; quantity: number };
 };
 
 /** 取消上架失败的返回结果 */

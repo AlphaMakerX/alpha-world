@@ -7,6 +7,7 @@
 
 import { DomainError } from "@/server/features/shared-kernel/domain/domain-error";
 import { normalizeItemKey } from "@/server/features/item/domain/value-objects/item-stack";
+import type { ItemKey } from "@/server/features/item/item-catalog";
 import type { Building } from "@/server/features/building/domain";
 import type { BuildingRepository } from "@/server/features/building/domain/repositories/building-repository";
 import type { ShopListingRepository } from "@/server/features/shop/domain/repositories/shop-listing-repository";
@@ -21,7 +22,7 @@ type CreateShopListingSuccessResult = {
     id: number;
     buildingId: number;
     sellerUserId: string;
-    itemKey: string;
+    itemKey: ItemKey;
     quantity: number;
     unitPrice: number;
     status: "active" | "sold" | "cancelled";
@@ -47,7 +48,7 @@ export type CreateShopListingCommand = {
   /** 目标商店建筑 ID */
   buildingId: number;
   /** 物品标识键 */
-  itemKey: string;
+  itemKey: ItemKey;
   /** 上架数量 */
   quantity: number;
   /** 单价 */
@@ -65,7 +66,7 @@ export type CreateShopListingUseCaseDeps = {
 };
 
 /** 校验通过后传递给业务逻辑的上下文 */
-type ValidatedContext = { building: Building; normalizedItemKey: string };
+type ValidatedContext = { building: Building; normalizedItemKey: ItemKey };
 
 async function validate(
   command: CreateShopListingCommand,
