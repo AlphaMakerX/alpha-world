@@ -16,8 +16,8 @@ export type RestTypeConfig = {
 export const FULL_REST: RestTypeConfig = {
   id: "full_rest",
   durationSeconds: 300,
-  staminaGain: 1000,
-  defaultCost: 500,
+  staminaGain: 100,
+  defaultCost: 10,
 };
 
 /** 按 ID 获取休息类型配置 */

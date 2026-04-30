@@ -77,6 +77,12 @@ export async function executeStartRestUseCase(
     cost = building.restPrice;
   }
 
+  // 获取主人用户（自己或别人住宅都需要）
+  const ownerUser = await deps.userRepository.findById(plotOwnerId);
+  if (!ownerUser) {
+    return { ok: false, error: "住宅主人不存在", code: "NOT_FOUND" };
+  }
+
   // 获取付款用户
   const resterUser = await deps.userRepository.findById(command.userId);
   if (!resterUser) {
@@ -104,44 +110,29 @@ export async function executeStartRestUseCase(
     });
     const savedJob = await deps.restJobRepository.save(job);
 
-    if (isOwnResidential) {
-      // 自己住宅：全部付给系统
-      if (cost > 0) {
-        await deps.financeService.transfer({
-          payer: resterUser,
-          receiver: adam,
-          amount: cost,
-          type: "residential_rest",
-          referenceId: String(savedJob.id),
-          description: "住宅休息",
-        });
-      }
-    } else {
-      // 别人住宅：90% 给主人，10% 给系统
+    // 统一收费：90% 给主人，10% 给系统
+    if (cost > 0) {
       const systemCut = Math.floor(cost * 0.1);
       const ownerCut = cost - systemCut;
 
       if (ownerCut > 0) {
-        const ownerUser = await deps.userRepository.findById(plotOwnerId);
-        if (ownerUser) {
-          await deps.financeService.transfer({
-            payer: resterUser,
-            receiver: ownerUser,
-            amount: ownerCut,
-            type: "residential_rest_service",
-            referenceId: String(savedJob.id),
-            description: "住宅休息服务（主人收入）",
-          });
-        }
+        await deps.financeService.transfer({
+          payer: resterUser,
+          receiver: ownerUser,
+          amount: ownerCut,
+          type: "residential_rest",
+          referenceId: String(savedJob.id),
+          description: "住宅休息（主人收入）",
+        });
       }
       if (systemCut > 0) {
         await deps.financeService.transfer({
           payer: resterUser,
           receiver: adam,
           amount: systemCut,
-          type: "residential_rest_service",
+          type: "residential_rest",
           referenceId: String(savedJob.id),
-          description: "住宅休息服务（系统抽成）",
+          description: "住宅休息（系统抽成）",
         });
       }
     }

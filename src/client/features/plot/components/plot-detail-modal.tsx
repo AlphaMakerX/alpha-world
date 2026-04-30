@@ -31,6 +31,7 @@ export function PlotDetailModal({
   factory,
   shop,
   purchasingStation,
+  residential,
 }: PlotDetailModalProps) {
   const [buildOptionsOpen, setBuildOptionsOpen] = useState(false); // 建造选项是否展开
   const [pendingBuildType, setPendingBuildType] = useState<BuildingType | null>(null); // 正在建造的建筑类型
@@ -114,6 +115,7 @@ export function PlotDetailModal({
                       factory={factory}
                       shop={shop}
                       purchasingStation={purchasingStation}
+                      residential={residential}
                     />
                   </div>
                 ),

@@ -18,6 +18,7 @@ import { ShopSection } from "@/client/features/shop/components/shop-section";
 import { ShopTransactionHistory } from "@/client/features/shop/components/shop-transaction-history";
 import { PurchasingStationSection } from "@/client/features/purchasing-station/components/purchasing-station-section";
 import { PurchasingStationTransactionHistory } from "@/client/features/purchasing-station/components/purchasing-station-transaction-history";
+import { ResidentialSection } from "@/client/features/residential/components/residential-section";
 
 /** 工厂操作相关的 Props */
 export type FactoryActionProps = {
@@ -47,6 +48,32 @@ export type ShopActionProps = {
   onCancel: (listingId: number) => void;
 };
 
+/** 住宅操作相关的 Props */
+export type ResidentialActionProps = {
+  jobs: Array<{
+    id: number;
+    buildingId: number;
+    ownerUserId: string;
+    resterUserId: string;
+    restType: string;
+    staminaGain: number;
+    cost: number;
+    status: string;
+    startedAt: Date;
+    finishAt: Date;
+    collectedAt: Date | null;
+  }>;
+  jobsLoading: boolean;
+  restPrice: number | null;
+  currentUserId?: string;
+  startRestLoading: boolean;
+  collectRestLoading: boolean;
+  setRestPriceLoading: boolean;
+  onStartRest: () => void;
+  onCollectRest: (jobId: number) => void;
+  onSetRestPrice: (price: number | null) => void;
+};
+
 /** 收购站操作相关的 Props */
 export type PurchasingStationActionProps = {
   orders: BuyOrder[];
@@ -66,6 +93,7 @@ type BuildingActionSectionProps = {
   factory: FactoryActionProps;
   shop: ShopActionProps;
   purchasingStation: PurchasingStationActionProps;
+  residential: ResidentialActionProps;
 };
 
 /**
@@ -78,6 +106,7 @@ export function BuildingActionSection({
   factory,
   shop,
   purchasingStation,
+  residential,
 }: BuildingActionSectionProps) {
   // 根据建筑能力选择对应的操作面板：工厂 > 商店 > 收购站
   const actionContent = capabilities.canManageFactory ? (
@@ -116,6 +145,20 @@ export function BuildingActionSection({
       onCreateOrder={purchasingStation.onCreateOrder}
       onFulfill={purchasingStation.onFulfill}
       onCancel={purchasingStation.onCancel}
+    />
+  ) : capabilities.canUseResidential ? (
+    <ResidentialSection
+      isOwner={capabilities.canManageResidential}
+      restPrice={residential.restPrice}
+      jobs={residential.jobs}
+      jobsLoading={residential.jobsLoading}
+      startRestLoading={residential.startRestLoading}
+      collectRestLoading={residential.collectRestLoading}
+      setRestPriceLoading={residential.setRestPriceLoading}
+      currentUserId={residential.currentUserId}
+      onStartRest={residential.onStartRest}
+      onCollectRest={residential.onCollectRest}
+      onSetRestPrice={residential.onSetRestPrice}
     />
   ) : null;
 

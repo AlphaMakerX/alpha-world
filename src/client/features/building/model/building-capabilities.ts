@@ -15,6 +15,9 @@ export type BuildingCapabilities = {
   isPurchasingStation: boolean;
   canManagePurchasingStation: boolean;
   canBrowsePurchasingStation: boolean;
+  isResidential: boolean;
+  canManageResidential: boolean;
+  canUseResidential: boolean;
 };
 
 /**
@@ -32,6 +35,9 @@ export function getBuildingCapabilities(building: Plot["building"] | null | unde
   const isPurchasingStation = building?.type === "purchasing_station";
   const canManagePurchasingStation = Boolean(isPurchasingStation && isOwner);
   const canBrowsePurchasingStation = Boolean(isPurchasingStation && !isOwner);
+  const isResidential = building?.type === "residential";
+  const canManageResidential = Boolean(isResidential && isOwner);
+  const canUseResidential = Boolean(isResidential);
 
   return {
     isFactory,
@@ -42,5 +48,8 @@ export function getBuildingCapabilities(building: Plot["building"] | null | unde
     isPurchasingStation,
     canManagePurchasingStation,
     canBrowsePurchasingStation,
+    isResidential,
+    canManageResidential,
+    canUseResidential,
   };
 }

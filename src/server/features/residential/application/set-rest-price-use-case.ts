@@ -29,8 +29,8 @@ export async function executeSetRestPriceUseCase(
   command: SetRestPriceCommand,
   deps: SetRestPriceUseCaseDeps,
 ): Promise<SetRestPriceResult> {
-  if (command.price !== null && command.price < 0) {
-    return { ok: false, error: "休息价格不能为负数", code: "BAD_REQUEST" };
+  if (command.price !== null && command.price < 10) {
+    return { ok: false, error: "休息价格不能低于 10 金币", code: "BAD_REQUEST" };
   }
 
   const building = await deps.buildingRepository.findById(command.buildingId);

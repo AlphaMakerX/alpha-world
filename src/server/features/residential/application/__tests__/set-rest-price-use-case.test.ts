@@ -107,23 +107,13 @@ describe("设定休息价格用例", () => {
     expect(building.restPrice).toBeNull();
   });
 
-  it("设定价格为 0，应允许（免费开放）", async () => {
-    const building = createResidential();
-    const deps = createMockDeps({
-      buildingRepository: {
-        findById: vi.fn().mockResolvedValue(building),
-        findByPlotId: vi.fn(),
-        findByPlotIds: vi.fn(),
-        findByOwnerUserId: vi.fn(),
-        save: vi.fn().mockImplementation((b: Building) => Promise.resolve(b)),
-      },
-    });
+  it("设定价格低于 10 时，应返回错误", async () => {
+    const deps = createMockDeps();
     const result = await executeSetRestPriceUseCase(
-      { userId: "user-1", buildingId: 1, price: 0 },
+      { userId: "user-1", buildingId: 1, price: 5 },
       deps,
     );
-    expect(result.ok).toBe(true);
-    expect(building.restPrice).toBe(0);
+    expect(result.ok).toBe(false);
   });
 
   it("建筑不是住宅类型时，应返回错误", async () => {

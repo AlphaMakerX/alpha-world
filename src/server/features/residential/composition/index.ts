@@ -45,7 +45,7 @@ export const listRestJobsSchema = z.object({
 export const setRestPriceSchema = z.object({
   userId: z.string().uuid("用户 ID 不合法"),
   buildingId: z.number().int().positive(),
-  price: z.number().min(0, "价格不能为负数").nullable(),
+  price: z.number().min(10, "价格不能低于 10 金币").nullable(),
 });
 
 /** 发起休息用例入口 */

@@ -113,12 +113,20 @@ describe("在自己住宅休息 — 正常流程", () => {
     expect(deps.restJobRepository.save).toHaveBeenCalled();
   });
 
-  it("应扣除 500 金币，收款方为 Adam", async () => {
+  it("应扣除 10 金币：90% 给自己，10% 给系统", async () => {
     const deps = createMockDeps();
     await executeStartRestUseCase({ userId: "user-1", buildingId: 1 }, deps);
+    // 90% 给主人（自己）= 9
     expect(deps.financeService.transfer).toHaveBeenCalledWith(
       expect.objectContaining({
-        amount: 500,
+        amount: 9,
+        type: "residential_rest",
+      }),
+    );
+    // 10% 给系统 = 1
+    expect(deps.financeService.transfer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 1,
         type: "residential_rest",
       }),
     );
@@ -157,10 +165,10 @@ describe("在别人住宅休息 — 正常流程", () => {
     expect(result.ok).toBe(true);
     // 90% 给主人 (900), 10% 给 Adam (100)
     expect(deps.financeService.transfer).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 900, type: "residential_rest_service" }),
+      expect.objectContaining({ amount: 900, type: "residential_rest" }),
     );
     expect(deps.financeService.transfer).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 100, type: "residential_rest_service" }),
+      expect.objectContaining({ amount: 100, type: "residential_rest" }),
     );
   });
 });
@@ -243,7 +251,7 @@ describe("校验 — 金币", () => {
   it("金币不足时，应返回错误", async () => {
     const deps = createMockDeps({
       userRepository: {
-        findById: vi.fn().mockResolvedValue(createUser("user-1", 100)),
+        findById: vi.fn().mockResolvedValue(createUser("user-1", 5)),
         findByUsername: vi.fn(),
         save: vi.fn(),
       },
@@ -254,8 +262,8 @@ describe("校验 — 金币", () => {
 });
 
 describe("边界情况", () => {
-  it("主人定价为 0 时，应成功休息", async () => {
-    const building = createResidential(0);
+  it("主人定价为 10（最低价）时，应成功休息", async () => {
+    const building = createResidential(10);
     const deps = createMockDeps({
       buildingRepository: {
         findById: vi.fn().mockResolvedValue(building),

@@ -8,6 +8,7 @@ import type {
   FactoryActionProps,
   ShopActionProps,
   PurchasingStationActionProps,
+  ResidentialActionProps,
 } from "@/client/features/building/components/building-action-section";
 import type { Plot } from "@/client/features/plot/types/plot-ui";
 
@@ -24,4 +25,5 @@ export type PlotDetailModalProps = {
   factory: FactoryActionProps;
   shop: ShopActionProps;
   purchasingStation: PurchasingStationActionProps;
+  residential: ResidentialActionProps;
 };

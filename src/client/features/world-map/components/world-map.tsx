@@ -27,6 +27,7 @@ import { useWorldMapFactory } from "../hooks/use-world-map-factory";
 import { useWorldMapPlots } from "../hooks/use-world-map-plots";
 import { useWorldMapPurchasingStation } from "../hooks/use-world-map-purchasing-station";
 import { useWorldMapSession } from "../hooks/use-world-map-session";
+import { useWorldMapResidential } from "../hooks/use-world-map-residential";
 import { useWorldMapShop } from "../hooks/use-world-map-shop";
 import { isInitialQueryLoading } from "../world-map-utils";
 
@@ -140,6 +141,24 @@ export function WorldMap() {
     handleFulfillBuyOrder,
     handleCancelBuyOrder,
   } = useWorldMapPurchasingStation({
+    authStatus,
+    selectedPlot,
+    selectedBuildingCapabilities,
+    messageApi,
+    trpcUtils,
+    setLoginModalOpen,
+  });
+
+  const {
+    restJobsData,
+    restJobsLoading,
+    startRestMutation,
+    collectRestMutation,
+    setRestPriceMutation,
+    handleStartRest,
+    handleCollectRest,
+    handleSetRestPrice,
+  } = useWorldMapResidential({
     authStatus,
     selectedPlot,
     selectedBuildingCapabilities,
@@ -267,6 +286,18 @@ export function WorldMap() {
           onCreateOrder: (itemKey, quantity, unitPrice) => void handleCreateBuyOrder(itemKey, quantity, unitPrice),
           onFulfill: (orderId, quantity) => void handleFulfillBuyOrder(orderId, quantity),
           onCancel: (orderId) => void handleCancelBuyOrder(orderId),
+        }}
+        residential={{
+          jobs: restJobsData?.jobs ?? [],
+          jobsLoading: restJobsLoading,
+          restPrice: selectedPlot?.building?.restPrice ?? null,
+          currentUserId,
+          startRestLoading: startRestMutation.isPending,
+          collectRestLoading: collectRestMutation.isPending,
+          setRestPriceLoading: setRestPriceMutation.isPending,
+          onStartRest: () => void handleStartRest(),
+          onCollectRest: (jobId) => void handleCollectRest(jobId),
+          onSetRestPrice: (price) => void handleSetRestPrice(price),
         }}
       />
       <PersonDetailModal
