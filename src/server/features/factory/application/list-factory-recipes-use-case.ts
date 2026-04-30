@@ -6,13 +6,14 @@ import {
 import type { FactoryRepository } from "@/server/features/factory/domain/repositories/factory-repository";
 import type { UnlockedRecipeRepository } from "@/server/features/factory/domain/repositories/unlocked-recipe-repository";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
+import { STAMINA_COST_PER_SECOND } from "@/shared/gameplay/player-stamina";
 
 /** 查询参数 */
 export type ListFactoryRecipesQuery = {
   buildingId?: number;
 };
 
-type RecipeWithUnlockStatus = Recipe & { unlocked: boolean };
+type RecipeWithUnlockStatus = Recipe & { unlocked: boolean; staminaCostPerUnit: number };
 
 /** 升级预览信息 */
 type UpgradePreview = {
@@ -55,7 +56,7 @@ export async function executeListFactoryRecipesUseCase(
     const allRecipes = listRecipes();
     return {
       ok: true,
-      recipes: allRecipes.map((r) => ({ ...r, unlocked: false })),
+      recipes: allRecipes.map((r) => ({ ...r, unlocked: false, staminaCostPerUnit: r.durationSeconds * STAMINA_COST_PER_SECOND })),
       upgradePreview: null,
     };
   }
@@ -87,7 +88,7 @@ export async function executeListFactoryRecipesUseCase(
 
   return {
     ok: true,
-    recipes: filtered.map((r) => ({ ...r, unlocked: unlockedSet.has(r.id) })),
+    recipes: filtered.map((r) => ({ ...r, unlocked: unlockedSet.has(r.id), staminaCostPerUnit: r.durationSeconds * STAMINA_COST_PER_SECOND })),
     upgradePreview,
   };
 }

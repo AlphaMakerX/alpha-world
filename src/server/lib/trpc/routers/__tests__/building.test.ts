@@ -4,15 +4,19 @@ import type { Session } from "next-auth";
 
 vi.mock("@/server/features/building/composition", async () => {
   const { z } = await import("zod");
+  const baseSchema = z.object({
+    ownerUserId: z.string().uuid(),
+    plotId: z.number().int().positive(),
+    buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
+    factorySubtype: z.string().optional(),
+  });
+  const refineFn = () => true;
   return {
     executeBuildBuildingUseCase: vi.fn(),
     executeListMyBuildingsUseCase: vi.fn(),
-    buildBuildingSchema: z.object({
-      ownerUserId: z.string().uuid(),
-      plotId: z.number().int().positive(),
-      buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
-      factorySubtype: z.string().optional(),
-    }),
+    buildBuildingBaseSchema: baseSchema,
+    buildBuildingSchema: baseSchema.refine(refineFn),
+    factorySubtypeRefinement: refineFn,
     listMyBuildingsSchema: z.object({
       ownerUserId: z.string().uuid(),
     }),
@@ -45,7 +49,7 @@ describe("building.build mutation — factorySubtype", () => {
       ok: true,
       building: {
         id: 1, plotId: 10, type: "factory", subtype: "mine", level: 1,
-        status: "active", createdAt: new Date(), updatedAt: new Date(),
+        status: "active", restPrice: null, createdAt: new Date(), updatedAt: new Date(),
       },
     });
     const caller = makeCaller();
@@ -72,7 +76,7 @@ describe("building.build mutation — factorySubtype", () => {
       ok: true,
       building: {
         id: 2, plotId: 10, type: "residential", subtype: null, level: 1,
-        status: "active", createdAt: new Date(), updatedAt: new Date(),
+        status: "active", restPrice: null, createdAt: new Date(), updatedAt: new Date(),
       },
     });
     const caller = makeCaller();

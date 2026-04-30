@@ -10,6 +10,7 @@ describe("Building rehydrate — subtype 与 level 映射", () => {
       subtype: "mine",
       level: 2,
       status: "active",
+      restPrice: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -26,6 +27,7 @@ describe("Building rehydrate — subtype 与 level 映射", () => {
       subtype: null,
       level: 1,
       status: "active",
+      restPrice: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

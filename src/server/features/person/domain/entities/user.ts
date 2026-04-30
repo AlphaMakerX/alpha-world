@@ -154,6 +154,34 @@ export class User {
     this.props.updatedAt = at;
   }
 
+  /** 消耗体力，体力不足时抛出领域错误 */
+  consumeStamina(amount: number): void {
+    if (amount < 0) {
+      throw new DomainError("体力消耗不能为负数");
+    }
+    if (amount === 0) return;
+    if (this.props.staminaCurrent < amount) {
+      throw new DomainError("体力不足");
+    }
+    this.props.staminaCurrent -= amount;
+    this.props.staminaUpdatedAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  /** 直接恢复指定量的体力，超过上限时截断 */
+  recoverStaminaByAmount(amount: number): void {
+    if (amount < 0) {
+      throw new DomainError("体力恢复量不能为负数");
+    }
+    if (amount === 0) return;
+    this.props.staminaCurrent = Math.min(
+      this.props.staminaMax,
+      this.props.staminaCurrent + amount,
+    );
+    this.props.staminaUpdatedAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
   /** 修改密码哈希 */
   changePasswordHash(passwordHash: string): void {
     if (!passwordHash) {

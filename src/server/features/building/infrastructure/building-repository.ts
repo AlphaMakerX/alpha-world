@@ -15,6 +15,7 @@ function toDomainBuilding(record: typeof buildings.$inferSelect): Building {
     subtype: (record.subtype as FactorySubtype) ?? null,
     level: record.level,
     status: record.status as BuildingStatus,
+    restPrice: record.restPrice != null ? Number(record.restPrice) : null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
@@ -69,6 +70,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         subtype: buildings.subtype,
         level: buildings.level,
         status: buildings.status,
+        restPrice: buildings.restPrice,
         createdAt: buildings.createdAt,
         updatedAt: buildings.updatedAt,
       })
@@ -90,6 +92,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
           subtype: building.subtype,
           level: building.level,
           status: building.status,
+          restPrice: building.restPrice != null ? String(building.restPrice) : null,
           updatedAt: new Date(),
         })
         .where(eq(buildings.id, building.id))
@@ -106,6 +109,7 @@ export class DrizzleBuildingRepository implements BuildingRepository {
         subtype: building.subtype,
         level: building.level,
         status: building.status,
+        restPrice: building.restPrice != null ? String(building.restPrice) : null,
         createdAt: building.createdAt,
         updatedAt: building.updatedAt,
       })

@@ -39,6 +39,7 @@ type BuildingProps = {
   subtype: string | null;
   level: number;
   status: BuildingStatus;
+  restPrice: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -70,6 +71,7 @@ export class Building {
       subtype: input.type === "factory" ? (input.subtype ?? null) : null,
       level: 1,
       status: "active",
+      restPrice: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -105,6 +107,22 @@ export class Building {
     }
   }
 
+  /** 断言当前建筑为住宅类型，否则抛出领域错误 */
+  ensureResidential(): void {
+    if (this.props.type !== "residential") {
+      throw new DomainError("当前建筑不是住宅");
+    }
+  }
+
+  /** 设定住宅对外休息价格，null 表示关闭对外服务 */
+  setRestPrice(price: number | null): void {
+    if (price !== null && price < 0) {
+      throw new DomainError("休息价格不能为负数");
+    }
+    this.props.restPrice = price;
+    this.props.updatedAt = new Date();
+  }
+
   /** 导出实体快照，用于 use case 返回值 */
   toSnapshot() {
     return { ...this.props };
@@ -132,6 +150,10 @@ export class Building {
 
   get status() {
     return this.props.status;
+  }
+
+  get restPrice() {
+    return this.props.restPrice;
   }
 
   get createdAt() {

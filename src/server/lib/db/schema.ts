@@ -8,3 +8,4 @@ export * from "@/server/features/factory/infrastructure/schema";
 export * from "@/server/features/factory/infrastructure/unlocked-recipe-schema";
 export * from "@/server/features/shop/infrastructure/schema";
 export * from "@/server/features/purchasing-station/infrastructure/schema";
+export * from "@/server/features/residential/infrastructure/schema";

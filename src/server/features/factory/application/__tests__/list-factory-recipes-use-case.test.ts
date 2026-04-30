@@ -38,15 +38,17 @@ function createMockDeps(
 }
 
 describe("查询工厂配方列表用例", () => {
-  it("按工厂查询：mine level=2，返回 mine 类型 level≤2 的配方，标注 unlocked", async () => {
+  it("按工厂查询：mine level=2，返回 mine 类型 level≤2 的配方，标注 unlocked 和 staminaCostPerUnit", async () => {
     const deps = createMockDeps();
     const query: ListFactoryRecipesQuery = { buildingId: 100 };
     const result = await executeListFactoryRecipesUseCase(query, deps);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // 每条配方都有 unlocked 字段
+    // 每条配方都有 unlocked 和 staminaCostPerUnit 字段
     for (const r of result.recipes) {
       expect(r).toHaveProperty("unlocked");
+      expect(r).toHaveProperty("staminaCostPerUnit");
+      expect(r.staminaCostPerUnit).toBe(r.durationSeconds * 0.1);
     }
     // 不含 level 3 的配方（requiredLevel > 2）
     for (const r of result.recipes) {

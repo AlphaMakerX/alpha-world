@@ -41,7 +41,7 @@ function createPlot(ownerUserId: string) {
   });
 }
 
-function createUser(money = 10000) {
+function createUser(money = 10000, staminaCurrent = 1000) {
   return User.rehydrate({
     id: "user-1",
     username: { getValue: () => "owner" } as any,
@@ -49,8 +49,8 @@ function createUser(money = 10000) {
     money,
     positionX: 0,
     positionY: 0,
-    staminaCurrent: 100,
-    staminaMax: 100,
+    staminaCurrent,
+    staminaMax: 1000,
     staminaUpdatedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -65,8 +65,8 @@ function createAdamUser() {
     money: 1_000_000_000,
     positionX: 0,
     positionY: 0,
-    staminaCurrent: 100,
-    staminaMax: 100,
+    staminaCurrent: 1000,
+    staminaMax: 1000,
     staminaUpdatedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -242,5 +242,96 @@ describe("启动生产用例 — 配方解锁校验", () => {
     );
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("余额不足");
+  });
+});
+
+describe("启动生产用例 — 体力校验", () => {
+  it("体力充足时启动生产（配方 10s × 1），应扣除体力 1（10×1×0.1）", async () => {
+    const user = createUser(10000, 1000);
+    const deps = createMockDeps({
+      userRepository: {
+        findById: vi.fn().mockResolvedValue(user),
+        findByUsername: vi.fn(),
+        save: vi.fn(),
+      },
+    });
+    const command: StartFactoryProductionCommand = {
+      ownerUserId: "user-1",
+      buildingId: 100,
+      recipeId: "buy_iron_ore",  // 采购配方, durationSeconds=10
+      quantity: 1,
+    };
+    const result = await executeStartFactoryProductionUseCase(command, deps);
+    expect(result.ok).toBe(true);
+    // 10s × 1 × 0.1 = 1 体力
+    expect(user.staminaCurrent).toBeCloseTo(999);
+  });
+
+  it("体力充足时启动生产（配方 10s × 3），应扣除体力 3", async () => {
+    const user = createUser(10000, 1000);
+    const deps = createMockDeps({
+      userRepository: {
+        findById: vi.fn().mockResolvedValue(user),
+        findByUsername: vi.fn(),
+        save: vi.fn(),
+      },
+    });
+    const result = await executeStartFactoryProductionUseCase(
+      { ownerUserId: "user-1", buildingId: 100, recipeId: "buy_iron_ore", quantity: 3 },
+      deps,
+    );
+    expect(result.ok).toBe(true);
+    // 10s × 3 × 0.1 = 3 体力
+    expect(user.staminaCurrent).toBeCloseTo(997);
+  });
+
+  it("体力恰好等于消耗量时，应成功启动生产", async () => {
+    const user = createUser(10000, 1);  // 体力恰好 1
+    const deps = createMockDeps({
+      userRepository: {
+        findById: vi.fn().mockResolvedValue(user),
+        findByUsername: vi.fn(),
+        save: vi.fn(),
+      },
+    });
+    const result = await executeStartFactoryProductionUseCase(
+      { ownerUserId: "user-1", buildingId: 100, recipeId: "buy_iron_ore", quantity: 1 },
+      deps,
+    );
+    expect(result.ok).toBe(true);
+    expect(user.staminaCurrent).toBeCloseTo(0);
+  });
+
+  it("体力不足时，应返回错误", async () => {
+    const user = createUser(10000, 0.5);  // 体力 0.5，需要 1
+    const deps = createMockDeps({
+      userRepository: {
+        findById: vi.fn().mockResolvedValue(user),
+        findByUsername: vi.fn(),
+        save: vi.fn(),
+      },
+    });
+    const result = await executeStartFactoryProductionUseCase(
+      { ownerUserId: "user-1", buildingId: 100, recipeId: "buy_iron_ore", quantity: 1 },
+      deps,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("体力不足");
+  });
+
+  it("体力不足时，不应创建生产任务", async () => {
+    const user = createUser(10000, 0);
+    const deps = createMockDeps({
+      userRepository: {
+        findById: vi.fn().mockResolvedValue(user),
+        findByUsername: vi.fn(),
+        save: vi.fn(),
+      },
+    });
+    await executeStartFactoryProductionUseCase(
+      { ownerUserId: "user-1", buildingId: 100, recipeId: "buy_iron_ore", quantity: 1 },
+      deps,
+    );
+    expect(deps.factoryProductionJobRepository.save).not.toHaveBeenCalled();
   });
 });

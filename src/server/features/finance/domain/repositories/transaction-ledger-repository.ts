@@ -14,7 +14,9 @@ export type MoneyTransactionType =
   | "shop_purchase"
   | "buy_order_fulfilled"
   | "recipe_unlock"
-  | "factory_upgrade";
+  | "factory_upgrade"
+  | "residential_rest"
+  | "residential_rest_service";
 
 /** 交易流水仓储接口 */
 export interface TransactionLedgerRepository {

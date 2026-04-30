@@ -23,19 +23,25 @@ import { autoUnlockDefaultRecipes } from "@/server/features/factory/application/
 import { unlockedRecipeRepository } from "@/server/features/factory/infrastructure/unlocked-recipe-repository";
 import { transact } from "@/server/lib/db";
 
-/** 建造建筑接口的参数校验 Schema */
-export const buildBuildingSchema = z.object({
+/** 建造建筑接口的基础参数 Schema（不含 refine，可安全调用 .omit()） */
+export const buildBuildingBaseSchema = z.object({
   ownerUserId: z.string().uuid("用户 ID 不合法"),
   plotId: z.number().int().positive(),
   buildingType: z.enum(["residential", "factory", "shop", "purchasing_station"]),
   factorySubtype: z.string().optional(),
-}).refine(
-  (data) => {
-    if (data.buildingType === "factory" && data.factorySubtype) {
-      return isValidFactorySubtype(data.factorySubtype);
-    }
-    return true;
-  },
+});
+
+/** 工厂子类型校验 refine 函数 */
+export const factorySubtypeRefinement = (data: { buildingType: string; factorySubtype?: string }) => {
+  if (data.buildingType === "factory" && data.factorySubtype) {
+    return isValidFactorySubtype(data.factorySubtype);
+  }
+  return true;
+};
+
+/** 建造建筑接口的参数校验 Schema（含 refine） */
+export const buildBuildingSchema = buildBuildingBaseSchema.refine(
+  factorySubtypeRefinement,
   { message: "无效的工厂子类型" },
 );
 

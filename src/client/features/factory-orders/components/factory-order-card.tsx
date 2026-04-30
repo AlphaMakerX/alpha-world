@@ -5,7 +5,7 @@
 
 import type { FactoryOrder, FactoryOrderStatus } from "@/client/features/factory/types/factory-ui";
 import { ItemTile } from "@/client/features/item/components/item-tile";
-import { getRecipeById } from "@/server/features/recipe/application/recipe-catalog";
+import { getRecipeById } from "@/server/features/recipe/application";
 import { useEffect, useState } from "react";
 
 /** 工厂订单卡片组件的 Props */

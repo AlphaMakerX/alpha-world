@@ -12,14 +12,15 @@ import {
 import {
   executeBuildBuildingUseCase,
   executeListMyBuildingsUseCase,
-  buildBuildingSchema,
+  buildBuildingBaseSchema,
+  factorySubtypeRefinement,
 } from "@/server/features/building/composition";
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
 
 export const buildingRouter = createTRPCRouter({
   /** 在指定地块上建造建筑（ownerUserId 从上下文自动注入） */
   build: protectedProcedure
-    .input(buildBuildingSchema.omit({ ownerUserId: true }))
+    .input(buildBuildingBaseSchema.omit({ ownerUserId: true }).refine(factorySubtypeRefinement, { message: "无效的工厂子类型" }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(
         await executeBuildBuildingUseCase({

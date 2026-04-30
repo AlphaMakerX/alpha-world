@@ -24,6 +24,7 @@ import type { SystemAccountService } from "@/server/features/person/domain/servi
 import type { FinanceService } from "@/server/features/finance/application/services/finance-service";
 import type { UseCaseErrorCode } from "@/server/features/shared-kernel/domain/use-case-result";
 import type { User } from "@/server/features/person/domain/entities/user";
+import { STAMINA_COST_PER_SECOND } from "@/shared/gameplay/player-stamina";
 
 /** 开始生产的命令参数 */
 export type StartFactoryProductionCommand = {
@@ -81,7 +82,7 @@ type ValidatedContext = {
   scaledOutputs: { itemKey: ItemKey; quantity: number }[];
   scaledDuration: number;
   moneyCost: number;
-  ownerUser: User | null;
+  ownerUser: User;
   adam: User | null;
 };
 
@@ -159,14 +160,28 @@ async function validate(
   const moneyCost = scaledInputs
     .filter((inputItem) => inputItem.itemKey === "money")
     .reduce((sum, inputItem) => sum + inputItem.quantity, 0);
-  const ownerUser = moneyCost > 0 ? await deps.userRepository.findById(command.ownerUserId) : null;
-  if (moneyCost > 0 && !ownerUser) {
+
+  // 体力校验：始终获取用户（体力检查必须）
+  const ownerUser = await deps.userRepository.findById(command.ownerUserId);
+  if (!ownerUser) {
     return {
       ok: false,
       error: "用户不存在",
       code: "NOT_FOUND",
     };
   }
+
+  // 结算自然恢复后校验体力
+  ownerUser.recoverStamina(new Date());
+  const staminaCost = scaledDuration * STAMINA_COST_PER_SECOND;
+  if (ownerUser.staminaCurrent < staminaCost) {
+    return {
+      ok: false,
+      error: `体力不足，需要 ${staminaCost.toFixed(1)}，当前 ${ownerUser.staminaCurrent.toFixed(1)}`,
+      code: "CONFLICT",
+    };
+  }
+  ownerUser.consumeStamina(staminaCost);
 
   const adam = moneyCost > 0 ? await deps.systemAccountService.getSystemAccount() : null;
 
@@ -240,7 +255,7 @@ export async function executeStartFactoryProductionUseCase(
       const savedJob = await deps.factoryProductionJobRepository.save(job);
 
       // 金钱类成本：从用户扣款并转入系统账户
-      if (ownerUser && adam) {
+      if (ownerUser && adam && moneyCost > 0) {
         await deps.financeService.transfer({
           payer: ownerUser,
           receiver: adam,
@@ -249,6 +264,9 @@ export async function executeStartFactoryProductionUseCase(
           referenceId: String(savedJob.id),
           description: `工厂生产: ${recipe.name} ×${qty}`,
         });
+      } else {
+        // 无金钱成本时仍需保存用户（体力已扣除）
+        await deps.userRepository.save(ownerUser);
       }
       return savedJob;
     });
