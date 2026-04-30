@@ -24,6 +24,13 @@ const itemDisplayByKey: Record<string, ItemDisplay> = {
     tileClassName: "border-amber-200 bg-gradient-to-b from-amber-50 to-yellow-100/80",
     iconClassName: "bg-amber-100 text-amber-700",
   },
+  stamina: {
+    name: "体力",
+    icon: "⚡",
+    tier: "raw_material",
+    tileClassName: "border-sky-200 bg-gradient-to-b from-sky-50 to-blue-100/80",
+    iconClassName: "bg-sky-100 text-sky-700",
+  },
 
   // ── 原材料 (raw_material) ──
   wood: {

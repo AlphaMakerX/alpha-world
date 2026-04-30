@@ -150,6 +150,10 @@ export function RecipeDetail({ recipe, inventoryItems, productionLoading, unlock
                   isInsufficient={input.isInsufficient}
                 />
               ))}
+              <ItemTile
+                itemKey="stamina"
+                quantity={Number((recipe.staminaCostPerUnit * quantity).toFixed(1))}
+              />
             </div>
           ) : (
             <p className="text-xs text-slate-500">无</p>
@@ -175,7 +179,7 @@ export function RecipeDetail({ recipe, inventoryItems, productionLoading, unlock
       </div>
       <Popconfirm
         title={`确认制造 ${quantity} 份「${recipe.name}」吗？`}
-        description={`将消耗 ${quantity} 倍材料，耗时 ${formatDuration(totalDuration)}。`}
+        description={`将消耗 ${quantity} 倍材料 + 体力 ${(recipe.staminaCostPerUnit * quantity).toFixed(1)}，耗时 ${formatDuration(totalDuration)}。`}
         okText="确认制造"
         cancelText="取消"
         onConfirm={() => onStartProduction(recipe.id, quantity)}

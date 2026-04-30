@@ -14,6 +14,7 @@ type WorldMapHeaderProps = {
   authStatus: AuthStatus;
   username?: string;
   money?: number;
+  stamina?: { current: number; max: number };
   onOpenProfileClick: () => void;
   onOpenInventoryClick: () => void;
   onOpenGameInfoClick: () => void;
@@ -27,6 +28,7 @@ export function WorldMapHeader({
   authStatus,
   username,
   money,
+  stamina,
   onOpenProfileClick,
   onOpenInventoryClick,
   onOpenGameInfoClick,
@@ -36,6 +38,7 @@ export function WorldMapHeader({
 }: WorldMapHeaderProps) {
   // 格式化金额为中文本地化格式（千分位分隔）
   const displayMoney = Number(money ?? 0).toLocaleString("zh-CN");
+  const displayStamina = stamina ? `${Math.floor(stamina.current)} / ${stamina.max}` : null;
   const isAuthenticated = authStatus === "authenticated";
   // 根据认证状态生成显示文案
   const displayStatus =
@@ -69,6 +72,11 @@ export function WorldMapHeader({
             >
               余额 · {displayMoney}
             </button>
+            {displayStamina ? (
+              <span className="inline-flex h-7 items-center rounded-full border border-sky-300 bg-sky-50 px-3 text-sm font-semibold tabular-nums text-sky-800">
+                ⚡ {displayStamina}
+              </span>
+            ) : null}
             <Button
               size="small"
               className="!h-7 !cursor-pointer !rounded-full !border-violet-300 !bg-violet-50 !px-3 !font-medium !text-violet-700 !transition-colors !duration-200 motion-reduce:!transition-none hover:!border-violet-400 hover:!bg-violet-100 hover:!text-violet-800 focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-violet-400/70 focus-visible:!ring-offset-1"

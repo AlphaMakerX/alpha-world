@@ -57,6 +57,7 @@ export function WorldMap() {
     playerPosition,
     headerUsername,
     headerMoney,
+    headerStamina,
     logoutLoading,
     handleLogout,
     trpcUtils,
@@ -197,6 +198,7 @@ export function WorldMap() {
         authStatus={authStatus}
         username={headerUsername}
         money={headerMoney}
+        stamina={headerStamina}
         onOpenProfileClick={() => {
           if (authStatus !== "authenticated") {
             setLoginModalOpen(true);

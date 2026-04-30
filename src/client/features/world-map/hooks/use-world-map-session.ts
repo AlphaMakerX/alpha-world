@@ -49,6 +49,7 @@ export function useWorldMapSession(options: {
       ? (meData?.user.username ?? session?.user?.name ?? undefined)
       : undefined;
   const headerMoney = authStatus === "authenticated" ? meData?.user.money : 0;
+  const headerStamina = authStatus === "authenticated" ? meData?.user.stamina : undefined;
 
   /** 登出流程：先保存位置 -> 调用 signOut -> 清除缓存 -> 刷新页面 */
   const handleLogout = async () => {
@@ -86,6 +87,7 @@ export function useWorldMapSession(options: {
     playerPosition,
     headerUsername,
     headerMoney,
+    headerStamina,
     logoutLoading,
     handleLogout,
     trpcUtils,
