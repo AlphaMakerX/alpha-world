@@ -12,6 +12,7 @@ import { PlotDetailSection } from "./plot-detail-section";
 import { PlotActionSection } from "./plot-action-section";
 import { BuildingDetailSection } from "@/client/features/building/components/building-detail-section";
 import { BuildingActionSection } from "@/client/features/building/components/building-action-section";
+import { RestJobHistory } from "@/client/features/residential/components/rest-job-history";
 import { DraggableWindow } from "@/client/components/draggable-window";
 import type { PlotDetailModalProps } from "./plot-detail-modal.types";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
@@ -120,6 +121,17 @@ export function PlotDetailModal({
                   </div>
                 ),
               },
+              ...(buildingCapabilities.isResidential
+                ? [
+                    {
+                      key: "rest-history",
+                      label: "休息记录",
+                      children: (
+                        <RestJobHistory jobs={residential.jobs} />
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>

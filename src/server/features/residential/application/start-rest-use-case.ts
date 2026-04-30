@@ -54,10 +54,13 @@ export async function executeStartRestUseCase(
     return { ok: false, error: "地块不存在", code: "NOT_FOUND" };
   }
 
-  // 校验无进行中的休息任务
+  // 校验无正在进行（未到时间）的休息任务
   const inProgressJob = await deps.restJobRepository.findInProgressByBuildingId(building.id);
   if (inProgressJob) {
-    return { ok: false, error: "该住宅已有进行中的休息任务", code: "CONFLICT" };
+    const now = new Date();
+    if (inProgressJob.finishAt.getTime() > now.getTime()) {
+      return { ok: false, error: "该住宅已有进行中的休息任务", code: "CONFLICT" };
+    }
   }
 
   if (!plot.ownerUserId) {

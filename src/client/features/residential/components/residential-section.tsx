@@ -9,7 +9,7 @@ import { Button, InputNumber, Popconfirm } from "antd";
 import { FULL_REST } from "@/server/features/residential/domain/rest-catalog";
 
 /** 休息任务快照类型 */
-type RestJobSnapshot = {
+export type RestJobSnapshot = {
   id: number;
   buildingId: number;
   ownerUserId: string;
@@ -37,6 +37,14 @@ type ResidentialSectionProps = {
   onCollectRest: (jobId: number) => void;
   onSetRestPrice: (price: number | null) => void;
 };
+
+/** 格式化日期时间为中文格式 */
+function formatDateTime(value: Date | string | null) {
+  if (!value) return "无";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "无";
+  return date.toLocaleString("zh-CN");
+}
 
 /** 格式化剩余时间为人类可读的中文格式 */
 function formatRemaining(finishAt: Date | string): string {
@@ -93,9 +101,12 @@ export function ResidentialSection({
   const [priceInput, setPriceInput] = useState<number | null>(restPrice);
   const [editingPrice, setEditingPrice] = useState(false);
 
-  const inProgressJob = jobs.find((j) => j.status === "in_progress");
-  const myInProgressJob = inProgressJob && inProgressJob.resterUserId === currentUserId ? inProgressJob : undefined;
+  // 我的进行中任务（包括已到时间待收取的）
+  const myInProgressJob = jobs.find((j) => j.status === "in_progress" && j.resterUserId === currentUserId);
+  // 其他人真正占用中的任务（仅未到时间的才算占用）
+  const otherInProgressJob = jobs.find((j) => j.status === "in_progress" && j.resterUserId !== currentUserId && new Date(j.finishAt).getTime() > Date.now());
   const progress = useRestProgress(myInProgressJob);
+  const otherProgress = useRestProgress(otherInProgressJob);
   const canCollect = myInProgressJob && progress >= 100;
 
   // 确定当前用户需要支付的费用
@@ -173,10 +184,35 @@ export function ResidentialSection({
             {canCollect ? "收取体力" : "休息中..."}
           </Button>
         </div>
-      ) : inProgressJob ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50/80 p-3">
-          <p className="text-sm font-medium text-amber-800">该住宅正在被使用</p>
-          <p className="mt-1 text-xs text-amber-600">每栋住宅同时只能有一个休息任务</p>
+      ) : otherInProgressJob ? (
+        <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-mono text-[11px] text-slate-400">#{otherInProgressJob.id}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500">住宅休息</span>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
+              其他玩家使用中
+            </span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-2.5 space-y-1">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-medium text-amber-600">{formatRemaining(otherInProgressJob.finishAt)}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-400 transition-[width] duration-1000 ease-linear"
+                style={{ width: `${otherProgress}%` }}
+              />
+            </div>
+          </div>
+
+          <p className="mt-2 text-[11px] text-slate-400">每栋住宅同时只能有一个休息任务，请稍后再来</p>
         </div>
       ) : !isOwner && restPrice === null ? (
         <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
