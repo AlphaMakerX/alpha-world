@@ -41,13 +41,11 @@ export function PlotDetailModal({
   const plotCapabilities = getPlotCapabilities(selectedPlot, currentUserId);
   const buildingCapabilities = getBuildingCapabilities(selectedPlot?.building, plotCapabilities.isOwner);
 
-  // 地块切换时重置所有操作状态
+  // 地块切换时重置所有操作状态，有建筑时默认显示建筑 Tab
   useEffect(() => {
-    if (!selectedPlot) {
-      setBuildOptionsOpen(false);
-      setPendingBuildType(null);
-      setActiveTabKey("plot");
-    }
+    setBuildOptionsOpen(false);
+    setPendingBuildType(null);
+    setActiveTabKey(selectedPlot?.building ? "building" : "plot");
   }, [selectedPlot]);
 
   // 建筑建成后自动关闭建造选项
