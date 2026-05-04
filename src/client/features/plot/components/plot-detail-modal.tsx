@@ -71,7 +71,7 @@ export function PlotDetailModal({
       onClose={onClose}
       width={820}
       initialPosition={{ x: 72, y: 80 }}
-      bodyClassName="h-[620px] overflow-y-auto"
+      bodyClassName="max-h-[620px] overflow-y-auto"
     >
       {selectedPlot ? (
         <div className="space-y-3 text-sm text-slate-700">
