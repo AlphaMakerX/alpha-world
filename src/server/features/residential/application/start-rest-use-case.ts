@@ -75,7 +75,7 @@ export async function executeStartRestUseCase(
     cost = FULL_REST.defaultCost;
   } else {
     if (
-        .restPrice === null) {
+        building.restPrice === null) {
       return { ok: false, error: "该住宅未开放对外休息服务", code: "CONFLICT" };
     }
     cost = building.restPrice;

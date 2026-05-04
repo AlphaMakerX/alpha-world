@@ -7,7 +7,7 @@ import { Button, Popconfirm, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { FactoryOrders, FactoryRecipe, FactoryUpgradePreview } from "@/client/features/factory/types/factory-ui";
 import type { InventoryItem } from "@/client/features/building/types/building-ui";
-import { FactoryOrdersSection } from "@/client/features/factory-orders/components/factory-orders-section";
+import { FactoryOrderDetail } from "@/client/features/factory-orders/components/factory-order-detail";
 import { RecipeDetail } from "@/client/features/factory/components/recipe-detail";
 import { RecipeList } from "@/client/features/factory/components/recipe-list";
 
@@ -96,11 +96,10 @@ export function FactorySection({
     }
   }, [filteredRecipes, selectedRecipeId]);
 
-  const [activeTab, setActiveTab] = useState<"produce" | "orders" | "upgrade">("produce");
+  const [activeTab, setActiveTab] = useState<"produce" | "upgrade">("produce");
 
   const tabs: Array<{ key: typeof activeTab; label: string; show: boolean }> = [
     { key: "produce", label: "制造", show: true },
-    { key: "orders", label: "订单", show: true },
     { key: "upgrade", label: "升级", show: Boolean(upgradePreview) },
   ];
 
@@ -128,42 +127,41 @@ export function FactorySection({
       </div>
 
       {activeTab === "produce" ? (
-        recipesLoading ? (
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-slate-500">
-              <Spin size="small" />
-              <span className="text-sm">配方加载中...</span>
+        <>
+          {recipesLoading ? (
+            <div className="rounded-md border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Spin size="small" />
+                <span className="text-sm">配方加载中...</span>
+              </div>
             </div>
-          </div>
-        ) : factoryRecipes.length ? (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <RecipeList
-              allRecipes={factoryRecipes}
-              recipes={filteredRecipes}
-              selectedRecipeId={selectedRecipeId}
-              selectedCategory={selectedCategory}
-              disabled={productionLoading}
-              onSelectCategory={setSelectedCategory}
-              onSelect={setSelectedRecipeId}
-            />
-            <div className="space-y-3 rounded-lg border border-blue-100 bg-gradient-to-b from-white to-blue-50/40 p-3">
-              <RecipeDetail
-                recipe={selectedRecipe}
-                inventoryItems={inventoryItems}
-                productionLoading={productionLoading}
-                unlockLoading={unlockLoading}
-                onStartProduction={onStartProduction}
-                onUnlockRecipe={onUnlockRecipe}
+          ) : factoryRecipes.length ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <RecipeList
+                allRecipes={factoryRecipes}
+                recipes={filteredRecipes}
+                selectedRecipeId={selectedRecipeId}
+                selectedCategory={selectedCategory}
+                disabled={productionLoading}
+                onSelectCategory={setSelectedCategory}
+                onSelect={setSelectedRecipeId}
               />
+              <div className="space-y-3 rounded-lg border border-blue-100 bg-gradient-to-b from-white to-blue-50/40 p-3">
+                <RecipeDetail
+                  recipe={selectedRecipe}
+                  inventoryItems={inventoryItems}
+                  productionLoading={productionLoading}
+                  unlockLoading={unlockLoading}
+                  onStartProduction={onStartProduction}
+                  onUnlockRecipe={onUnlockRecipe}
+                />
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="text-slate-500">暂无可用配方</p>
-        )
-      ) : null}
-
-      {activeTab === "orders" ? (
-        <FactoryOrdersSection factoryOrders={factoryOrders} />
+          ) : (
+            <p className="text-slate-500">暂无可用配方</p>
+          )}
+          <FactoryOrderDetail focusOrder={factoryOrders?.focusOrder} />
+        </>
       ) : null}
 
       {activeTab === "upgrade" && upgradePreview ? (

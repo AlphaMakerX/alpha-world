@@ -13,6 +13,7 @@ import { PlotActionSection } from "./plot-action-section";
 import { BuildingDetailSection } from "@/client/features/building/components/building-detail-section";
 import { BuildingActionSection } from "@/client/features/building/components/building-action-section";
 import { RestJobHistory } from "@/client/features/residential/components/rest-job-history";
+import { FactoryOrderList } from "@/client/features/factory-orders/components/factory-order-list";
 import { DraggableWindow } from "@/client/components/draggable-window";
 import type { PlotDetailModalProps } from "./plot-detail-modal.types";
 import type { BuildingType } from "@/client/features/building/types/building-ui";
@@ -126,6 +127,17 @@ export function PlotDetailModal({
                       label: "休息记录",
                       children: (
                         <RestJobHistory jobs={residential.jobs} />
+                      ),
+                    },
+                  ]
+                : []),
+              ...(buildingCapabilities.isFactory
+                ? [
+                    {
+                      key: "order-history",
+                      label: "历史订单",
+                      children: (
+                        <FactoryOrderList historyOrders={factory?.orders?.historyOrders} />
                       ),
                     },
                   ]
