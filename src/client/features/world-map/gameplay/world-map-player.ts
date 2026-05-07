@@ -7,8 +7,8 @@
 import type * as Phaser from 'phaser'
 import { MAP_HEIGHT } from '../constants'
 
-const DUDE_TEXTURE_KEY = 'dude'                            // 玩家精灵纹理 key
-const dudeUrl = new URL('../../../../../public/assets/dude.png', import.meta.url).href
+const DUDE_TEXTURE_KEY = 'dude-move'                        // 玩家精灵纹理 key
+const dudeUrl = new URL('../../../../../public/assets/dude-move.png', import.meta.url).href
 
 /** 带物理体的玩家精灵类型 */
 export type PlayerSprite = Phaser.GameObjects.Sprite & { body: Phaser.Physics.Arcade.Body }
@@ -17,7 +17,7 @@ export type PlayerPosition = { x: number; y: number }
 
 /** 预加载玩家精灵表资源 */
 export function preloadPlayerAssets(scene: Phaser.Scene): void {
-  scene.load.spritesheet(DUDE_TEXTURE_KEY, dudeUrl, { frameWidth: 32, frameHeight: 48 })
+  scene.load.spritesheet(DUDE_TEXTURE_KEY, dudeUrl, { frameWidth: 80, frameHeight: 120 })
 }
 
 /** 创建玩家精灵并放置到指定位置，默认位于地图左侧道路中央 */
@@ -27,38 +27,62 @@ export function createPlayer(
 ): PlayerSprite {
   const player = scene.physics.add.sprite(position.x, position.y, DUDE_TEXTURE_KEY) as PlayerSprite
   player.setOrigin(0.5, 1)
-  player.setFrame(4)
+  player.setFrame(0)
+  player.setScale(0.5)
   player.setDepth(20)
   return player
 }
 
-/** 注册玩家动画（left / turn / right），重复调用时跳过已存在的动画 */
+/** 注册玩家动画（up / down / left / right / turn），重复调用时跳过已存在的动画 */
 export function createPlayerAnimations(scene: Phaser.Scene): void {
   const { anims } = scene
 
-  if (!anims.exists('left')) {
+  // 第1行：向下（帧 0-3）
+  if (!anims.exists('down')) {
     anims.create({
-      key: 'left',
+      key: 'down',
       frames: anims.generateFrameNumbers(DUDE_TEXTURE_KEY, { start: 0, end: 3 }),
       frameRate: 10,
       repeat: -1,
     })
   }
 
-  if (!anims.exists('turn')) {
+  // 第2行：向左（帧 4-7）
+  if (!anims.exists('left')) {
     anims.create({
-      key: 'turn',
-      frames: [{ key: DUDE_TEXTURE_KEY, frame: 4 }],
-      frameRate: 20,
+      key: 'left',
+      frames: anims.generateFrameNumbers(DUDE_TEXTURE_KEY, { start: 4, end: 7 }),
+      frameRate: 10,
+      repeat: -1,
     })
   }
 
+  // 第3行：向右（帧 8-11）
   if (!anims.exists('right')) {
     anims.create({
       key: 'right',
-      frames: anims.generateFrameNumbers(DUDE_TEXTURE_KEY, { start: 5, end: 8 }),
+      frames: anims.generateFrameNumbers(DUDE_TEXTURE_KEY, { start: 8, end: 11 }),
       frameRate: 10,
       repeat: -1,
+    })
+  }
+
+  // 第4行：向上（帧 12-15）
+  if (!anims.exists('up')) {
+    anims.create({
+      key: 'up',
+      frames: anims.generateFrameNumbers(DUDE_TEXTURE_KEY, { start: 12, end: 15 }),
+      frameRate: 10,
+      repeat: -1,
+    })
+  }
+
+  // 待机：朝下站立（帧 0）
+  if (!anims.exists('turn')) {
+    anims.create({
+      key: 'turn',
+      frames: [{ key: DUDE_TEXTURE_KEY, frame: 0 }],
+      frameRate: 20,
     })
   }
 }
@@ -74,6 +98,14 @@ export function updatePlayerAnimation(
     return
   }
 
+  if (cursors.up.isDown) {
+    player.anims.play('up', true)
+    return
+  }
+  if (cursors.down.isDown) {
+    player.anims.play('down', true)
+    return
+  }
   if (cursors.left.isDown) {
     player.anims.play('left', true)
     return
