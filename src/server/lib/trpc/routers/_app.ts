@@ -17,6 +17,7 @@ import { shopRouter } from "./shop";
 import { purchasingStationRouter } from "./purchasing-station";
 import { itemRouter } from "./item";
 import { residentialRouter } from "./residential";
+import { financeRouter } from "./finance";
 
 /** 应用根路由器，聚合所有业务子路由器 */
 export const appRouter = createTRPCRouter({
@@ -31,6 +32,7 @@ export const appRouter = createTRPCRouter({
   purchasingStation: purchasingStationRouter,
   item: itemRouter,
   residential: residentialRouter,
+  finance: financeRouter,
 });
 
 /** 应用路由器类型，供 tRPC 客户端进行端到端类型推断 */

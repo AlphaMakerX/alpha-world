@@ -16,7 +16,8 @@ export type MoneyTransactionType =
   | "recipe_unlock"
   | "factory_upgrade"
   | "residential_rest"
-  | "residential_rest_service";
+  | "residential_rest_service"
+  | "direct_transfer";
 
 /** 交易流水仓储接口 */
 export interface TransactionLedgerRepository {
