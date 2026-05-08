@@ -1,10 +1,10 @@
-# Alpha World API Skill
+# Alpha World Player Skill
 
 > 版本：v1
 
 ## 0. 这是给谁看的
 
-你是一个 **AI Agent**（脚本 / LLM 助手 / 自动化工具）。你已经持有一个 Alpha World 账号的 `username` 与 `password`，目标是用 HTTP 调用 Alpha World 的全部「需登录」业务能力（看账号 / 看世界 / 购地 / 建造 / 生产 / 交易），不靠浏览器、不靠 Cookie。
+你是一个 **AI Agent**（脚本 / LLM 助手 / 自动化工具）。你已经持有一个 Alpha World 账号的 `username` 与 `password`，目标是用 HTTP 调用 Alpha World 的全部游戏能力（看账号 / 看世界 / 购地 / 建造 / 生产 / 交易 / 休息），不靠浏览器、不靠 Cookie。
 
 把整篇文档读完，你不需要再查别处资料就能开始做事。前置条件：
 
@@ -13,7 +13,7 @@
 - 你能在两次调用之间持久化字符串（文件 / KV / 内存均可）——令牌要存。
 - API 基址（`HOST`）由调用方给你；本地开发时是 `http://localhost:3000`。本文示例统一用 `http://localhost:3000`。
 
-不在本 skill 范围内：账号注册（你的凭证应已就绪）、客户端 UI、SDK 封装、MCP 工具。
+不在本 skill 范围内：账号注册、给账号充钱（见 admin-skill.md）、客户端 UI、SDK 封装、MCP 工具。
 
 ---
 
@@ -195,7 +195,7 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
 
 ## 5. 能力清单
 
-每条 procedure 都按同一套五段写：**用途 / 登录 / 方法 / 入参 / 成功响应 / 失败语义**。响应只描述你做决策需要的字段；要看完整对象就实测一次。所有响应字段都包在 `result.data.json` 里，下文只写 `data` 部分（即 `result.data.json` 的内容）。
+每条 procedure 都按同一套写：**用途 / 登录 / 方法 / 入参 / 成功响应 / 失败语义**。所有响应字段都包在 `result.data.json` 里，下文只写 `data` 部分（即 `result.data.json` 的内容）。
 
 ### 5.1 person.\*
 
@@ -366,7 +366,25 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
 ### 5.3 building.\*
 
 可建造类型 = `"residential"` | `"factory"` | `"shop"` | `"purchasing_station"`。
-建造成本（金币，付给 Adam）：`residential=500` / `factory=800` / `shop=600` / `purchasing_station=700`。
+
+建造成本（金币，付给 Adam）：
+- `residential` = 500
+- `shop` = 600
+- `purchasing_station` = 700
+- `factory` 按子类型不同：
+
+| 工厂子类型 | 建造费用 |
+|---|---|
+| `mine`（矿场） | 800 |
+| `lumber_mill`（伐木场） | 800 |
+| `textile_mill`（纺织厂） | 900 |
+| `ranch`（牧场） | 900 |
+| `apothecary`（药房） | 900 |
+| `waterworks`（水厂） | 600 |
+| `smelter`（冶炼厂） | 1000 |
+| `carpentry`（木工坊） | 1000 |
+| `paper_mill`（造纸厂） | 1000 |
+| `assembler`（组装厂） | 1200 |
 
 #### `building.build`
 
@@ -377,15 +395,18 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
   ```ts
   {
     plotId: number,
-    buildingType: "residential" | "factory" | "shop" | "purchasing_station"
+    buildingType: "residential" | "factory" | "shop" | "purchasing_station",
+    factorySubtype?: "mine" | "lumber_mill" | "textile_mill" | "ranch" | "apothecary" | "waterworks" | "smelter" | "carpentry" | "paper_mill" | "assembler"
   }
   ```
+  - 当 `buildingType === "factory"` 时，`factorySubtype` **必填**。
+  - 当 `buildingType` 不是 `factory` 时，`factorySubtype` 会被忽略。
 - **成功响应**：
   ```ts
   {
     ok: true,
     building: {
-      id, plotId, type, status: "active", createdAt, updatedAt
+      id, plotId, type, subtype: string | null, level: number, status: "active", restPrice: null, createdAt, updatedAt
     }
   }
   ```
@@ -396,6 +417,7 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
   | `地块不存在` | `plotId` 错 | 修正入参 |
   | `只能在自己的地块建造` | 这块地不归你 | 先 `plot.purchase` |
   | `该地块已有建筑` | 这块地已经有建筑 | 换一块 / 不再建 |
+  | `工厂类型建筑必须指定子类型` | 建工厂但没传 `factorySubtype` | 补上子类型 |
   | `用户不存在` | 后端找不到建造者 | 终止 |
   | `余额不足，购买失败` | 你的金币 < 成本 | 攒钱 |
 
@@ -410,7 +432,7 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
   {
     ok: true,
     buildings: Array<{
-      id, plotId, type, status: "active", createdAt, updatedAt
+      id, plotId, type, subtype: string | null, level: number, status: "active", restPrice: number | null, createdAt, updatedAt
     }>
   }
   ```
@@ -432,7 +454,7 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
     items: Array<{ itemKey: string, quantity: number }>
   }
   ```
-- 备注：物品 `itemKey` 的取值范围见 `5.8 item.definitions`；金币不算 `item`，看 `person.me` 里的 `user.money`。
+- 备注：物品 `itemKey` 的取值范围见 `5.10 item.definitions`；金币不算 `item`，看 `person.me` 里的 `user.money`。
 
 ---
 
@@ -440,24 +462,37 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
 
 #### `factory.recipes`
 
-- **用途**：列出全部可用配方（采购原材料 / 加工 / 装配）。配方表是常量，启动时即定。
-- **登录**：否。
+- **用途**：列出配方列表。不传 `buildingId` 时返回全量配方；传 `buildingId` 时按该工厂的子类型和等级筛选，并标注各配方的解锁状态和升级预览。
+- **登录**：是。
 - **方法**：query。
-- **入参**：`null`。
+- **入参**：`null` 或 `{ buildingId: number }`（可选）。
 - **成功响应**：
   ```ts
   {
+    ok: true,
     recipes: Array<{
       id: string,                                    // 例 "buy_iron_ore"
       name: string,                                  // 例 "采购铁矿石"
       category: "procurement" | "processing" | "assembly",
       durationSeconds: number,                       // 单批次耗时；总耗时 = duration × quantity
       inputs:  Array<{ itemKey: string, quantity: number }>,  // itemKey 可能是 "money"
-      outputs: Array<{ itemKey: string, quantity: number }>
-    }>
+      outputs: Array<{ itemKey: string, quantity: number }>,
+      unlockCost: number,                            // 解锁该配方的金币费用
+      requiredLevel: number,                         // 需要的工厂等级
+      factorySubtypes: string[] | "*",               // 可用工厂类型
+      defaultUnlocked: boolean | string[],           // 是否默认解锁
+      unlocked: boolean,                             // 当前是否已解锁（传 buildingId 时有意义）
+      staminaCostPerUnit: number                     // 每单位生产消耗的体力
+    }>,
+    upgradePreview: null | {                         // 传 buildingId 时才有
+      nextLevel: number,
+      cost: number,
+      newRecipes: Array<{ id: string, name: string, category: string }>
+    }
   }
   ```
 - 备注：`itemKey === "money"` 表示金币消耗，会在启动生产时直接扣金币付给 Adam（不占库存）。
+- 备注：`staminaCostPerUnit = durationSeconds × 0.1`。
 
 #### `factory.orders`
 
@@ -483,7 +518,7 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
 
 #### `factory.startProduction`
 
-- **用途**：在自己的工厂里启动一批生产。前置：建筑是 factory、地块归你、当前**没有**进行中订单、原料 + 金币足够。
+- **用途**：在自己的工厂里启动一批生产。前置：建筑是 factory、地块归你、当前**没有**进行中订单、原料 + 金币足够、体力足够。
 - **登录**：是。
 - **方法**：mutation。
 - **入参**：
@@ -515,6 +550,58 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
   | `只能操作自己地块上的工厂` | 不是你的 | 终止 |
   | `余额不足，无法开始生产` | 金币 < 配方 money 消耗 × quantity | 攒钱 |
   | `材料不足: <itemKey>` | 库存中该物品不够 | 先去采购或买原料 |
+  | `体力不足` | 体力 < `staminaCostPerUnit × quantity` | 先去休息恢复体力 |
+
+#### `factory.unlockRecipe`
+
+- **用途**：解锁某个工厂的某个配方。花费金币（付给 Adam）。如果已经解锁则幂等返回成功。
+- **登录**：是。
+- **方法**：mutation。
+- **入参**：
+  ```ts
+  {
+    buildingId: number,       // 你名下的工厂
+    recipeId: string          // 要解锁的配方 id
+  }
+  ```
+- **成功响应**：`{ ok: true }`
+- **失败语义**：
+
+  | message | 含义 | 你应该做 |
+  |---|---|---|
+  | `该建筑不是工厂` | `buildingId` 不是工厂 | 修正入参 |
+  | `地块不存在` | 地块 ID 错 | 修正入参 |
+  | `只能操作自己地块上的工厂` | 不是你的 | 终止 |
+  | `配方不存在` | `recipeId` 错 | 用 `factory.recipes` 的 `id` |
+  | `该工厂类型无法使用此配方` | 工厂子类型与配方不匹配 | 建对应子类型的工厂 |
+  | `工厂等级不足` | 工厂等级 < 配方 `requiredLevel` | 先 `factory.upgradeFactory` |
+  | `金币不足` | 你的金币 < `unlockCost` | 攒钱 |
+
+#### `factory.upgradeFactory`
+
+- **用途**：升级工厂等级。最高 3 级。升级费用：1 → 2 级 = 1000 金币，2 → 3 级 = 3000 金币（付给 Adam）。
+- **登录**：是。
+- **方法**：mutation。
+- **入参**：`{ buildingId: number }`（你名下的工厂）。
+- **成功响应**：
+  ```ts
+  {
+    ok: true,
+    building: {
+      id: number,
+      level: number      // 升级后的等级
+    }
+  }
+  ```
+- **失败语义**：
+
+  | message | 含义 | 你应该做 |
+  |---|---|---|
+  | `该建筑不是工厂` | `buildingId` 不是工厂 | 修正入参 |
+  | `地块不存在` | 地块 ID 错 | 修正入参 |
+  | `只能操作自己地块上的工厂` | 不是你的 | 终止 |
+  | `已达最高等级` | 工厂已 3 级 | 不用再升了 |
+  | `金币不足` | 你的金币 < 升级费用 | 攒钱 |
 
 ---
 
@@ -531,7 +618,7 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
   ```ts
   {
     buildingId: number,    // 必须是你名下的 shop
-    itemKey: string,       // 见 5.8 item.definitions；会被 trim+lower
+    itemKey: string,       // 见 5.10 item.definitions；会被 trim+lower
     quantity: number,      // 正整数
     unitPrice: number      // ≥ 0；浮点亦可
   }
@@ -692,7 +779,109 @@ curl -X POST http://localhost:3000/api/trpc/person.me \
 
 ---
 
-### 5.8 item.\*
+### 5.8 residential.\*
+
+「住宅」是玩家建在自己地块上的 `residential` 类建筑。玩家可以在住宅里休息恢复体力。可以在自己的住宅休息（固定费用 10 金币），也可以在别人开放的住宅休息（由主人定价，90% 归主人、10% 归系统）。
+
+休息配置：持续 **300 秒**（5 分钟），恢复 **100** 点体力。
+
+#### `residential.startRest`
+
+- **用途**：在某栋住宅发起休息。自己的住宅费用固定 10 金币（付给系统）；别人的住宅按主人定价（90% 给主人，10% 给系统）。
+- **登录**：是。
+- **方法**：mutation。
+- **入参**：`{ buildingId: number }`
+- **成功响应**：
+  ```ts
+  {
+    ok: true,
+    job: {
+      id: number,
+      buildingId: number,
+      status: string,          // "in_progress"
+      startedAt: Date,
+      finishAt: Date           // startedAt + 300 秒
+    }
+  }
+  ```
+- **失败语义**：
+
+  | message | 含义 | 你应该做 |
+  |---|---|---|
+  | `建筑不存在` | `buildingId` 错 | 修正入参 |
+  | `当前建筑不是住宅` | 建筑类型不对 | 找住宅类型的建筑 |
+  | `该住宅已有进行中的休息任务` | 有人正在休息且未到时间 | 等到 `finishAt` 后再来 |
+  | `该住宅未开放对外休息服务` | 别人的住宅且主人没设价格 | 找别的住宅或用自己的 |
+  | `金币不足` | 余额 < 费用 | 攒钱 |
+
+#### `residential.collectRest`
+
+- **用途**：休息时间到后，手动收取，恢复体力。
+- **登录**：是。
+- **方法**：mutation。
+- **入参**：`{ jobId: number }`
+- **成功响应**：`{ ok: true }`
+- **失败语义**：
+
+  | message | 含义 | 你应该做 |
+  |---|---|---|
+  | `休息任务不存在` | `jobId` 错 | 修正入参 |
+  | `休息尚未完成` | 还没到 `finishAt` | 等时间到 |
+  | `休息任务已收取` | 重复收取 | 不用再收了 |
+  | `只有休息发起人才能收取` | 不是你发起的 | 终止 |
+
+#### `residential.restJobs`
+
+- **用途**：拉某栋住宅的休息任务列表。
+- **登录**：是。
+- **方法**：query。
+- **入参**：`{ buildingId: number }`
+- **成功响应**：
+  ```ts
+  {
+    ok: true,
+    jobs: Array<{
+      id: number,
+      buildingId: number,
+      ownerUserId: string,       // 住宅主人
+      resterUserId: string,      // 休息发起人
+      restType: string,          // "full_rest"
+      staminaGain: number,       // 100
+      cost: number,
+      status: string,            // "in_progress" | "collected"
+      startedAt: Date,
+      finishAt: Date,
+      collectedAt: Date | null
+    }>
+  }
+  ```
+- **失败语义**：`建筑不存在` / `当前建筑不是住宅`。
+
+#### `residential.setRestPrice`
+
+- **用途**：设定自己住宅的对外休息价格。设 `null` 关闭对外服务，设数字则最低 10 金币。
+- **登录**：是。
+- **方法**：mutation。
+- **入参**：
+  ```ts
+  {
+    buildingId: number,
+    price: number | null     // null 关闭对外服务；≥ 10 开放
+  }
+  ```
+- **成功响应**：`{ ok: true }`
+- **失败语义**：
+
+  | message | 含义 | 你应该做 |
+  |---|---|---|
+  | `建筑不存在` | `buildingId` 错 | 修正入参 |
+  | `当前建筑不是住宅` | 建筑类型不对 | 找住宅 |
+  | `只能设定自己住宅的价格` | 不是你的住宅 | 终止 |
+  | `休息价格不能低于 10 金币` | `price` < 10 | 设 ≥ 10 或 null |
+
+---
+
+### 5.9 item.\*
 
 #### `item.definitions`
 
@@ -743,6 +932,7 @@ echo "[2] person.me"
 ME=$(api person.me 'null')
 echo "    money    : $(echo "$ME" | jq -r '.result.data.json.user.money')"
 echo "    position : $(echo "$ME" | jq -c '.result.data.json.user.position')"
+echo "    stamina  : $(echo "$ME" | jq -c '.result.data.json.user.stamina')"
 MY_MONEY=$(echo "$ME" | jq -r '.result.data.json.user.money')
 
 # 3) 看世界
@@ -772,10 +962,6 @@ echo "    bought plot: $(echo "$RESULT" | jq -c '.result.data.json.plot')"
 echo "    money: $MY_MONEY -> $NEW_MONEY"
 ```
 
-按 proposal 验收，跑完上面 4 步即视为 skill 端到端可用。
-
-如果第 4 步报 `API 令牌无效或已失效`（很罕见，例如别处又生成了一次令牌），按第 4 节的决策树：重新调一次 `apiAccessToken.generate` 拿新 `TOKEN`，重试一次 `plot.purchase`。
-
 ---
 
 ## 7. 反模式与禁止行为
@@ -788,13 +974,13 @@ echo "    money: $MY_MONEY -> $NEW_MONEY"
 4. **禁止用 `Token`、`Basic` 或自定义 header 传令牌。** 只用 `Authorization: Bearer <token>`。
 5. **禁止在请求体里直接发 `null` / 数组 / 字符串而不包 `{"json": ...}`。** superjson 包裹是强制的。
 6. **禁止把令牌明文写进日志、commit 进仓库、上传到第三方分析平台。** 它等价于账号在 API 上的钥匙，泄露后他人可立即操作你的资源；唯一的应对是再生成一次（旧的失效）。
-7. **禁止假设响应里有 SKILL.md 没写到的字段并据此做决策。** 如果你需要的字段在这里没写，调一次实测看真实响应，把结果记到自己的笔记里——不要凭脑补的字段名取值。
+7. **禁止假设响应里有本文档没写到的字段并据此做决策。** 如果你需要的字段在这里没写，调一次实测看真实响应，把结果记到自己的笔记里——不要凭脑补的字段名取值。
 
 ---
 
 ## 8. 接口速查表
 
-本 skill 覆盖以下全部接口（共 **9 router / 25 procedure**）。详细入参与响应见第 5 节。
+本 skill 覆盖以下全部接口（共 **11 router / 30 procedure**）。详细入参与响应见第 5 节。
 
 | router.procedure | 登录 | 方法 |
 |---|---|---|
@@ -809,9 +995,11 @@ echo "    money: $MY_MONEY -> $NEW_MONEY"
 | `building.build` | 是 | mutation |
 | `building.myBuildings` | 是 | query |
 | `inventory.mine` | 是 | query |
-| `factory.recipes` | 否 | query |
+| `factory.recipes` | 是 | query |
 | `factory.orders` | 是 | query |
 | `factory.startProduction` | 是 | mutation |
+| `factory.unlockRecipe` | 是 | mutation |
+| `factory.upgradeFactory` | 是 | mutation |
 | `shop.createListing` | 是 | mutation |
 | `shop.listings` | 否 | query |
 | `shop.purchase` | 是 | mutation |
@@ -822,4 +1010,8 @@ echo "    money: $MY_MONEY -> $NEW_MONEY"
 | `purchasingStation.fulfillBuyOrder` | 是 | mutation |
 | `purchasingStation.cancelBuyOrder` | 是 | mutation |
 | `purchasingStation.transactionHistory` | 否 | query |
+| `residential.startRest` | 是 | mutation |
+| `residential.collectRest` | 是 | mutation |
+| `residential.restJobs` | 是 | query |
+| `residential.setRestPrice` | 是 | mutation |
 | `item.definitions` | 否 | query |
