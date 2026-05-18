@@ -52,6 +52,7 @@ function makeCaller() {
   return router.createCaller({
     userId: "00000000-0000-0000-0000-000000000001",
     session: { user: { id: "u1" }, expires: "" } as Session,
+    userRole: "user",
     tokenPresentButInvalid: false,
   });
 }

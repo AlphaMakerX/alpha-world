@@ -21,6 +21,7 @@ export const users = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     username: varchar("username", { length: 32 }).notNull().unique(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+    role: varchar("role", { length: 16 }).notNull().default("user"),
     money: numeric("money", { precision: 12, scale: 2 }).notNull().default("10000"),
     positionX: numeric("position_x", { precision: 10, scale: 2 }).notNull().default("140"),
     positionY: numeric("position_y", { precision: 10, scale: 2 }).notNull().default("600"),
@@ -31,6 +32,7 @@ export const users = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    check("users_role_chk", sql`${table.role} in ('admin', 'user')`),
     check("users_username_length_chk", sql`char_length(${table.username}) between 3 and 32`),
     check("users_money_chk", sql`${table.money} >= 0`),
     check("users_position_x_chk", sql`${table.positionX} >= 0`),

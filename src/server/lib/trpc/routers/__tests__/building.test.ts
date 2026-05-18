@@ -31,12 +31,13 @@ const mockedBuild = vi.mocked(executeBuildBuildingUseCase);
 
 const router = createTRPCRouter({ building: buildingRouter });
 
-type CallerCtx = { userId: string | null; session: Session | null; tokenPresentButInvalid: boolean };
+type CallerCtx = { userId: string | null; session: Session | null; userRole: "admin" | "user" | null; tokenPresentButInvalid: boolean };
 
 function makeCaller(overrides?: Partial<CallerCtx>) {
   return router.createCaller({
     userId: overrides?.userId ?? "00000000-0000-0000-0000-000000000001",
     session: overrides?.session ?? ({ user: { id: "u1" }, expires: "" } as Session),
+    userRole: overrides?.userRole ?? "user",
     tokenPresentButInvalid: false,
   });
 }

@@ -4,7 +4,7 @@
  * 提供财务相关接口：用户间直接转账。
  */
 
-import { createTRPCRouter, protectedProcedure } from "@/server/lib/trpc/core";
+import { createTRPCRouter, adminProcedure } from "@/server/lib/trpc/core";
 import {
   executeTransferMoneyUseCase,
   transferMoneySchema,
@@ -12,8 +12,8 @@ import {
 import { unwrapUseCaseResult } from "@/server/lib/trpc/utils";
 
 export const financeRouter = createTRPCRouter({
-  /** 向指定用户转账金币 */
-  transfer: protectedProcedure
+  /** 向指定用户转账金币（仅管理员） */
+  transfer: adminProcedure
     .input(transferMoneySchema.omit({ payerUserId: true }))
     .mutation(async ({ input, ctx }) => {
       return unwrapUseCaseResult(

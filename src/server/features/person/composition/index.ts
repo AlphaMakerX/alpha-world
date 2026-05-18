@@ -27,6 +27,7 @@ import {
 } from "@/server/features/person/application/get-wealth-leaderboard-use-case";
 import { personQueryRepository, userRepository } from "@/server/features/person/infrastructure";
 import { PERSONA_IDS } from "@/server/features/person/domain/personas";
+import type { UserRole } from "@/server/features/person/domain/entities/user";
 
 /** 获取当前用户的入参校验 Schema */
 export const getCurrentUserSchema = z.object({
@@ -88,6 +89,12 @@ export async function executeUpdateUserPositionUseCase(
   return executeUpdateUserPositionUseCaseImpl(parsed.data, {
     userRepository,
   });
+}
+
+/** 根据用户 ID 查询角色，用于 tRPC 上下文注入 */
+export async function resolveUserRole(userId: string): Promise<UserRole | null> {
+  const user = await userRepository.findById(userId);
+  return user?.role ?? null;
 }
 
 /** 获取 Adam 资金概况 */

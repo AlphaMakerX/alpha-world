@@ -28,6 +28,7 @@ const standaloneRouter = createTRPCRouter({
 type CallerCtx = {
   userId: string | null;
   session: Session | null;
+  userRole: "admin" | "user" | null;
   tokenPresentButInvalid: boolean;
 };
 
@@ -35,6 +36,7 @@ function makeCaller(overrides?: Partial<CallerCtx>) {
   return standaloneRouter.createCaller({
     userId: overrides?.userId ?? null,
     session: overrides?.session ?? null,
+    userRole: overrides?.userRole ?? null,
     tokenPresentButInvalid: overrides?.tokenPresentButInvalid ?? false,
   });
 }

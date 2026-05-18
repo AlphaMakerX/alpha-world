@@ -6,6 +6,7 @@
 import { eq } from "drizzle-orm";
 import { getDbClient } from "@/server/lib/db";
 import { User } from "@/server/features/person/domain/entities/user";
+import type { UserRole } from "@/server/features/person/domain/entities/user";
 import type { UserRepository } from "@/server/features/person/domain/repositories/user-repository";
 import { Username } from "@/server/features/person/domain/value-objects/username";
 import { users } from "@/server/features/person/infrastructure/schema";
@@ -16,6 +17,7 @@ function toDomainUser(record: typeof users.$inferSelect) {
     id: record.id,
     username: Username.create(record.username),
     passwordHash: record.passwordHash,
+    role: record.role as UserRole,
     money: Number(record.money),
     positionX: Number(record.positionX),
     positionY: Number(record.positionY),
@@ -62,6 +64,7 @@ export class DrizzleUserRepository implements UserRepository {
         id: user.id,
         username: user.username.getValue(),
         passwordHash: user.passwordHash,
+        role: user.role,
         money: user.money.toString(),
         positionX: user.positionX.toString(),
         positionY: user.positionY.toString(),
@@ -76,6 +79,7 @@ export class DrizzleUserRepository implements UserRepository {
         set: {
           username: user.username.getValue(),
           passwordHash: user.passwordHash,
+          role: user.role,
           money: user.money.toString(),
           positionX: user.positionX.toString(),
           positionY: user.positionY.toString(),

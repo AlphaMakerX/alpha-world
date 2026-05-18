@@ -41,11 +41,12 @@ export async function executeAdamStep(input: { deps: ExecuteAdamStepDeps }): Pro
   }
   const adamPasswordHash = await input.deps.passwordHasher.hash(ADAM_PERSONA_CONFIG.initialPassword);
 
-  // 使用预定义的 userId、用户名和初始资金注册 Adam
+  // 使用预定义的 userId、用户名和初始资金注册 Adam，角色为管理员
   const adam = User.register({
     id: ADAM_PERSONA_CONFIG.userId,
     username: ADAM_PERSONA_CONFIG.username,
     passwordHash: adamPasswordHash,
+    role: "admin",
     initialMoney: ADAM_PERSONA_CONFIG.initialMoney,
   });
 

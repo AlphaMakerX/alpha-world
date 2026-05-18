@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/lib/auth/auth-options";
 import { resolveUserIdFromBearer } from "@/server/features/api-access-token/composition";
 import type { TRPCContext } from "@/server/lib/trpc/core";
+import { resolveUserRole } from "@/server/features/person/composition";
 
 /**
  * 根据请求创建 tRPC 上下文
@@ -32,10 +33,14 @@ export async function createTrpcContext({
   // Bearer 优先于 Session（设计文档约定的唯一规则）
   const userId = bearerUserId ?? sessionUserId;
 
+  // 已登录用户查询角色，未登录则为 null
+  const userRole = userId ? await resolveUserRole(userId) : null;
+
   // session 字段只来源于 NextAuth，不因 Bearer 而伪造
   return {
     session,
     userId,
+    userRole,
     tokenPresentButInvalid:
       isAuthHeaderPresent(authHeader) && bearerUserId === null,
   };

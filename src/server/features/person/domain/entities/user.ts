@@ -11,11 +11,15 @@ import {
   PLAYER_STAMINA_RECOVERY_PER_SECOND,
 } from "@/shared/gameplay/player-stamina";
 
+/** 用户角色类型 */
+export type UserRole = "admin" | "user";
+
 /** 用户实体内部属性 */
 type UserProps = {
   id: string;
   username: Username;
   passwordHash: string;
+  role: UserRole;
   money: number;
   positionX: number;
   positionY: number;
@@ -38,6 +42,7 @@ export class User {
     id: string;
     username: string;
     passwordHash: string;
+    role?: UserRole;
     initialMoney?: number;
     positionX?: number;
     positionY?: number;
@@ -70,6 +75,7 @@ export class User {
       id: input.id,
       username: Username.create(input.username),
       passwordHash: input.passwordHash,
+      role: input.role ?? "user",
       money: initialMoney,
       positionX,
       positionY,
@@ -82,7 +88,7 @@ export class User {
   }
 
   /** 从持久化数据重建用户实体（反序列化），校验数据完整性 */
-  static rehydrate(props: UserProps): User {
+  static rehydrate(props: Omit<UserProps, "role"> & { role?: UserRole }): User {
     if (props.money < 0) {
       throw new DomainError("用户余额不能小于 0");
     }
@@ -99,7 +105,7 @@ export class User {
     ) {
       throw new DomainError("用户体力数据不合法");
     }
-    return new User(props);
+    return new User({ ...props, role: props.role ?? "user" });
   }
 
   /** 扣减用户金额，余额不足时抛出领域错误 */
@@ -193,6 +199,14 @@ export class User {
 
   get id() {
     return this.props.id;
+  }
+
+  get role(): UserRole {
+    return this.props.role;
+  }
+
+  get isAdmin(): boolean {
+    return this.props.role === "admin";
   }
 
   get username() {

@@ -18,8 +18,13 @@ vi.mock("@/server/features/api-access-token/composition", () => ({
   resolveUserIdFromBearer: vi.fn(),
 }));
 
+vi.mock("@/server/features/person/composition", () => ({
+  resolveUserRole: vi.fn(),
+}));
+
 import { getServerSession } from "next-auth";
 import { resolveUserIdFromBearer } from "@/server/features/api-access-token/composition";
+import { resolveUserRole } from "@/server/features/person/composition";
 import { createTrpcContext } from "../context";
 import {
   createTRPCRouter,
@@ -28,6 +33,7 @@ import {
 
 const mockedGetServerSession = vi.mocked(getServerSession);
 const mockedResolveBearer = vi.mocked(resolveUserIdFromBearer);
+const mockedResolveUserRole = vi.mocked(resolveUserRole);
 
 function makeReq(authHeader?: string | null): Request {
   const headers = new Headers();
@@ -48,6 +54,8 @@ describe("createTrpcContext", () => {
   beforeEach(() => {
     mockedGetServerSession.mockReset();
     mockedResolveBearer.mockReset();
+    mockedResolveUserRole.mockReset();
+    mockedResolveUserRole.mockResolvedValue("user");
   });
 
   it("无 Session、无 Authorization → userId/session 均为 null，tokenPresentButInvalid 为 false", async () => {
@@ -59,6 +67,7 @@ describe("createTrpcContext", () => {
     expect(ctx).toEqual({
       session: null,
       userId: null,
+      userRole: null,
       tokenPresentButInvalid: false,
     });
     expect(mockedResolveBearer).toHaveBeenCalledWith(null);
@@ -164,6 +173,7 @@ describe("protectedProcedure 中间件：错误文案区分", () => {
     const caller = router.createCaller({
       session: null,
       userId: null,
+      userRole: null,
       tokenPresentButInvalid: false,
     });
 
@@ -178,6 +188,7 @@ describe("protectedProcedure 中间件：错误文案区分", () => {
     const caller = router.createCaller({
       session: null,
       userId: null,
+      userRole: null,
       tokenPresentButInvalid: true,
     });
 
@@ -192,6 +203,7 @@ describe("protectedProcedure 中间件：错误文案区分", () => {
     const caller1 = router.createCaller({
       session: null,
       userId: "user-1",
+      userRole: "user",
       tokenPresentButInvalid: false,
     });
     await expect(caller1.ping()).resolves.toEqual({ userId: "user-1" });
@@ -200,6 +212,7 @@ describe("protectedProcedure 中间件：错误文案区分", () => {
     const caller2 = router.createCaller({
       session: null,
       userId: "user-1",
+      userRole: "user",
       tokenPresentButInvalid: true,
     });
     await expect(caller2.ping()).resolves.toEqual({ userId: "user-1" });
@@ -209,6 +222,7 @@ describe("protectedProcedure 中间件：错误文案区分", () => {
     const caller = router.createCaller({
       session: null,
       userId: null,
+      userRole: null,
       tokenPresentButInvalid: false,
     });
     const err = await caller.ping().catch((e) => e);
